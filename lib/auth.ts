@@ -1,7 +1,8 @@
-import NextAuth from 'next-auth';
+import { getServerSession, type NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
+// Authentication configuration shared between NextAuth route handlers and server utilities.
+export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
       name: 'Guest',
@@ -21,4 +22,12 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   pages: {
     signIn: '/signin',
   },
-});
+};
+
+/**
+ * Helper to retrieve the current session on the server.
+ * Using NextAuth v4 we need to wrap getServerSession with our config.
+ */
+export function auth() {
+  return getServerSession(authOptions);
+}
