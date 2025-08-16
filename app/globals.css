@@ -4,4 +4,27 @@
 
 :root {
   --font-sans: ui-sans-serif, system-ui;
+  --bg: #0B0C0F0A;
+  --surface: rgba(255,255,255,0.8);
+  --text: #0B0C0F;
+  --text-muted: #384150;
+  --accent: #FF7A00;
+  --planning: #6AA7FF;
+  --flavors: #9A6BFF;
+  --ingredients: #00C2A8;
+  --review: #FFC53D;
+  --people: #6ED8A0;
+  --visibility: #FF7A7A;
+}
+
+.dark {
+  --bg: #0B0C0F;
+  --surface: rgba(15,17,21,0.8);
+  --text: #E6EAF2;
+  --text-muted: #98A2B3;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
 }
