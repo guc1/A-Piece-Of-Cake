@@ -1,7 +1,7 @@
-import NextAuth from 'next-auth';
+import { getServerSession, type NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
       name: 'Guest',
@@ -21,4 +21,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   pages: {
     signIn: '/signin',
   },
-});
+};
+
+export function auth() {
+  return getServerSession(authOptions);
+}
+
+export { signIn, signOut } from 'next-auth/react';

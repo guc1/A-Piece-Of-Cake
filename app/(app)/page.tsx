@@ -1,8 +1,11 @@
+import { CakeNavigation } from '@/components/cake/cake-navigation';
+import { t } from '@/lib/i18n';
+
 export default function DashboardPage() {
   return (
-    <section>
-      <h1 className="text-2xl font-bold mb-4">Cake</h1>
-      <p className="text-sm text-gray-600">Your dashboard is baking.</p>
+    <section className="flex flex-col items-center justify-center gap-8">
+      <h1 className="sr-only">{t('nav.cake')}</h1>
+      <CakeNavigation />
     </section>
   );
 }
