@@ -15,7 +15,7 @@ export default async function AppLayout({
 
   return (
     <html lang="en">
-      <body>
+      <body className="flex min-h-screen flex-col">
         <nav className="flex items-center justify-between border-b p-4">
           <ul className="flex gap-4">
             <li><Link href="/">Cake</Link></li>
@@ -30,7 +30,7 @@ export default async function AppLayout({
             <Button type="submit">Sign out</Button>
           </form>
         </nav>
-        <main className="p-4">{children}</main>
+        <main className="flex flex-1 flex-col p-4">{children}</main>
       </body>
     </html>
   );

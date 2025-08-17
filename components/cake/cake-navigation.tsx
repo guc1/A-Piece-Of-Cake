@@ -9,12 +9,28 @@ import { Cake3D } from './cake-3d';
 export function CakeNavigation() {
   const router = useRouter();
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState('');
   const userId = '42';
 
+  const handleSliceClick = (slug: string) => {
+    const slice = slices.find((s) => s.slug === slug);
+    if (slice) {
+      router.push(slice.href);
+      const label = t(`nav.${slice.slug}`);
+      setAnnouncement(`${label} opened`);
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center gap-8">
-      <Cake3D activeSlug={activeSlug} userId={userId} />
-      <nav className="grid w-full max-w-md grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 items-center justify-center">
+        <Cake3D
+          activeSlug={activeSlug}
+          userId={userId}
+          onSliceClick={handleSliceClick}
+        />
+      </div>
+      <nav className="mt-[clamp(48px,8vh,120px)] grid w-full max-w-md grid-cols-2 gap-2 sm:grid-cols-3">
         {slices.map((slice) => (
           <button
             key={slice.slug}
@@ -35,6 +51,7 @@ export function CakeNavigation() {
       <p className="sr-only" aria-live="polite">
         {activeSlug ? `${t(`nav.${activeSlug}`)} slice highlighted` : ''}
       </p>
+      <p className="sr-only" aria-live="polite">{announcement}</p>
     </div>
   );
 }
