@@ -7,9 +7,8 @@
    pnpm install
    ```
 2. Create a `.env` file and set required values:
-   - `GUEST_PASSWORD` – password for guest login
    - `NEXTAUTH_SECRET` – secret used by NextAuth
-   - `DATABASE_URL` – PostgreSQL connection string (if using the DB)
+   - `DATABASE_URL` – PostgreSQL connection string (optional, memory store used by default)
 3. Start the dev server on port 3001
    ```sh
    pnpm dev
@@ -23,3 +22,9 @@
    ```sh
    pnpm test
    ```
+
+## Usage
+
+- Visit `http://localhost:3001/` and choose **Sign up** to create a new account.
+- After creating an account you will be signed in automatically and taken to your flavors page.
+- Signed-in users will retain their flavors as long as the server is running.
