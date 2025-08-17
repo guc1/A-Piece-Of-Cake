@@ -1,6 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useState } from 'react';
+import { Cake3D } from './cake-3d';
 import { t } from '@/lib/i18n';
 
 function IconBase({ children, ...props }: React.SVGProps<SVGSVGElement>) {
@@ -72,50 +75,57 @@ interface Slice {
 }
 
 const slices: Slice[] = [
-  { key: 'planning', href: '/planning', Icon: CalendarIcon, color: 'var(--planning)' },
-  { key: 'flavors', href: '/flavors', Icon: SwirlIcon, color: 'var(--flavors)' },
-  { key: 'ingredients', href: '/ingredients', Icon: FlaskIcon, color: 'var(--ingredients)' },
+  {
+    key: 'planning',
+    href: '/planning',
+    Icon: CalendarIcon,
+    color: 'var(--planning)',
+  },
+  {
+    key: 'flavors',
+    href: '/flavors',
+    Icon: SwirlIcon,
+    color: 'var(--flavors)',
+  },
+  {
+    key: 'ingredients',
+    href: '/ingredients',
+    Icon: FlaskIcon,
+    color: 'var(--ingredients)',
+  },
   { key: 'review', href: '/review', Icon: StarIcon, color: 'var(--review)' },
   { key: 'people', href: '/people', Icon: UsersIcon, color: 'var(--people)' },
-  { key: 'visibility', href: '/visibility', Icon: EyeIcon, color: 'var(--visibility)' },
+  {
+    key: 'visibility',
+    href: '/visibility',
+    Icon: EyeIcon,
+    color: 'var(--visibility)',
+  },
 ];
 
 export function CakeNavigation() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id ?? '0';
+  const [activeSlug, setActiveSlug] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col items-center gap-8">
-      <div className="relative h-64 w-64 rounded-full bg-[var(--surface)] shadow-md">
-        {slices.map((slice, i) => {
-          const rotate = i * 60;
-          return (
-            <button
-              key={slice.key}
-              aria-label={t(`nav.${slice.key}`)}
-              onClick={() => router.push(slice.href)}
-              style={{
-                transform: `rotate(${rotate}deg)`,
-                backgroundColor: slice.color,
-              }}
-              className="absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-full -translate-y-full origin-bottom-left rounded-br-[100%] p-2 text-[var(--text)] transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
-            >
-              <div
-                className="flex h-full w-full flex-col items-center justify-center gap-1"
-                style={{ transform: `rotate(-${rotate}deg)` }}
-              >
-                <slice.Icon className="h-5 w-5" />
-                <span className="text-xs">{t(`nav.${slice.key}`)}</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      <Cake3D activeSlug={activeSlug} userId={userId} />
+      <p aria-live="polite" className="sr-only">
+        {activeSlug ? `${t(`nav.${activeSlug}`)} slice highlighted` : ''}
+      </p>
       <nav className="grid w-full max-w-md grid-cols-2 gap-2 sm:grid-cols-3">
         {slices.map((slice) => (
           <button
             key={slice.key}
+            id={`n4vbox-${slice.key}-${userId}`}
             aria-label={t(`nav.${slice.key}`)}
             onClick={() => router.push(slice.href)}
+            onMouseEnter={() => setActiveSlug(slice.key)}
+            onMouseLeave={() => setActiveSlug(null)}
+            onFocus={() => setActiveSlug(slice.key)}
+            onBlur={() => setActiveSlug(null)}
             className="flex items-center justify-center gap-2 rounded border bg-[var(--surface)] p-4 text-sm text-[var(--text)] transition-transform duration-200 hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
           >
             <slice.Icon className="h-4 w-4" />
