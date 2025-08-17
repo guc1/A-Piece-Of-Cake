@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import type { Flavor, Visibility } from '@/types/flavor';
-import { createFlavor, updateFlavor } from './actions';
+import type { Subflavor, Visibility } from '@/types/subflavor';
+import { createSubflavor, updateSubflavor } from './actions';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
 const VISIBILITIES: Visibility[] = [
@@ -21,7 +20,7 @@ const COLOR_SWATCHES = [
   '#f472b6',
 ];
 
-function sortFlavors(list: Flavor[]) {
+function sortSubflavors(list: Subflavor[]) {
   return [...list].sort((a, b) => {
     if (b.importance !== a.importance) return b.importance - a.importance;
     if (a.orderIndex !== b.orderIndex) return a.orderIndex - b.orderIndex;
@@ -40,17 +39,20 @@ type FormState = {
   orderIndex: number;
 };
 
-export default function FlavorsClient({
+export default function SubflavorsClient({
   userId,
-  initialFlavors,
+  flavorId,
+  initialSubflavors,
 }: {
   userId: string;
-  initialFlavors: Flavor[];
+  flavorId: string;
+  initialSubflavors: Subflavor[];
 }) {
-  const router = useRouter();
-  const [flavors, setFlavors] = useState<Flavor[]>(sortFlavors(initialFlavors));
+  const [subflavors, setSubflavors] = useState<Subflavor[]>(
+    sortSubflavors(initialSubflavors),
+  );
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Flavor | null>(null);
+  const [editing, setEditing] = useState<Subflavor | null>(null);
   const [form, setForm] = useState<FormState>({
     name: '',
     description: '',
@@ -90,14 +92,14 @@ export default function FlavorsClient({
       importance: 50,
       targetMix: 50,
       visibility: 'private' as Visibility,
-      orderIndex: flavors.length,
+      orderIndex: subflavors.length,
     };
     setForm(blank);
     setInitialForm(blank);
     setModalOpen(true);
   }
 
-  function openEdit(f: Flavor, e: HTMLElement) {
+  function openEdit(f: Subflavor, e: HTMLElement) {
     triggerRef.current = e;
     const current = {
       name: f.name,
@@ -115,10 +117,10 @@ export default function FlavorsClient({
     setModalOpen(true);
   }
 
-  async function remove(f: Flavor) {
+  async function remove(f: Subflavor) {
     if (!confirm(`Delete '${f.name}'? This can't be undone.`)) return;
-    await fetch(`/api/flavors/${f.id}`, { method: 'DELETE' });
-    setFlavors((prev) => prev.filter((p) => p.id !== f.id));
+    await fetch(`/api/subflavors/${f.id}`, { method: 'DELETE' });
+    setSubflavors((prev) => prev.filter((p) => p.id !== f.id));
   }
 
   const attemptClose = useCallback(() => {
@@ -139,14 +141,14 @@ export default function FlavorsClient({
     setError('');
     try {
       const data = editing
-        ? await updateFlavor(editing.id, form)
-        : await createFlavor(form);
+        ? await updateSubflavor(flavorId, editing.id, form)
+        : await createSubflavor(flavorId, form);
       if (editing) {
-        setFlavors((prev) =>
-          sortFlavors(prev.map((p) => (p.id === data.id ? data : p))),
+        setSubflavors((prev) =>
+          sortSubflavors(prev.map((p) => (p.id === data.id ? data : p))),
         );
       } else {
-        setFlavors((prev) => sortFlavors([...prev, data]));
+        setSubflavors((prev) => sortSubflavors([...prev, data]));
       }
       setModalOpen(false);
       setEditing(null);
@@ -206,16 +208,16 @@ export default function FlavorsClient({
         <button
           onClick={(e) => openCreate(e.currentTarget)}
           className="rounded bg-orange-500 px-3 py-2 text-white"
-          id={`f7avoured1tnew-${userId}`}
+          id={`s7ubflavoured1tnew-${userId}`}
         >
-          New Flavor
+          New Subflavor
         </button>
       </div>
-      <ul className="flex flex-col gap-4" id={`f7avourli5t-${userId}`}>
-        {flavors.map((f) => (
+      <ul className="flex flex-col gap-4" id={`s7ubflavourli5t-${userId}`}>
+        {subflavors.map((f) => (
           <li
             key={f.id}
-            id={`f7avourrow${f.id}-${userId}`}
+            id={`s7ubflavourrow${f.id}-${userId}`}
             role="button"
             tabIndex={0}
             onClick={(e) => openEdit(f, e.currentTarget)}
@@ -226,50 +228,38 @@ export default function FlavorsClient({
             }}
             className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
           >
-            <div className="flex flex-col items-center">
-              <div
-                id={`f7avourava${f.id}-${userId}`}
-                aria-label={`${f.name} flavor, importance ${f.importance}, target ${f.targetMix} percent, ${f.visibility}`}
-                title={`Importance: ${f.importance} • Target: ${f.targetMix}%`}
-                style={
-                  {
-                    '--importance': f.importance,
-                    '--diam': `clamp(44px, calc(28px + 0.8px * var(--importance)), 120px)`,
-                    backgroundColor: f.color,
-                    width: 'var(--diam)',
-                    height: 'var(--diam)',
-                  } as React.CSSProperties
-                }
-                className="flex items-center justify-center rounded-full shadow-inner"
+            <div
+              id={`s7ubflavourava${f.id}-${userId}`}
+              aria-label={`${f.name} subflavor, importance ${f.importance}, target ${f.targetMix} percent, ${f.visibility}`}
+              title={`Importance: ${f.importance} • Target: ${f.targetMix}%`}
+              style={
+                {
+                  '--importance': f.importance,
+                  '--diam': `clamp(44px, calc(28px + 0.8px * var(--importance)), 120px)`,
+                  backgroundColor: f.color,
+                  width: 'var(--diam)',
+                  height: 'var(--diam)',
+                } as React.CSSProperties
+              }
+              className="flex items-center justify-center rounded-full shadow-inner"
+            >
+              <span
+                className="text-white"
+                style={{ fontSize: 'min(44px, calc(var(--diam)*0.48))' }}
               >
-                <span
-                  className="text-white"
-                  style={{ fontSize: 'min(44px, calc(var(--diam)*0.48))' }}
-                >
-                  {f.icon}
-                </span>
-              </div>
-              <button
-                id={`f7avsubfbtn${f.id}-${userId}`}
-                className="mt-2 text-xs text-blue-600 underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/flavors/${f.id}/subflavors`);
-                }}
-              >
-                View Subflavors
-              </button>
+                {f.icon}
+              </span>
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div
-                id={`f7avourn4me${f.id}-${userId}`}
+                id={`s7ubflavourn4me${f.id}-${userId}`}
                 className="font-semibold"
                 style={{ color: '#000' }}
               >
                 {f.name}
               </div>
               <div
-                id={`f7avourde5cr${f.id}-${userId}`}
+                id={`s7ubflavourde5cr${f.id}-${userId}`}
                 className="text-sm text-gray-500"
               >
                 {f.description}
@@ -284,14 +274,14 @@ export default function FlavorsClient({
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                id={`f7avoured1t${f.id}-${userId}`}
+                id={`s7ubflavoured1t${f.id}-${userId}`}
                 className="text-sm text-blue-600 underline"
                 onClick={(e) => openEdit(f, e.currentTarget)}
               >
                 Edit ▸
               </button>
               <button
-                id={`f7avourd3l${f.id}-${userId}`}
+                id={`s7ubflavourd3l${f.id}-${userId}`}
                 className="text-sm text-red-600 underline"
                 onClick={() => remove(f)}
               >
@@ -303,11 +293,11 @@ export default function FlavorsClient({
       </ul>
       {modalOpen && (
         <div
-          id={`f7avourmdl-${mode}-${userId}`}
+          id={`s7ubflavourmdl-${mode}-${userId}`}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md"
           aria-modal="true"
           role="dialog"
-          aria-labelledby="flavor-modal-title"
+          aria-labelledby="subflavor-modal-title"
           onClick={attemptClose}
         >
           <div
@@ -316,8 +306,8 @@ export default function FlavorsClient({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 id="flavor-modal-title" className="text-lg font-semibold">
-                {editing ? 'Edit Flavor' : 'New Flavor'}
+              <h2 id="subflavor-modal-title" className="text-lg font-semibold">
+                {editing ? 'Edit Subflavor' : 'New Subflavor'}
               </h2>
               <div
                 style={
@@ -349,12 +339,12 @@ export default function FlavorsClient({
               <div>
                 <label
                   className="block text-sm font-medium"
-                  htmlFor={`f7avourn4me-frm-${userId}`}
+                  htmlFor={`s7ubflavourn4me-frm-${userId}`}
                 >
                   Name
                 </label>
                 <input
-                  id={`f7avourn4me-frm-${userId}`}
+                  id={`s7ubflavourn4me-frm-${userId}`}
                   className="w-full rounded border p-1"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -366,13 +356,13 @@ export default function FlavorsClient({
               <div className="md:col-span-2">
                 <label
                   className="block text-sm font-medium"
-                  htmlFor={`f7avourde5cr-frm-${userId}`}
+                  htmlFor={`s7ubflavourde5cr-frm-${userId}`}
                 >
                   Description
                 </label>
                 <div className="relative">
                   <textarea
-                    id={`f7avourde5cr-frm-${userId}`}
+                    id={`s7ubflavourde5cr-frm-${userId}`}
                     className="w-full resize-none overflow-hidden rounded border p-1"
                     value={form.description}
                     onChange={handleDescription}
@@ -429,12 +419,12 @@ export default function FlavorsClient({
               <div>
                 <label
                   className="block text-sm font-medium"
-                  htmlFor={`f7avour1mp-frm-${userId}`}
+                  htmlFor={`s7ubflavour1mp-frm-${userId}`}
                 >
                   Importance
                 </label>
                 <input
-                  id={`f7avour1mp-frm-${userId}`}
+                  id={`s7ubflavour1mp-frm-${userId}`}
                   type="range"
                   min={0}
                   max={100}
@@ -448,12 +438,12 @@ export default function FlavorsClient({
               <div>
                 <label
                   className="block text-sm font-medium"
-                  htmlFor={`f7avourt4rg-frm-${userId}`}
+                  htmlFor={`s7ubflavourt4rg-frm-${userId}`}
                 >
                   Target %
                 </label>
                 <input
-                  id={`f7avourt4rg-frm-${userId}`}
+                  id={`s7ubflavourt4rg-frm-${userId}`}
                   type="number"
                   min={0}
                   max={100}
@@ -489,14 +479,14 @@ export default function FlavorsClient({
               <div className="md:col-span-2 flex justify-end gap-2 pt-4">
                 <button
                   type="button"
-                  id={`f7avourcnl-frm-${userId}`}
+                  id={`s7ubflavourcnl-frm-${userId}`}
                   className="rounded border px-3 py-1"
                   onClick={attemptClose}
                 >
                   Cancel
                 </button>
                 <button
-                  id={`f7avoursav-frm-${userId}`}
+                  id={`s7ubflavoursav-frm-${userId}`}
                   type="submit"
                   disabled={submitting}
                   className="rounded bg-orange-500 px-3 py-1 text-white disabled:opacity-50"
