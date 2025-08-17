@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-const password = process.env.GUEST_PASSWORD ?? '';
-
 function rgb(hex: string) {
   const bigint = parseInt(hex.slice(1), 16);
   const r = (bigint >> 16) & 255;
@@ -11,9 +9,13 @@ function rgb(hex: string) {
 }
 
 test('flavor CRUD and ordering', async ({ page }) => {
-  await page.goto('/signin');
-  await page.fill('input[type="password"]', password);
-  await page.click('text=Enter');
+  const email = `user${Date.now()}@example.com`;
+  const password = 'pass1234';
+  await page.goto('/signup');
+  await page.fill('input[placeholder="Name"]', 'Tester');
+  await page.fill('input[placeholder="Email"]', email);
+  await page.fill('input[placeholder="Password"]', password);
+  await page.click('text=Sign Up');
   await page.goto('/flavors');
 
   // create first flavor
