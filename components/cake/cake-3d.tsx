@@ -33,6 +33,7 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
   const radius = baseSize / 2;
   const labelRadius = radius * 0.58;
   const labelFont = Math.max(10, radius * 0.18);
+  const nudgeX = -radius * 0.1;
 
   return (
     <div
@@ -42,7 +43,9 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
     >
       <div
         className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 [transform-style:preserve-3d]"
-        style={{ transform: `rotateX(-16deg) scale(${cakeScale})` }}
+        style={{
+          transform: `translateX(${nudgeX}px) rotateX(-16deg) scale(${cakeScale})`,
+        }}
       >
         {slices.map((slice, i) => {
           const rotate = i * 60;
@@ -76,7 +79,7 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
               <div
                 className="absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-full -translate-y-full origin-bottom-left rounded-br-[100%] shadow-md"
                 style={{
-                  transform: `rotate(${rotate}deg)` ,
+                  transform: `rotate(${rotate}deg)`,
                   backgroundColor: slice.color,
                 }}
               >
@@ -87,7 +90,7 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
                     fontSize: `${labelFont}px`,
                     left: '50%',
                     bottom: '50%',
-                    transform: `translate(${labelRadius}px, -50%) rotate(${-rotate}deg)` ,
+                    transform: `translate(${labelRadius}px, -50%) rotate(${-rotate}deg)`,
                   }}
                 >
                   {t(`nav.${slice.slug}`)}
@@ -100,4 +103,3 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
     </div>
   );
 }
-
