@@ -25,3 +25,4 @@
 - 2025-08-23: Replaced flavor drawer with centered modal, added server actions for create/update, autosizing description field, and updated tests.
 - 2025-08-24: Persisted user id in NextAuth session to fix "Please sign in" error when saving flavors.
 - 2025-08-24: Prevented modal from refocusing on the name field while typing flavor descriptions.
+- 2025-08-24: Added email/password sign up & login with user-specific flavor persistence.
