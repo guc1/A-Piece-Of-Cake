@@ -46,7 +46,7 @@ export default async function PeoplePage() {
   );
 
   const friends: typeof allUsers = [];
-  const followersList: typeof allUsers = [];
+  const following: typeof allUsers = [];
   const discover: ((typeof allUsers)[number] & { status?: string })[] = [];
 
   for (const u of allUsers) {
@@ -63,10 +63,10 @@ export default async function PeoplePage() {
     if (myStatus === 'accepted' && theirStatus === 'accepted') {
       friends.push(u);
     } else if (myStatus === 'accepted' && theirStatus !== 'accepted') {
-      followersList.push(u);
+      following.push(u);
     } else if (myStatus === 'pending') {
       discover.push({ ...u, status: 'pending' });
-    } else if (!myStatus && !theirStatus) {
+    } else if (!myStatus) {
       discover.push(u);
     }
   }
@@ -84,8 +84,8 @@ export default async function PeoplePage() {
         <UserList users={friends} relation="friend" />
       </div>
       <div>
-        <h2 className="text-xl font-semibold mb-2">Followers</h2>
-        <UserList users={followersList} relation="following" />
+        <h2 className="text-xl font-semibold mb-2">Following</h2>
+        <UserList users={following} relation="following" />
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Discover</h2>
