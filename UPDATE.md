@@ -6,8 +6,10 @@
 
 - 2025-08-17: Replaced auth wrapper with NextAuth factory to fix runtime error.
 - 2025-08-17: Switched to getServerSession helper and direct NextAuth route handler to resolve "auth is not a function" error.
+- 2025-08-17: Added 3D cake component with animated wedges and keyboard-accessible light boxes.
 
 ## Follow-ups
+
 - [ ] Add OAuth (Google) + DB adapter for NextAuth
 - [ ] Implement onboarding for Signature Ethos + Credo
 - [ ] Wire flavors UI to DB
