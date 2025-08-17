@@ -3,7 +3,9 @@
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { follows, notifications, users } from '@/lib/db/schema';
+import { createUser, getUserByHandle } from '@/lib/users';
 import { and, eq } from 'drizzle-orm';
+import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
 
 export async function followRequest(
@@ -11,9 +13,35 @@ export async function followRequest(
   _formData?: FormData,
 ): Promise<void> {
   const session = await auth();
-  const me = Number(session?.user?.id);
+  let me = Number(session?.user?.id);
   if (!me) throw new Error('Please sign in.');
   if (me === targetId) throw new Error('Cannot follow yourself.');
+
+  // Ensure the current user exists to avoid foreign key issues
+  let [self] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, me));
+  if (!self) {
+    const email = session?.user?.email;
+    if (!email) throw new Error('User not found');
+    // derive a handle from the email and ensure uniqueness
+    let baseHandle = email.split('@')[0];
+    let handle = baseHandle;
+    let suffix = 1;
+    while (await getUserByHandle(handle)) {
+      handle = `${baseHandle}${suffix++}`;
+    }
+    const password = randomBytes(16).toString('hex');
+    const user = await createUser({
+      email,
+      password,
+      handle,
+      displayName: session?.user?.name ?? undefined,
+    });
+    me = user.id;
+    self = { id: user.id };
+  }
 
   const [target] = await db
     .select({ accountVisibility: users.accountVisibility })
