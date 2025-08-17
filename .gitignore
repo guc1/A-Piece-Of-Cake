@@ -5,4 +5,10 @@ out
 .env.local
 .DS_Store
 playwright-report
+*.tsbuildinfo
+test-results
+.nyc_output
+.coverage
+.pnpm-store
+.turbo
 .babelrc

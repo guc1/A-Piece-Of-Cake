@@ -41,6 +41,12 @@ export async function followRequest(
       fromUserId: me,
       type: 'follow_request',
     });
+  } else {
+    await db.insert(notifications).values({
+      toUserId: me,
+      fromUserId: targetId,
+      type: 'follow_accepted',
+    });
   }
 
   revalidatePath('/people');
