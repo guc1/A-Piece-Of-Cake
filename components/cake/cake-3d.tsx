@@ -2,20 +2,21 @@
 
 import React, { CSSProperties, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { t } from '@/lib/i18n';
 import { slices } from './slices';
 
 interface Cake3DProps {
   activeSlug: string | null;
   hoveredSlug: string | null;
-  setHoveredSlug: (slug: string | null) => void;
+  onHover: (slug: string) => void;
+  onLeave: () => void;
   userId: string | number;
 }
 
 export function Cake3D({
   activeSlug,
   hoveredSlug,
-  setHoveredSlug,
+  onHover,
+  onLeave,
   userId,
 }: Cake3DProps) {
   const router = useRouter();
@@ -91,7 +92,7 @@ export function Cake3D({
             <button
               key={slice.slug}
               id={`cak3hit-${slice.slug}-${userId}`}
-              aria-label={t(`nav.${slice.slug}`)}
+              aria-label={slice.label}
               role="link"
               tabIndex={0}
               onClick={() => router.push(slice.href)}
@@ -101,10 +102,10 @@ export function Cake3D({
                   router.push(slice.href);
                 }
               }}
-              onPointerEnter={() => setHoveredSlug(slice.slug)}
-              onPointerLeave={() => setHoveredSlug(null)}
-              onFocus={() => setHoveredSlug(slice.slug)}
-              onBlur={() => setHoveredSlug(null)}
+              onPointerEnter={() => onHover(slice.slug)}
+              onPointerLeave={onLeave}
+              onFocus={() => onHover(slice.slug)}
+              onBlur={onLeave}
               className="absolute inset-0 cursor-pointer bg-transparent"
               style={style}
             >
