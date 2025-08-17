@@ -11,3 +11,11 @@ Examples:
 - `cak3seg-{slug}-{userId}` → cake slice segment (e.g., `cak3seg-planning-42`).
 - `n4vbox-{slug}-{userId}` → navigation light box (e.g., `n4vbox-planning-42`).
 - `cak3titleText` → page heading text.
+- `f7avourrow{flavorId}-{userId}` → flavor row container.
+- `f7avourava{flavorId}-{userId}` → flavor avatar.
+- `f7avourn4me{flavorId}-{userId}` → flavor title element.
+- `f7avourde5cr{flavorId}-{userId}` → flavor description element.
+- `f7avour1mp{flavorId}-{userId}` → importance slider input.
+- `f7avourt4rg{flavorId}-{userId}` → target percentage input.
+- `f7avoured1t{flavorId}-{userId}` → edit action.
+- `f7avourd3l{flavorId}-{userId}` → delete action.
