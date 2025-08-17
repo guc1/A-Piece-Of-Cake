@@ -15,11 +15,15 @@ export const accountVisibilityEnum = pgEnum('account_visibility', [
   'private',
 ]);
 
-export const followStatusEnum = pgEnum('follow_status', ['pending', 'accepted']);
+export const followStatusEnum = pgEnum('follow_status', [
+  'pending',
+  'accepted',
+]);
 
 export const notificationTypeEnum = pgEnum('notification_type', [
   'follow_request',
   'follow_accepted',
+  'follow_declined',
   'unfollow',
 ]);
 
@@ -75,24 +79,31 @@ export const follows = pgTable(
   'follows',
   {
     id: serial('id').primaryKey(),
-    followerId: integer('follower_id').references(() => users.id).notNull(),
-    followingId: integer('following_id').references(() => users.id).notNull(),
+    followerId: integer('follower_id')
+      .references(() => users.id)
+      .notNull(),
+    followingId: integer('following_id')
+      .references(() => users.id)
+      .notNull(),
     status: followStatusEnum('status').notNull().default('pending'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },
   (table) => ({
-    uniqueFollowerFollowing: uniqueIndex('follows_follower_following_unique').on(
-      table.followerId,
-      table.followingId,
-    ),
+    uniqueFollowerFollowing: uniqueIndex(
+      'follows_follower_following_unique',
+    ).on(table.followerId, table.followingId),
   }),
 );
 
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
-  toUserId: integer('to_user_id').references(() => users.id).notNull(),
-  fromUserId: integer('from_user_id').references(() => users.id).notNull(),
+  toUserId: integer('to_user_id')
+    .references(() => users.id)
+    .notNull(),
+  fromUserId: integer('from_user_id')
+    .references(() => users.id)
+    .notNull(),
   type: notificationTypeEnum('type').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   readAt: timestamp('read_at'),

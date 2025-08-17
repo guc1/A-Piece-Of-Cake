@@ -53,10 +53,6 @@ export default async function PeoplePage() {
     if (u.accountVisibility === 'private') continue;
     const myStatus = myMap.get(u.id);
     const theirStatus = inboundMap.get(u.id);
-    if (u.accountVisibility !== 'open' && !myStatus && !theirStatus) {
-      // skip closed accounts with no relationship
-      continue;
-    }
     if (myStatus === 'accepted' && theirStatus === 'accepted') {
       friends.push(u);
     } else if (myStatus === 'accepted' || myStatus === 'pending') {
@@ -151,6 +147,13 @@ function UserAction({
         </form>
       );
     case 'discover':
+      if (user.status === 'accepted') {
+        return (
+          <form action={followRequest.bind(null, user.id)}>
+            <Button size="sm">Follow back</Button>
+          </form>
+        );
+      }
       return (
         <form action={followRequest.bind(null, user.id)}>
           <Button size="sm">
