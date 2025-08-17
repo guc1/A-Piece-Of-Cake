@@ -3,6 +3,7 @@
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { follows, notifications, users } from '@/lib/db/schema';
+import { ensureUser } from '@/lib/users';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
@@ -11,8 +12,8 @@ export async function followRequest(
   _formData?: FormData,
 ): Promise<void> {
   const session = await auth();
-  const me = Number(session?.user?.id);
-  if (!me) throw new Error('Please sign in.');
+  const self = await ensureUser(session);
+  const me = self.id;
   if (me === targetId) throw new Error('Cannot follow yourself.');
 
   const [target] = await db
@@ -50,8 +51,8 @@ export async function cancelFollowRequest(
   _formData?: FormData,
 ): Promise<void> {
   const session = await auth();
-  const me = Number(session?.user?.id);
-  if (!me) throw new Error('Please sign in.');
+  const self = await ensureUser(session);
+  const me = self.id;
   await db
     .delete(follows)
     .where(
@@ -69,8 +70,8 @@ export async function acceptFollowRequest(
   _formData?: FormData,
 ): Promise<void> {
   const session = await auth();
-  const me = Number(session?.user?.id);
-  if (!me) throw new Error('Please sign in.');
+  const self = await ensureUser(session);
+  const me = self.id;
   const [req] = await db
     .select()
     .from(follows)
@@ -95,8 +96,8 @@ export async function unfollow(
   _formData?: FormData,
 ): Promise<void> {
   const session = await auth();
-  const me = Number(session?.user?.id);
-  if (!me) throw new Error('Please sign in.');
+  const self = await ensureUser(session);
+  const me = self.id;
   await db
     .delete(follows)
     .where(and(eq(follows.followerId, me), eq(follows.followingId, targetId)));
@@ -108,8 +109,8 @@ export async function declineFollowRequest(
   _formData?: FormData,
 ): Promise<void> {
   const session = await auth();
-  const me = Number(session?.user?.id);
-  if (!me) throw new Error('Please sign in.');
+  const self = await ensureUser(session);
+  const me = self.id;
   await db
     .delete(follows)
     .where(

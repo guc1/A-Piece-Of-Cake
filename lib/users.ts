@@ -2,6 +2,7 @@ import { db } from './db';
 import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+import type { Session } from 'next-auth';
 
 export interface NewUser {
   email: string;
@@ -51,4 +52,28 @@ export async function getUserByEmail(email: string) {
 export async function getUserByHandle(handle: string) {
   const [user] = await db.select().from(users).where(eq(users.handle, handle));
   return user ?? null;
+}
+
+export async function ensureUser(session: Session | null) {
+  const email = session?.user?.email;
+  if (!email) throw new Error('Please sign in.');
+
+  let user = await getUserByEmail(email);
+  if (user) return user;
+
+  let baseHandle = email.split('@')[0];
+  let handle = baseHandle;
+  let suffix = 1;
+  while (await getUserByHandle(handle)) {
+    handle = `${baseHandle}${suffix++}`;
+  }
+
+  const password = randomBytes(16).toString('hex');
+  user = await createUser({
+    email,
+    password,
+    handle,
+    displayName: session?.user?.name ?? undefined,
+  });
+  return user;
 }
