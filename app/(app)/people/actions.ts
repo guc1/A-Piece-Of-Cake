@@ -42,11 +42,18 @@ export async function followRequest(
       type: 'follow_request',
     });
   } else {
-    await db.insert(notifications).values({
-      toUserId: me,
-      fromUserId: targetId,
-      type: 'follow_accepted',
-    });
+    await db.insert(notifications).values([
+      {
+        toUserId: targetId,
+        fromUserId: me,
+        type: 'follow_request',
+      },
+      {
+        toUserId: me,
+        fromUserId: targetId,
+        type: 'follow_accepted',
+      },
+    ]);
   }
 
   revalidatePath('/people');
@@ -107,6 +114,12 @@ export async function unfollow(
   await db
     .delete(follows)
     .where(and(eq(follows.followerId, me), eq(follows.followingId, targetId)));
+
+  await db.insert(notifications).values({
+    toUserId: targetId,
+    fromUserId: me,
+    type: 'unfollow',
+  });
   revalidatePath('/people');
 }
 

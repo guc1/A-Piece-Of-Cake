@@ -46,28 +46,23 @@ export default async function PeoplePage() {
   );
 
   const friends: typeof allUsers = [];
-  const followersList: typeof allUsers = [];
+  const following: ((typeof allUsers)[number] & { status?: string })[] = [];
   const discover: ((typeof allUsers)[number] & { status?: string })[] = [];
 
   for (const u of allUsers) {
     if (u.accountVisibility === 'private') continue;
     const myStatus = myMap.get(u.id);
     const theirStatus = inboundMap.get(u.id);
-    if (
-      u.accountVisibility !== 'open' &&
-      myStatus !== 'accepted' &&
-      theirStatus !== 'accepted'
-    ) {
+    if (u.accountVisibility !== 'open' && !myStatus && !theirStatus) {
+      // skip closed accounts with no relationship
       continue;
     }
     if (myStatus === 'accepted' && theirStatus === 'accepted') {
       friends.push(u);
-    } else if (myStatus === 'accepted' && theirStatus !== 'accepted') {
-      followersList.push(u);
-    } else if (myStatus === 'pending') {
-      discover.push({ ...u, status: 'pending' });
-    } else if (!myStatus && !theirStatus) {
-      discover.push(u);
+    } else if (myStatus === 'accepted' || myStatus === 'pending') {
+      following.push({ ...u, status: myStatus });
+    } else {
+      discover.push({ ...u, status: theirStatus });
     }
   }
 
@@ -84,8 +79,8 @@ export default async function PeoplePage() {
         <UserList users={friends} relation="friend" />
       </div>
       <div>
-        <h2 className="text-xl font-semibold mb-2">Followers</h2>
-        <UserList users={followersList} relation="following" />
+        <h2 className="text-xl font-semibold mb-2">Following</h2>
+        <UserList users={following} relation="following" />
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Discover</h2>
@@ -139,14 +134,6 @@ function UserAction({
   switch (relation) {
     case 'friend':
     case 'following':
-      return (
-        <form action={unfollow.bind(null, user.id)}>
-          <Button variant="outline" size="sm">
-            Unfollow
-          </Button>
-        </form>
-      );
-    case 'discover':
       if (user.status === 'pending') {
         return (
           <form action={cancelFollowRequest.bind(null, user.id)}>
@@ -156,6 +143,14 @@ function UserAction({
           </form>
         );
       }
+      return (
+        <form action={unfollow.bind(null, user.id)}>
+          <Button variant="outline" size="sm">
+            Unfollow
+          </Button>
+        </form>
+      );
+    case 'discover':
       return (
         <form action={followRequest.bind(null, user.id)}>
           <Button size="sm">

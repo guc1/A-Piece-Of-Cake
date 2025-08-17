@@ -20,6 +20,7 @@ export const followStatusEnum = pgEnum('follow_status', ['pending', 'accepted'])
 export const notificationTypeEnum = pgEnum('notification_type', [
   'follow_request',
   'follow_accepted',
+  'unfollow',
 ]);
 
 export const users = pgTable('users', {
