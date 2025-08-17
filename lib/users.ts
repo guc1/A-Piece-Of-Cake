@@ -6,6 +6,10 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 export interface NewUser {
   email: string;
   password: string;
+  handle: string;
+  displayName?: string;
+  avatarUrl?: string;
+  accountVisibility?: 'open' | 'closed' | 'private';
   name?: string;
 }
 
@@ -26,12 +30,25 @@ export async function createUser(input: NewUser) {
   const passwordHash = hashPassword(input.password);
   const [user] = await db
     .insert(users)
-    .values({ email: input.email, name: input.name, passwordHash })
+    .values({
+      email: input.email,
+      handle: input.handle,
+      displayName: input.displayName ?? input.name,
+      avatarUrl: input.avatarUrl,
+      accountVisibility: input.accountVisibility ?? 'open',
+      name: input.name,
+      passwordHash,
+    })
     .returning();
   return user;
 }
 
 export async function getUserByEmail(email: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email));
+  return user ?? null;
+}
+
+export async function getUserByHandle(handle: string) {
+  const [user] = await db.select().from(users).where(eq(users.handle, handle));
   return user ?? null;
 }
