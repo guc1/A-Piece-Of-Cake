@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 function GearIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -21,12 +22,10 @@ function GearIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export function SettingsButton() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
-  const [visibility, setVisibility] = useState<
-    'open' | 'closed' | 'private' | null
-  >(null);
-  const followers = 0; // TODO: replace with real follower count
+  const [followers, setFollowers] = useState(0);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('color-mode');
@@ -34,9 +33,9 @@ export function SettingsButton() {
       setDark(true);
       document.documentElement.classList.add('dark');
     }
-    fetch('/api/account/visibility')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setVisibility(data?.accountVisibility ?? 'open'));
+    void fetchFollowers();
+    const id = setInterval(fetchFollowers, 5000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -49,13 +48,12 @@ export function SettingsButton() {
     }
   }, [dark]);
 
-  async function changeVisibility(v: 'open' | 'closed' | 'private') {
-    setVisibility(v);
-    await fetch('/api/account/visibility', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountVisibility: v }),
-    });
+  async function fetchFollowers() {
+    const res = await fetch('/api/account/followers');
+    if (res.ok) {
+      const data = await res.json();
+      setFollowers(data.followers ?? 0);
+    }
   }
 
   return (
@@ -72,28 +70,22 @@ export function SettingsButton() {
           <div className="mb-2">Followers: {followers}</div>
           <div className="mb-2 flex items-center justify-between">
             <span>Dark Mode</span>
-            <input
-              type="checkbox"
-              checked={dark}
-              onChange={(e) => setDark(e.target.checked)}
-            />
-          </div>
-          <div className="mb-2 flex items-center justify-between">
-            <span>Account</span>
-            <select
-              value={visibility ?? ''}
-              onChange={(e) =>
-                changeVisibility(
-                  e.target.value as 'open' | 'closed' | 'private',
-                )
-              }
-              className="rounded border px-1 py-0.5"
+            <button
+              className="rounded border px-2 py-0.5"
+              onClick={() => setDark((v) => !v)}
             >
-              <option value="open">open</option>
-              <option value="closed">closed</option>
-              <option value="private">private</option>
-            </select>
+              {dark ? 'On' : 'Off'}
+            </button>
           </div>
+          <button
+            className="mb-2 w-full rounded border bg-[var(--surface)] px-3 py-1 hover:bg-[var(--bg)]"
+            onClick={() => {
+              setOpen(false);
+              router.push('/settings/account');
+            }}
+          >
+            Account settings
+          </button>
           <button
             className="mt-2 w-full rounded bg-[var(--accent)] px-3 py-1 text-white hover:opacity-90"
             onClick={() => signOut()}

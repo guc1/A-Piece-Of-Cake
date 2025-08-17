@@ -36,3 +36,4 @@
  - 2025-08-27: Auto-created missing user records during follow to avoid "User not found" errors.
 - 2025-08-27: Reconciled session users with DB via email, preventing duplicate records and hiding self on People page.
 - 2025-08-28: Enabled class-based dark mode toggle, added account visibility API route, and sent inbox notifications for auto-accepted follows.
+ - 2025-08-29: Fixed dark mode toggle, added real-time follower count API with polling, and created account settings page.
