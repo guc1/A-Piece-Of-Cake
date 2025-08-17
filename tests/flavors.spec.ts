@@ -17,25 +17,25 @@ test('flavor CRUD and ordering', async ({ page }) => {
   await page.goto('/flavors');
 
   // create first flavor
-  await page.click('text=+ Flavor');
-  await page.fill('input[id^="f7avourn4me"]', 'First');
-  await page.fill('textarea[id^="f7avourde5cr"]', 'desc1');
-  await page.fill('input[type="color"]', '#ff0000');
-  await page.selectOption('select', { value: '⭐' });
-  await page.fill('input[id^="f7avour1mp"]', '60');
-  await page.fill('input[id^="f7avourt4rg"]', '20');
-  await page.click('button:has-text("Save")');
+  await page.click('text=New Flavor');
+  await page.fill('input[id^="f7avourn4me-frm"]', 'First');
+  await page.fill('textarea[id^="f7avourde5cr-frm"]', 'desc1');
+  await page.fill('input[name="color"]', '#ff0000');
+  await page.click('button:has-text("⭐")');
+  await page.fill('input[id^="f7avour1mp-frm"]', '60');
+  await page.fill('input[id^="f7avourt4rg-frm"]', '20');
+  await page.click('button[id^="f7avoursav-frm"]');
   await expect(page.locator('li:has-text("First")')).toBeVisible();
 
   // create second flavor with higher importance
-  await page.click('text=+ Flavor');
-  await page.fill('input[id^="f7avourn4me"]', 'Second');
-  await page.fill('textarea[id^="f7avourde5cr"]', 'desc2');
-  await page.fill('input[type="color"]', '#00ff00');
-  await page.selectOption('select', { value: '📚' });
-  await page.fill('input[id^="f7avour1mp"]', '80');
-  await page.fill('input[id^="f7avourt4rg"]', '30');
-  await page.click('button:has-text("Save")');
+  await page.click('text=New Flavor');
+  await page.fill('input[id^="f7avourn4me-frm"]', 'Second');
+  await page.fill('textarea[id^="f7avourde5cr-frm"]', 'desc2');
+  await page.fill('input[name="color"]', '#00ff00');
+  await page.click('button:has-text("📚")');
+  await page.fill('input[id^="f7avour1mp-frm"]', '80');
+  await page.fill('input[id^="f7avourt4rg-frm"]', '30');
+  await page.click('button[id^="f7avoursav-frm"]');
 
   const rows = page.locator('ul[id^="f7avourli5t"] > li');
   await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText('Second');
@@ -48,16 +48,16 @@ test('flavor CRUD and ordering', async ({ page }) => {
 
   // edit importance of First to reorder
   await rows.nth(1).click();
-  await page.fill('input[id^="f7avour1mp"]', '90');
-  await page.click('button:has-text("Save")');
+  await page.fill('input[id^="f7avour1mp-frm"]', '90');
+  await page.click('button[id^="f7avoursav-frm"]');
   await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText('First');
 
   // edit text/color/icon
   await rows.first().click();
-  await page.fill('input[id^="f7avourn4me"]', 'First Updated');
-  await page.fill('input[type="color"]', '#0000ff');
-  await page.selectOption('select', { value: '❤️' });
-  await page.click('button:has-text("Save")');
+  await page.fill('input[id^="f7avourn4me-frm"]', 'First Updated');
+  await page.fill('input[name="color"]', '#0000ff');
+  await page.click('button:has-text("❤️")');
+  await page.click('button[id^="f7avoursav-frm"]');
   await page.reload();
   await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText('First Updated');
   const color = await rows.first().locator('div[id^="f7avourava"]').evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -67,9 +67,9 @@ test('flavor CRUD and ordering', async ({ page }) => {
   // keyboard interaction: focus row, open with Enter then close with Esc
   await rows.first().focus();
   await page.keyboard.press('Enter');
-  await expect(page.locator('button:has-text("Save")')).toBeVisible();
+  await expect(page.locator('button[id^="f7avoursav-frm"]')).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.locator('button:has-text("Save")')).not.toBeVisible();
+  await expect(page.locator('button[id^="f7avoursav-frm"]')).not.toBeVisible();
 
   // delete flavor
   page.on('dialog', (d) => d.accept());
