@@ -32,8 +32,10 @@
 - 2025-08-27: Introduced social "People" pages with follow system, inbox for requests, and profile visibility enforcement.
 - 2025-08-27: Fixed sign-up flow to require unique handle, enabling multiple user accounts; updated Playwright tests and added people listing test.
 - 2025-08-27: Added account visibility API and settings control; only open accounts are visible in People page.
- - 2025-08-27: Validated follower existence in follow action to prevent foreign key errors.
- - 2025-08-27: Auto-created missing user records during follow to avoid "User not found" errors.
+- 2025-08-27: Validated follower existence in follow action to prevent foreign key errors.
+- 2025-08-27: Auto-created missing user records during follow to avoid "User not found" errors.
 - 2025-08-27: Reconciled session users with DB via email, preventing duplicate records and hiding self on People page.
 - 2025-08-28: Enabled class-based dark mode toggle, added account visibility API route, and sent inbox notifications for auto-accepted follows.
 - 2025-08-30: Added followers API, updated settings menu with live follower count, dark mode toggle fix, and link to new account settings page for visibility changes.
+- 2025-08-30: Fixed follow visibility and notifications; renamed People page section to "Following" so followed users remain discoverable.
+- 2025-08-30: Kept closed-account follows visible, added unfollow notifications, and surfaced them in the inbox.
