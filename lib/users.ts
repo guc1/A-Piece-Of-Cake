@@ -24,14 +24,28 @@ export function verifyPassword(password: string, hash: string): boolean {
 
 export async function createUser(input: NewUser) {
   const passwordHash = hashPassword(input.password);
+  const handle = input.email.split('@')[0];
+  const displayName = input.name ?? handle;
   const [user] = await db
     .insert(users)
-    .values({ email: input.email, name: input.name, passwordHash })
+    .values({
+      email: input.email,
+      name: input.name,
+      passwordHash,
+      handle,
+      displayName,
+      accountVisibility: 'open',
+    })
     .returning();
   return user;
 }
 
 export async function getUserByEmail(email: string) {
   const [user] = await db.select().from(users).where(eq(users.email, email));
+  return user ?? null;
+}
+
+export async function getUserById(id: number) {
+  const [user] = await db.select().from(users).where(eq(users.id, id));
   return user ?? null;
 }
