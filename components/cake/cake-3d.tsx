@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { t } from '@/lib/i18n';
 import { slices } from './slices';
 
 interface Cake3DProps {
@@ -9,6 +11,7 @@ interface Cake3DProps {
 }
 
 export function Cake3D({ activeSlug, userId }: Cake3DProps) {
+  const router = useRouter();
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
@@ -25,14 +28,21 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
     ? 'transform 200ms ease-out'
     : 'transform 260ms cubic-bezier(0.34,1.56,0.64,1)';
 
+  const baseSize = 256; // px
+  const cakeScale = 1.3;
+  const radius = baseSize / 2;
+  const labelRadius = radius * 0.58;
+  const labelFont = Math.max(10, radius * 0.18);
+
   return (
     <div
-      className="relative h-64 w-64 [perspective:800px]"
+      className="relative [perspective:800px]"
+      style={{ width: `${baseSize}px`, height: `${baseSize}px` }}
       data-active-slice={activeSlug ?? 'none'}
     >
       <div
-        className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 [transform-style:preserve-3d]"
-        style={{ transform: 'rotateX(-35deg)' }}
+        className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 [transform-style:preserve-3d]"
+        style={{ transform: `rotateX(-16deg) scale(${cakeScale})` }}
       >
         {slices.map((slice, i) => {
           const rotate = i * 60;
@@ -41,27 +51,49 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
           const isActive = activeSlug === slice.slug;
           const dx = isActive ? Math.cos(rad) * distance : 0;
           const dz = isActive ? Math.sin(rad) * distance : 0;
-          const scale = isActive ? scaleActive : 1;
+          const s = isActive ? scaleActive : 1;
 
           return (
-            <div
+            <button
               key={slice.slug}
               id={`cak3seg-${slice.slug}-${userId}`}
-              aria-hidden
-              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              aria-label={t(`nav.${slice.slug}`)}
+              role="link"
+              tabIndex={0}
+              onClick={() => router.push(slice.href)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  router.push(slice.href);
+                }
+              }}
+              className="absolute inset-0 flex cursor-pointer items-center justify-center bg-transparent"
               style={{
-                transform: `translate3d(${dx}px,0,${dz}px) scale(${scale})`,
+                transform: `translate3d(${dx}px,0,${dz}px) scale(${s})`,
                 transition,
               }}
             >
               <div
-                className="pointer-events-none absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-full -translate-y-full origin-bottom-left rounded-br-[100%] shadow-md"
+                className="absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-full -translate-y-full origin-bottom-left rounded-br-[100%] shadow-md"
                 style={{
                   transform: `rotate(${rotate}deg)` ,
                   backgroundColor: slice.color,
                 }}
-              />
-            </div>
+              >
+                <span
+                  id={`cak3lbl-${slice.slug}-${userId}`}
+                  className="pointer-events-none absolute whitespace-nowrap font-medium text-[var(--text)] [text-shadow:0_0_1px_rgba(0,0,0,0.4)]"
+                  style={{
+                    fontSize: `${labelFont}px`,
+                    left: '50%',
+                    bottom: '50%',
+                    transform: `translate(${labelRadius}px, -50%) rotate(${-rotate}deg)` ,
+                  }}
+                >
+                  {t(`nav.${slice.slug}`)}
+                </span>
+              </div>
+            </button>
           );
         })}
       </div>
