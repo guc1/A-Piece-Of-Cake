@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { t } from '@/lib/i18n';
 import { slices } from './slices';
 import { Cake3D } from './cake-3d';
 
@@ -11,8 +10,10 @@ export function CakeNavigation() {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const [offsetVh, setOffsetVh] = useState(-8);
+  const [boxesOffsetVh, setBoxesOffsetVh] = useState(-6);
   const [reduced, setReduced] = useState(false);
   const userId = '42';
+  const clearTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const computeOffset = () => {
@@ -28,12 +29,49 @@ export function CakeNavigation() {
   }, []);
 
   useEffect(() => {
+    const computeBoxesOffset = () => {
+      const vh = window.innerHeight;
+      let val = -6;
+      if (vh < 640) val = -4;
+      else if (vh >= 900) val = -8;
+      setBoxesOffsetVh(val);
+    };
+    computeBoxesOffset();
+    window.addEventListener('resize', computeBoxesOffset);
+    return () => window.removeEventListener('resize', computeBoxesOffset);
+  }, []);
+
+  useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const handler = () => setReduced(media.matches);
     setReduced(media.matches);
     media.addEventListener('change', handler);
     return () => media.removeEventListener('change', handler);
   }, []);
+
+  function handleEnter(slug: string) {
+    if (clearTimer.current) {
+      clearTimeout(clearTimer.current);
+      clearTimer.current = null;
+    }
+    setActiveSlug(slug);
+    setHoveredSlug(slug);
+  }
+
+  function handleLeave() {
+    if (clearTimer.current) {
+      clearTimeout(clearTimer.current);
+      clearTimer.current = null;
+    }
+    clearTimer.current = setTimeout(() => {
+      setActiveSlug(null);
+      setHoveredSlug(null);
+    }, 80);
+  }
+
+  const hoveredLabel = hoveredSlug
+    ? (slices.find((s) => s.slug === hoveredSlug)?.label ?? '')
+    : '';
 
   return (
     <div
@@ -65,7 +103,8 @@ export function CakeNavigation() {
         <Cake3D
           activeSlug={activeSlug}
           hoveredSlug={hoveredSlug}
-          setHoveredSlug={setHoveredSlug}
+          onHover={handleEnter}
+          onLeave={handleLeave}
           userId={userId}
         />
       </div>
@@ -74,6 +113,7 @@ export function CakeNavigation() {
           className="grid grid-cols-2 place-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6"
           style={{
             marginTop: 'clamp(32px,6vh,96px)',
+            transform: `translateY(${boxesOffsetVh}vh)`,
           }}
         >
           {slices.map((slice) => {
@@ -87,25 +127,13 @@ export function CakeNavigation() {
                 key={slice.slug}
                 id={`n4vbox-${slice.slug}-${userId}`}
                 data-popped={popped ? true : undefined}
-                aria-label={t(`nav.${slice.slug}`)}
+                aria-label={slice.label}
                 onClick={() => router.push(slice.href)}
-                onMouseEnter={() => {
-                  setActiveSlug(slice.slug);
-                  setHoveredSlug(slice.slug);
-                }}
-                onMouseLeave={() => {
-                  setActiveSlug(null);
-                  setHoveredSlug(null);
-                }}
-                onFocus={() => {
-                  setActiveSlug(slice.slug);
-                  setHoveredSlug(slice.slug);
-                }}
-                onBlur={() => {
-                  setActiveSlug(null);
-                  setHoveredSlug(null);
-                }}
-                className={`flex h-[42px] min-w-[168px] items-center justify-center gap-2 rounded border px-4 text-sm font-normal text-[var(--text)] shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 ${
+                onMouseEnter={() => handleEnter(slice.slug)}
+                onMouseLeave={handleLeave}
+                onFocus={() => handleEnter(slice.slug)}
+                onBlur={handleLeave}
+                className={`flex h-[42px] min-w-[168px] items-center justify-center gap-2 rounded border px-4 text-[0.95rem] font-normal text-[var(--text)] shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 ${
                   popped ? 'shadow-md' : ''
                 }`}
                 style={{
@@ -119,14 +147,14 @@ export function CakeNavigation() {
                 }}
               >
                 <slice.Icon className="h-4 w-4" />
-                {t(`nav.${slice.slug}`)}
+                {slice.label}
               </button>
             );
           })}
         </nav>
       </div>
       <p className="sr-only" aria-live="polite">
-        {hoveredSlug ? t(`nav.${hoveredSlug}`) : ''}
+        {hoveredLabel}
       </p>
     </div>
   );
