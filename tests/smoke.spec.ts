@@ -6,10 +6,12 @@ test('landing page shows CTA', async ({ page }) => {
 });
 
 test('can sign up and reach dashboard', async ({ page }) => {
-  const email = `user${Date.now()}@example.com`;
+  const handle = `user${Date.now()}`;
+  const email = `${handle}@example.com`;
   const password = 'pass1234';
   await page.goto('/signup');
   await page.fill('input[placeholder="Name"]', 'Tester');
+  await page.fill('input[placeholder="Handle"]', handle);
   await page.fill('input[placeholder="Email"]', email);
   await page.fill('input[placeholder="Password"]', password);
   await page.click('text=Sign Up');
