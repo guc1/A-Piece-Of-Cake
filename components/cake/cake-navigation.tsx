@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { slices } from './slices';
 import { Cake3D } from './cake-3d';
+import { SettingsButton } from './settings-button';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -75,9 +76,10 @@ export function CakeNavigation() {
 
   return (
     <div
-      className="grid w-full justify-items-center"
+      className="relative grid w-full justify-items-center"
       style={{ minHeight: 'calc(100vh - 64px)' }}
     >
+      <SettingsButton />
       <div
         className="grid w-full place-items-center"
         style={{ marginBottom: 'clamp(24px,3vh,36px)' }}

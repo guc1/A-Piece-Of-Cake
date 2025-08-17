@@ -28,3 +28,4 @@
 - 2025-08-25: Added email/password authentication with sign-up and login pages and stored flavors in Postgres.
 - 2025-08-25: Added migration to add slug to flavors and guarded user ID parsing to prevent NaN queries.
 - 2025-08-26: Added subflavors with CRUD UI, server actions, API routes, and navigation button from flavors list.
+- 2025-08-26: Added settings button with sign-out, dark mode toggle, follower count display, and profile visibility toggle.
