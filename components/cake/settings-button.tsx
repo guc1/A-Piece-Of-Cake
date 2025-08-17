@@ -75,7 +75,7 @@ export function SettingsButton() {
             <input
               type="checkbox"
               checked={dark}
-              onChange={(e) => setDark(e.target.checked)}
+              onChange={() => setDark((v) => !v)}
             />
           </div>
           <div className="mb-2 flex items-center justify-between">
