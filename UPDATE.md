@@ -37,3 +37,4 @@
 - 2025-08-27: Reconciled session users with DB via email, preventing duplicate records and hiding self on People page.
 - 2025-08-28: Enabled class-based dark mode toggle, added account visibility API route, and sent inbox notifications for auto-accepted follows.
 - 2025-08-30: Added followers API, updated settings menu with live follower count, dark mode toggle fix, and link to new account settings page for visibility changes.
+- 2025-08-30: Fixed follow logic so followed users remain discoverable, renamed Followers section to Following, and added test coverage.
