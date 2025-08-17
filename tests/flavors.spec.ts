@@ -9,10 +9,12 @@ function rgb(hex: string) {
 }
 
 test('flavor CRUD and ordering', async ({ page }) => {
-  const email = `user${Date.now()}@example.com`;
+  const handle = `user${Date.now()}`;
+  const email = `${handle}@example.com`;
   const password = 'pass1234';
   await page.goto('/signup');
   await page.fill('input[placeholder="Name"]', 'Tester');
+  await page.fill('input[placeholder="Handle"]', handle);
   await page.fill('input[placeholder="Email"]', email);
   await page.fill('input[placeholder="Password"]', password);
   await page.click('text=Sign Up');
@@ -40,19 +42,31 @@ test('flavor CRUD and ordering', async ({ page }) => {
   await page.click('button[id^="f7avoursav-frm"]');
 
   const rows = page.locator('ul[id^="f7avourli5t"] > li');
-  await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText('Second');
-  await expect(rows.nth(1).locator('div[id^="f7avourn4me"]')).toHaveText('First');
+  await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText(
+    'Second',
+  );
+  await expect(rows.nth(1).locator('div[id^="f7avourn4me"]')).toHaveText(
+    'First',
+  );
 
   // avatar sizes compare
-  const firstSize = await rows.first().locator('div[id^="f7avourava"]').evaluate((el) => el.clientWidth);
-  const secondSize = await rows.nth(1).locator('div[id^="f7avourava"]').evaluate((el) => el.clientWidth);
+  const firstSize = await rows
+    .first()
+    .locator('div[id^="f7avourava"]')
+    .evaluate((el) => el.clientWidth);
+  const secondSize = await rows
+    .nth(1)
+    .locator('div[id^="f7avourava"]')
+    .evaluate((el) => el.clientWidth);
   expect(firstSize).toBeGreaterThan(secondSize);
 
   // edit importance of First to reorder
   await rows.nth(1).click();
   await page.fill('input[id^="f7avour1mp-frm"]', '90');
   await page.click('button[id^="f7avoursav-frm"]');
-  await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText('First');
+  await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText(
+    'First',
+  );
 
   // edit text/color/icon
   await rows.first().click();
@@ -61,10 +75,17 @@ test('flavor CRUD and ordering', async ({ page }) => {
   await page.click('button:has-text("❤️")');
   await page.click('button[id^="f7avoursav-frm"]');
   await page.reload();
-  await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText('First Updated');
-  const color = await rows.first().locator('div[id^="f7avourava"]').evaluate((el) => getComputedStyle(el).backgroundColor);
+  await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText(
+    'First Updated',
+  );
+  const color = await rows
+    .first()
+    .locator('div[id^="f7avourava"]')
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(color).toBe(rgb('#0000ff'));
-  await expect(rows.first().locator('div[id^="f7avourava"] span')).toHaveText('❤️');
+  await expect(rows.first().locator('div[id^="f7avourava"] span')).toHaveText(
+    '❤️',
+  );
 
   // keyboard interaction: focus row, open with Enter then close with Esc
   await rows.first().focus();

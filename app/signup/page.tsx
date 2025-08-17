@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 
 export default function SignUpPage() {
   const [name, setName] = useState('');
+  const [handle, setHandle] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -18,7 +19,7 @@ export default function SignUpPage() {
             const res = await fetch('/api/signup', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name, email, password }),
+              body: JSON.stringify({ name, email, password, handle }),
             });
             if (res.ok) {
               await signIn('credentials', {
@@ -36,6 +37,13 @@ export default function SignUpPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name"
+            className="border p-2"
+          />
+          <input
+            type="text"
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            placeholder="Handle"
             className="border p-2"
           />
           <input
