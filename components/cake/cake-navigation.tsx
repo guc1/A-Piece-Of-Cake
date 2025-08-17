@@ -12,9 +12,26 @@ export function CakeNavigation() {
   const userId = '42';
 
   return (
-    <div className="flex flex-col items-center gap-8">
-      <Cake3D activeSlug={activeSlug} userId={userId} />
-      <nav className="grid w-full max-w-md grid-cols-2 gap-2 sm:grid-cols-3">
+    <div
+      className="grid w-full place-items-center"
+      style={{ minHeight: 'calc(100vh - 64px)' }}
+    >
+      <div
+        className="grid w-full place-items-center"
+        style={{
+          height: 'clamp(360px,46vh,640px)',
+          transform: 'translateY(-10vh)',
+        }}
+      >
+        <Cake3D activeSlug={activeSlug} userId={userId} />
+      </div>
+      <nav
+        className="grid grid-cols-2 justify-center justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6"
+        style={{
+          marginTop: 'clamp(32px,6vh,96px)',
+          marginInline: 'auto',
+        }}
+      >
         {slices.map((slice) => (
           <button
             key={slice.slug}
