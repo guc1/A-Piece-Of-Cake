@@ -13,3 +13,4 @@
 - [ ] Wire flavors UI to DB
 - [ ] Add visibility model and guards
 - [ ] Add AI coach stub endpoint/action
+- 2025-08-18: Added CSS-based 3D cake with animated wedges linked to navigation boxes.
