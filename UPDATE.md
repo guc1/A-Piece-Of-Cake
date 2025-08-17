@@ -18,3 +18,4 @@
 - 2025-08-18: Centered cake layout, added in-slice labels and direct slice navigation with stable IDs.
 - 2025-08-18: Repositioned cake higher with responsive offset and optical left nudge; navigation boxes remain centered.
 - 2025-08-19: Made navigation boxes compact and added hover-only slice labels driven by separate hoveredSlug state.
+- 2025-08-20: Lowered cake for arced title, removed slice labels, added hoveredSlug-driven box pop with reduced-motion support, and rendered responsive "A Piece Of Cake" title arc.
