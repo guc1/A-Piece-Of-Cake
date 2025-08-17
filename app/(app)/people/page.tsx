@@ -2,14 +2,14 @@ import { db } from '@/lib/db';
 import { follows, users } from '@/lib/db/schema';
 import { auth } from '@/lib/auth';
 import { followRequest, unfollow, cancelFollowRequest } from './actions';
+import { ensureUser } from '@/lib/users';
 import Link from 'next/link';
 import { eq, ne } from 'drizzle-orm';
 import { Button } from '@/components/ui/button';
 
 export default async function PeoplePage() {
   const session = await auth();
-  const me = Number(session?.user?.id);
-  if (!me) {
+  if (!session?.user?.email) {
     return (
       <section>
         <h1 className="text-2xl font-bold">People</h1>
@@ -17,6 +17,8 @@ export default async function PeoplePage() {
       </section>
     );
   }
+  const self = await ensureUser(session);
+  const me = self.id;
 
   const allUsers = await db
     .select({
