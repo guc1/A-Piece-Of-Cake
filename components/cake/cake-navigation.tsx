@@ -9,6 +9,7 @@ import { Cake3D } from './cake-3d';
 export function CakeNavigation() {
   const router = useRouter();
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
+  const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const [offsetVh, setOffsetVh] = useState(-18);
   const userId = '42';
 
@@ -37,7 +38,12 @@ export function CakeNavigation() {
           transform: `translateY(${offsetVh}vh)`,
         }}
       >
-        <Cake3D activeSlug={activeSlug} userId={userId} />
+        <Cake3D
+          activeSlug={activeSlug}
+          hoveredSlug={hoveredSlug}
+          setHoveredSlug={setHoveredSlug}
+          userId={userId}
+        />
       </div>
       <nav
         className="grid grid-cols-2 justify-center justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6"
@@ -52,11 +58,23 @@ export function CakeNavigation() {
             id={`n4vbox-${slice.slug}-${userId}`}
             aria-label={t(`nav.${slice.slug}`)}
             onClick={() => router.push(slice.href)}
-            onMouseEnter={() => setActiveSlug(slice.slug)}
-            onMouseLeave={() => setActiveSlug(null)}
-            onFocus={() => setActiveSlug(slice.slug)}
-            onBlur={() => setActiveSlug(null)}
-            className="flex items-center justify-center gap-2 rounded border bg-[var(--surface)] p-4 text-sm text-[var(--text)] transition-transform duration-200 hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+            onMouseEnter={() => {
+              setActiveSlug(slice.slug);
+              setHoveredSlug(slice.slug);
+            }}
+            onMouseLeave={() => {
+              setActiveSlug(null);
+              setHoveredSlug(null);
+            }}
+            onFocus={() => {
+              setActiveSlug(slice.slug);
+              setHoveredSlug(slice.slug);
+            }}
+            onBlur={() => {
+              setActiveSlug(null);
+              setHoveredSlug(null);
+            }}
+            className="flex h-[42px] min-w-[168px] items-center justify-center gap-2 rounded border bg-[var(--surface)] px-4 text-sm font-normal text-[var(--text)] shadow-sm transition-transform duration-200 hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
           >
             <slice.Icon className="h-4 w-4" />
             {t(`nav.${slice.slug}`)}

@@ -16,3 +16,4 @@
 - 2025-08-18: Added CSS-based 3D cake with animated wedges linked to navigation boxes.
 - 2025-08-18: Centered cake layout, added in-slice labels and direct slice navigation with stable IDs.
 - 2025-08-18: Repositioned cake higher with responsive offset and optical left nudge; navigation boxes remain centered.
+- 2025-08-19: Made navigation boxes compact and added hover-only slice labels with separate hover state.
