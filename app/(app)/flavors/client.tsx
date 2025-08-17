@@ -52,6 +52,16 @@ export default function FlavorsClient({
   const [error, setError] = useState('');
   const triggerRef = useRef<HTMLElement | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef(form);
+  const initialFormRef = useRef(initialForm);
+
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
+  useEffect(() => {
+    initialFormRef.current = initialForm;
+  }, [initialForm]);
 
   const mode = editing ? 'edit' : 'new';
 
@@ -97,20 +107,17 @@ export default function FlavorsClient({
     setFlavors((prev) => prev.filter((p) => p.id !== f.id));
   }
 
-  const isDirty = useCallback(
-    () => JSON.stringify(form) !== JSON.stringify(initialForm),
-    [form, initialForm]
-  );
-
   const attemptClose = useCallback(() => {
-    if (isDirty() && !confirm('Discard changes?')) {
+    const dirty =
+      JSON.stringify(formRef.current) !== JSON.stringify(initialFormRef.current);
+    if (dirty && !confirm('Discard changes?')) {
       return;
     }
     setModalOpen(false);
     setEditing(null);
     setError('');
     triggerRef.current?.focus();
-  }, [isDirty]);
+  }, []);
 
   async function save() {
     setSubmitting(true);
