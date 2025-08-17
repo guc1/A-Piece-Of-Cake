@@ -22,3 +22,4 @@
 - 2025-08-21: Replaced arc title with centered H1 and reshaped cake into six equal circular slices with seam gaps.
 - 2025-08-22: Raised navigation boxes, synced slice hover with box animations, and simplified labels.
 - 2025-08-22: Added flavors MVP with sortable list, creation/edit drawer, and API routes.
+- 2025-08-23: Replaced flavor drawer with centered modal using server actions, autosizing description with counter, and updated ID scheme.
