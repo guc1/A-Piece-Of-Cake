@@ -32,12 +32,11 @@ export default async function InboxPage() {
       id: notifications.id,
       handle: users.handle,
       displayName: users.displayName,
+      type: notifications.type,
     })
     .from(notifications)
     .innerJoin(users, eq(users.id, notifications.fromUserId))
-    .where(
-      and(eq(notifications.toUserId, me), eq(notifications.type, 'follow_accepted')),
-    );
+    .where(eq(notifications.toUserId, me));
 
   return (
     <section className="space-y-8">
@@ -51,8 +50,12 @@ export default async function InboxPage() {
             {requests.map((r) => (
               <li key={r.id} className="flex items-center justify-between py-2">
                 <div>
-                  <div className="font-semibold">{r.displayName ?? r.handle}</div>
-                  <div className="text-sm text-muted-foreground">@{r.handle}</div>
+                  <div className="font-semibold">
+                    {r.displayName ?? r.handle}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    @{r.handle}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <form action={acceptFollowRequest.bind(null, r.id)}>
@@ -78,8 +81,10 @@ export default async function InboxPage() {
             {activity.map((a) => (
               <li key={a.id} className="py-2">
                 <div className="text-sm">
-                  <span className="font-semibold">@{a.handle}</span> accepted your follow
-                  request
+                  <span className="font-semibold">@{a.handle}</span>{' '}
+                  {a.type === 'follow_accepted'
+                    ? 'accepted your follow request'
+                    : 'started following you'}
                 </div>
               </li>
             ))}
