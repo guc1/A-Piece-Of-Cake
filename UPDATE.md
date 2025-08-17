@@ -14,3 +14,5 @@
 - [ ] Add visibility model and guards
 - [ ] Add AI coach stub endpoint/action
 - 2025-08-18: Added CSS-based 3D cake with animated wedges linked to navigation boxes.
+
+- 2025-08-19: Centered cake and boxes layout, added internal slice labels and clickable slice navigation with stable IDs.
