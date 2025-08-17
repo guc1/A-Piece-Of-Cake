@@ -21,6 +21,9 @@
     "postcss": "^8.4.31",
     "react": "19.1.1",
     "react-dom": "19.1.1",
+    "three": "^0.164.0",
+    "@react-three/fiber": "^8.15.11",
+    "@react-three/drei": "^9.101.3",
     "tailwind-merge": "^2.2.2",
     "tailwindcss": "^3.4.1"
   },
