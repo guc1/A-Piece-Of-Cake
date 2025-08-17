@@ -1,11 +1,11 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
 import { useState } from 'react';
-import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 
-export default function SignInPage() {
+export default function SignUpPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -15,15 +15,29 @@ export default function SignInPage() {
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            await signIn('credentials', {
-              email,
-              password,
-              redirect: true,
-              callbackUrl: '/flavors',
+            const res = await fetch('/api/signup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, email, password }),
             });
+            if (res.ok) {
+              await signIn('credentials', {
+                email,
+                password,
+                redirect: true,
+                callbackUrl: '/flavors',
+              });
+            }
           }}
           className="flex flex-col gap-4"
         >
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Name"
+            className="border p-2"
+          />
           <input
             type="email"
             value={email}
@@ -38,13 +52,8 @@ export default function SignInPage() {
             placeholder="Password"
             className="border p-2"
           />
-          <Button type="submit">Enter</Button>
+          <Button type="submit">Sign Up</Button>
         </form>
-        <p className="mt-4 text-center">
-          <Link href="/signup" className="text-blue-600">
-            Create account
-          </Link>
-        </p>
       </div>
     </main>
   );

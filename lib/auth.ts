@@ -1,19 +1,23 @@
 import { getServerSession, type NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import { getUserByEmail, verifyPassword } from '@/lib/users';
 
 // NextAuth configuration used both by the route handler and server helpers
 export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
-      name: 'Guest',
+      name: 'Credentials',
       credentials: {
-        password: { label: 'Guest password', type: 'password' },
+        email: { label: 'Email', type: 'text' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (credentials?.password === process.env.GUEST_PASSWORD) {
-          return { id: Math.random().toString(36).slice(2) };
-        }
-        return null;
+        if (!credentials?.email || !credentials.password) return null;
+        const user = await getUserByEmail(credentials.email);
+        if (!user) return null;
+        const ok = verifyPassword(credentials.password, user.passwordHash);
+        if (!ok) return null;
+        return { id: user.id.toString(), name: user.name ?? undefined, email: user.email };
       },
     }),
   ],

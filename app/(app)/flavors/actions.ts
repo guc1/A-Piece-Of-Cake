@@ -60,7 +60,7 @@ export async function createFlavor(form: any): Promise<Flavor> {
   if (!userId) {
     throw new Error('Please sign in.');
   }
-  const flavor = createFlavorStore(userId, sanitize(form));
+  const flavor = await createFlavorStore(userId, sanitize(form));
   revalidatePath('/flavors');
   return flavor;
 }
@@ -71,7 +71,7 @@ export async function updateFlavor(id: string, form: any): Promise<Flavor> {
   if (!userId) {
     throw new Error('Please sign in.');
   }
-  const updated = updateFlavorStore(userId, id, sanitize(form));
+  const updated = await updateFlavorStore(userId, id, sanitize(form));
   if (!updated) {
     throw new Error('Not found');
   }
