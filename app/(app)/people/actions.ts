@@ -15,6 +15,13 @@ export async function followRequest(
   if (!me) throw new Error('Please sign in.');
   if (me === targetId) throw new Error('Cannot follow yourself.');
 
+  // Ensure the current user exists to avoid foreign key issues
+  const [self] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, me));
+  if (!self) throw new Error('User not found');
+
   const [target] = await db
     .select({ accountVisibility: users.accountVisibility })
     .from(users)
