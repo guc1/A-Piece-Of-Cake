@@ -21,3 +21,4 @@
 - 2025-08-20: Lowered cake for arced title, removed slice labels, added hoveredSlug-driven box pop with reduced-motion support, and rendered responsive "A Piece Of Cake" title arc.
 - 2025-08-21: Replaced arc title with centered H1 and reshaped cake into six equal circular slices with seam gaps.
 - 2025-08-22: Raised navigation boxes, synced slice hover with box animations, and simplified labels.
+- 2025-08-22: Added flavors MVP with sortable list, creation/edit drawer, and API routes.
