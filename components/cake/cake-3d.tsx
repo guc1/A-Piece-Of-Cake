@@ -7,10 +7,12 @@ import { slices } from './slices';
 
 interface Cake3DProps {
   activeSlug: string | null;
+  hoveredSlug: string | null;
+  setHoveredSlug: (slug: string | null) => void;
   userId: string | number;
 }
 
-export function Cake3D({ activeSlug, userId }: Cake3DProps) {
+export function Cake3D({ activeSlug, hoveredSlug, setHoveredSlug, userId }: Cake3DProps) {
   const router = useRouter();
   const [reduced, setReduced] = useState(false);
 
@@ -32,8 +34,18 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
   const cakeScale = 1.3;
   const radius = baseSize / 2;
   const leftNudge = radius * 0.1;
-  const labelRadius = radius * 0.58;
-  const labelFont = Math.max(10, radius * 0.18);
+  const clampFont = `clamp(14px, ${radius * 0.18}px, 22px)`;
+
+  const [visibleSlug, setVisibleSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (hoveredSlug) {
+      setVisibleSlug(hoveredSlug);
+      return;
+    }
+    const t = setTimeout(() => setVisibleSlug(null), 160);
+    return () => clearTimeout(t);
+  }, [hoveredSlug]);
 
   return (
     <div
@@ -63,6 +75,8 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
               aria-label={t(`nav.${slice.slug}`)}
               role="link"
               tabIndex={0}
+              onPointerEnter={() => setHoveredSlug(slice.slug)}
+              onPointerLeave={() => setHoveredSlug(null)}
               onClick={() => router.push(slice.href)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -82,23 +96,40 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
                   transform: `rotate(${rotate}deg)` ,
                   backgroundColor: slice.color,
                 }}
-              >
-                <span
-                  id={`cak3lbl-${slice.slug}-${userId}`}
-                  className="pointer-events-none absolute whitespace-nowrap font-medium text-[var(--text)] [text-shadow:0_0_1px_rgba(0,0,0,0.4)]"
-                  style={{
-                    fontSize: `${labelFont}px`,
-                    left: '50%',
-                    bottom: '50%',
-                    transform: `translate(${labelRadius}px, -50%) rotate(${-rotate}deg)` ,
-                  }}
-                >
-                  {t(`nav.${slice.slug}`)}
-                </span>
-              </div>
+              />
             </button>
           );
         })}
+        {visibleSlug && (
+          (() => {
+            const idx = slices.findIndex((s) => s.slug === visibleSlug);
+            if (idx === -1) return null;
+            const thetaStart = (idx * 60 * Math.PI) / 180;
+            const thetaLength = (60 * Math.PI) / 180;
+            const mid = thetaStart + thetaLength / 2;
+            const dirX = Math.cos(mid);
+            const dirZ = Math.sin(mid);
+            const x = dirX * radius * 0.96;
+            const z = dirZ * radius * 0.96;
+            const y = -radius * 0.5 - radius * 0.06;
+            const visible = hoveredSlug === visibleSlug;
+            return (
+              <span
+                id={`cak3lbl-${visibleSlug}-${userId}`}
+                className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[var(--text)] [text-shadow:0_0_1px_rgba(0,0,0,0.4)]"
+                style={{
+                  fontSize: clampFont,
+                  transform: `translate3d(${x}px, ${y}px, ${z}px) scale(${visible ? 1 : 0.96})`,
+                  opacity: visible ? 1 : 0,
+                  transition: 'opacity 120ms ease-out, transform 120ms ease-out',
+                  transitionDelay: visible ? '80ms' : '0ms',
+                }}
+              >
+                {t(`nav.${visibleSlug}`)}
+              </span>
+            );
+          })()
+        )}
       </div>
     </div>
   );
