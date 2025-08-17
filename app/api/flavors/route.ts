@@ -8,7 +8,7 @@ export async function GET() {
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const flavors = listFlavors(userId);
+  const flavors = await listFlavors(userId);
   return NextResponse.json(flavors);
 }
 
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json();
   try {
-    const flavor = createFlavor(userId, sanitize(body));
+    const flavor = await createFlavor(userId, sanitize(body));
     return NextResponse.json(flavor, { status: 201 });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 400 });
