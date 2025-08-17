@@ -32,3 +32,4 @@
 - 2025-08-27: Introduced social "People" pages with follow system, inbox for requests, and profile visibility enforcement.
 - 2025-08-27: Fixed sign-up flow to require unique handle, enabling multiple user accounts; updated Playwright tests and added people listing test.
 - 2025-08-27: Added account visibility API and settings control; only open accounts are visible in People page.
+ - 2025-08-27: Validated follower existence in follow action to prevent foreign key errors.
