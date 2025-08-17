@@ -5,6 +5,6 @@ import FlavorsClient from './client';
 export default async function FlavorsPage() {
   const session = await auth();
   const userId = (session?.user as any)?.id || '';
-  const flavors = userId ? listFlavors(userId) : [];
+  const flavors = userId ? await listFlavors(userId) : [];
   return <FlavorsClient userId={userId} initialFlavors={flavors} />;
 }

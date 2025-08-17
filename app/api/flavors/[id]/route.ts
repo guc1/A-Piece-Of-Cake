@@ -1,38 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { listFlavors, updateFlavor, deleteFlavor } from '@/lib/flavors-store';
+import { getFlavor, updateFlavor, deleteFlavor } from '@/lib/flavors-store';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await auth();
   const userId = (session?.user as any)?.id;
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const flavors = listFlavors(userId);
-  const flavor = flavors.find((f) => f.id === params.id);
+  const flavor = await getFlavor(userId, params.id);
   if (!flavor) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(flavor);
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await auth();
   const userId = (session?.user as any)?.id;
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const body = await req.json();
-  const updated = updateFlavor(userId, params.id, sanitize(body));
+  const updated = await updateFlavor(userId, params.id, sanitize(body));
   if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(updated);
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, context: any) {
+  const { params } = context as { params: { id: string } };
   const session = await auth();
   const userId = (session?.user as any)?.id;
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const ok = deleteFlavor(userId, params.id);
+  const ok = await deleteFlavor(userId, params.id);
   if (!ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json({ success: true });
 }
