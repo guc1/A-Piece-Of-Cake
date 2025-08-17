@@ -39,16 +39,25 @@ export default async function PeoplePage() {
     .where(eq(follows.followingId, me));
 
   const myMap = new Map(myFollows.map((f) => [f.followingId, f.status]));
-  const inboundMap = new Map(inboundFollows.map((f) => [f.followerId, f.status]));
+  const inboundMap = new Map(
+    inboundFollows.map((f) => [f.followerId, f.status]),
+  );
 
   const friends: typeof allUsers = [];
   const followersList: typeof allUsers = [];
-  const discover: (typeof allUsers[number] & { status?: string })[] = [];
+  const discover: ((typeof allUsers)[number] & { status?: string })[] = [];
 
   for (const u of allUsers) {
     if (u.accountVisibility === 'private') continue;
     const myStatus = myMap.get(u.id);
     const theirStatus = inboundMap.get(u.id);
+    if (
+      u.accountVisibility !== 'open' &&
+      myStatus !== 'accepted' &&
+      theirStatus !== 'accepted'
+    ) {
+      continue;
+    }
     if (myStatus === 'accepted' && theirStatus === 'accepted') {
       friends.push(u);
     } else if (myStatus === 'accepted' && theirStatus !== 'accepted') {
