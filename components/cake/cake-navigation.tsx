@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@/lib/i18n';
 import { slices } from './slices';
@@ -9,18 +9,31 @@ import { Cake3D } from './cake-3d';
 export function CakeNavigation() {
   const router = useRouter();
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
+  const [offsetVh, setOffsetVh] = useState(-18);
   const userId = '42';
+
+  useEffect(() => {
+    const updateOffset = () => {
+      const vh = window.innerHeight;
+      if (vh < 720) setOffsetVh(-16);
+      else if (vh > 900) setOffsetVh(-20);
+      else setOffsetVh(-18);
+    };
+    updateOffset();
+    window.addEventListener('resize', updateOffset);
+    return () => window.removeEventListener('resize', updateOffset);
+  }, []);
 
   return (
     <div
-      className="grid w-full place-items-center"
+      className="grid w-full justify-items-center"
       style={{ minHeight: 'calc(100vh - 64px)' }}
     >
       <div
         className="grid w-full place-items-center"
         style={{
-          height: 'clamp(360px,46vh,640px)',
-          transform: 'translateY(-4vh)',
+          height: 'clamp(420px,54vh,720px)',
+          transform: `translateY(${offsetVh}vh)`,
         }}
       >
         <Cake3D activeSlug={activeSlug} userId={userId} />
@@ -55,4 +68,3 @@ export function CakeNavigation() {
     </div>
   );
 }
-
