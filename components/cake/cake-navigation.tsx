@@ -22,8 +22,12 @@ export function CakeNavigation() {
       className="grid w-full min-h-[calc(100vh-64px)] place-items-center"
       data-active-slice={activeSlug ?? 'none'}
     >
-      <div className="grid w-full place-items-center [height:clamp(360px,46vh,640px)] [transform:translateY(-4vh)]">
-        <Cake3D activeSlug={activeSlug} userId={userId} onNavigate={handleNavigate} />
+      <div className="grid w-full place-items-center [height:clamp(360px,46vh,640px)] [transform:translateY(-11vh)]">
+        <Cake3D
+          activeSlug={activeSlug}
+          userId={userId}
+          onNavigate={handleNavigate}
+        />
       </div>
       <nav className="mt-[clamp(32px,6vh,96px)] grid justify-center justify-items-center gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 mx-auto">
         {slices.map((slice) => (
@@ -46,8 +50,9 @@ export function CakeNavigation() {
       <p className="sr-only" aria-live="polite">
         {activeSlug ? `${t(`nav.${activeSlug}`)} slice highlighted` : ''}
       </p>
-      <p className="sr-only" aria-live="polite">{announce}</p>
+      <p className="sr-only" aria-live="polite">
+        {announce}
+      </p>
     </section>
   );
 }
-

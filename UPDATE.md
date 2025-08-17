@@ -8,6 +8,7 @@
 - 2025-08-17: Switched to getServerSession helper and direct NextAuth route handler to resolve "auth is not a function" error.
 
 ## Follow-ups
+
 - [ ] Add OAuth (Google) + DB adapter for NextAuth
 - [ ] Implement onboarding for Signature Ethos + Credo
 - [ ] Wire flavors UI to DB
@@ -16,3 +17,4 @@
 - 2025-08-18: Added CSS-based 3D cake with animated wedges linked to navigation boxes.
 
 - 2025-08-19: Centered cake and boxes layout, added internal slice labels and clickable slice navigation with stable IDs.
+- 2025-08-19: Raised 3D cake position to translateY(-11vh) for improved centering above navigation boxes.
