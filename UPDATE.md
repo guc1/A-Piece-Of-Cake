@@ -22,4 +22,5 @@
 - 2025-08-21: Replaced arc title with centered H1 and reshaped cake into six equal circular slices with seam gaps.
 - 2025-08-22: Raised navigation boxes, synced slice hover with box animations, and simplified labels.
 - 2025-08-22: Added flavors MVP with sortable list, creation/edit drawer, and API routes.
- - 2025-08-23: Replaced flavor drawer with centered modal, added server actions for create/update, autosizing description field, and updated tests.
+- 2025-08-23: Replaced flavor drawer with centered modal, added server actions for create/update, autosizing description field, and updated tests.
+- 2025-08-24: Persisted user id in NextAuth session to fix "Please sign in" error when saving flavors.

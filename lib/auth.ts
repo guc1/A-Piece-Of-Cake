@@ -17,6 +17,23 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  callbacks: {
+    // Persist the user's id in the JWT so it can be read from the session
+    async jwt({ token, user }) {
+      if (user) {
+        // On initial sign in, the user object is available and we store the id
+        token.id = (user as any).id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        // Expose the user id on the session for server actions/routes
+        (session.user as any).id = token.id as string;
+      }
+      return session;
+    },
+  },
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
