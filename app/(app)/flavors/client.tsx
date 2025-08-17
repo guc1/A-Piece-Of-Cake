@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import type { Flavor, Visibility } from '@/types/flavor';
+import { createFlavor as createFlavorAction, updateFlavor as updateFlavorAction } from './actions';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
 const VISIBILITIES: Visibility[] = ['private', 'friends', 'followers', 'public'];
@@ -21,7 +22,7 @@ export default function FlavorsClient({
   initialFlavors: Flavor[];
 }) {
   const [flavors, setFlavors] = useState<Flavor[]>(sortFlavors(initialFlavors));
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Flavor | null>(null);
   const [form, setForm] = useState({
     name: '',
@@ -33,25 +34,38 @@ export default function FlavorsClient({
     visibility: 'private' as Visibility,
     orderIndex: 0,
   });
+  const initialForm = useRef(form);
+  const [error, setError] = useState('');
+  const [isPending, startTransition] = useTransition();
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const nameRef = useRef<HTMLInputElement | null>(null);
+  const descRef = useRef<HTMLTextAreaElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
-  function openCreate() {
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm.current);
+
+  function openCreate(e: React.MouseEvent<HTMLButtonElement>) {
+    triggerRef.current = e.currentTarget;
     setEditing(null);
-    setForm({
+    const blank = {
       name: '',
       description: '',
       color: '#888888',
       icon: ICONS[0],
       importance: 50,
       targetMix: 50,
-      visibility: 'private',
+      visibility: 'private' as Visibility,
       orderIndex: flavors.length,
-    });
-    setDrawerOpen(true);
+    };
+    setForm(blank);
+    initialForm.current = blank;
+    setModalOpen(true);
+    setTimeout(() => nameRef.current?.focus(), 0);
   }
 
-  function openEdit(f: Flavor) {
-    setEditing(f);
-    setForm({
+  function openEdit(f: Flavor, el: HTMLElement) {
+    triggerRef.current = el;
+    const data = {
       name: f.name,
       description: f.description,
       color: f.color,
@@ -60,27 +74,98 @@ export default function FlavorsClient({
       targetMix: f.targetMix,
       visibility: f.visibility,
       orderIndex: f.orderIndex,
-    });
-    setDrawerOpen(true);
+    };
+    setEditing(f);
+    setForm(data);
+    initialForm.current = data;
+    setModalOpen(true);
+    setTimeout(() => nameRef.current?.focus(), 0);
   }
 
-  async function save() {
-    const method = editing ? 'PUT' : 'POST';
-    const url = editing ? `/api/flavors/${editing.id}` : '/api/flavors';
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
-      const data: Flavor = await res.json();
-      if (editing) {
-        setFlavors((prev) => sortFlavors(prev.map((p) => (p.id === data.id ? data : p))));
-      } else {
-        setFlavors((prev) => sortFlavors([...prev, data]));
+  const requestClose = useCallback(() => {
+    if (isDirty && !confirm('Discard changes?')) return;
+    setModalOpen(false);
+    setError('');
+    setTimeout(() => triggerRef.current?.focus(), 0);
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        requestClose();
       }
-      setDrawerOpen(false);
     }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [modalOpen, requestClose]);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+      'a,button,input,textarea,select,[tabindex]:not([tabindex="-1"])'
+    );
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== 'Tab' || !focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', handleTab);
+    return () => document.removeEventListener('keydown', handleTab);
+  }, [modalOpen]);
+
+  useEffect(() => {
+    if (!descRef.current) return;
+    descRef.current.style.height = 'auto';
+    const line = parseInt(getComputedStyle(descRef.current).lineHeight || '20', 10);
+    const max = line * 8;
+    descRef.current.style.height = Math.min(descRef.current.scrollHeight, max) + 'px';
+  }, [form.description]);
+
+  const onBackdrop = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (e.target === e.currentTarget) {
+        requestClose();
+      }
+    },
+    [requestClose]
+  );
+
+  function save() {
+    setError('');
+    const action = editing
+      ? (data: typeof form) => updateFlavorAction(editing.id, data)
+      : (data: typeof form) => createFlavorAction(data);
+    startTransition(async () => {
+      try {
+        const data = await action(form);
+        setFlavors((prev) =>
+          sortFlavors(
+            editing ? prev.map((p) => (p.id === data.id ? data : p)) : [...prev, data]
+          )
+        );
+        setModalOpen(false);
+        setError('');
+        initialForm.current = form;
+        setTimeout(() => triggerRef.current?.focus(), 0);
+      } catch (e: any) {
+        setError(e.message || 'Failed to save');
+        setTimeout(() => {
+          nameRef.current?.focus();
+        }, 0);
+      }
+    });
   }
 
   async function remove(f: Flavor) {
@@ -91,6 +176,8 @@ export default function FlavorsClient({
     }
   }
 
+  const descCount = form.description.length;
+
   return (
     <section>
       <div className="mb-4 flex justify-end">
@@ -99,7 +186,7 @@ export default function FlavorsClient({
           className="rounded bg-orange-500 px-3 py-2 text-white"
           id={`f7avoured1tnew-${userId}`}
         >
-          + Flavor
+          New Flavor
         </button>
       </div>
       <ul className="flex flex-col gap-4" id={`f7avourli5t-${userId}`}>
@@ -109,9 +196,9 @@ export default function FlavorsClient({
             id={`f7avourrow${f.id}-${userId}`}
             role="button"
             tabIndex={0}
-            onClick={() => openEdit(f)}
+            onClick={(e) => openEdit(f, e.currentTarget as HTMLElement)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') openEdit(f);
+              if (e.key === 'Enter') openEdit(f, e.currentTarget as HTMLElement);
               if (e.key === 'Delete') remove(f);
             }}
             className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
@@ -159,7 +246,7 @@ export default function FlavorsClient({
               <button
                 id={`f7avoured1t${f.id}-${userId}`}
                 className="text-sm text-blue-600 underline"
-                onClick={() => openEdit(f)}
+                onClick={(e) => openEdit(f, e.currentTarget as HTMLElement)}
               >
                 Edit ▸
               </button>
@@ -174,26 +261,31 @@ export default function FlavorsClient({
           </li>
         ))}
       </ul>
-      {drawerOpen && (
+      {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex justify-end bg-black/20"
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setDrawerOpen(false);
-          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md"
+          onMouseDown={onBackdrop}
         >
-          <div className="h-full w-80 bg-white p-4 shadow-lg" role="dialog">
-            <h2 className="mb-4 text-lg font-semibold">
+          <div
+            ref={modalRef}
+            id={`f7avourmdl-${editing ? 'edit' : 'new'}-${userId}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="flavor-modal-title"
+            className="mx-4 w-full max-w-[800px] rounded-3xl bg-white p-6 shadow-xl transition-all duration-150 data-[open=false]:scale-95 data-[open=false]:opacity-0"
+          >
+            <h2 id="flavor-modal-title" className="mb-4 text-lg font-semibold">
               {editing ? 'Edit Flavor' : 'New Flavor'}
             </h2>
             <div className="mb-4 flex justify-center">
               <div
-              style={{
-                '--importance': form.importance,
-                '--diam': `clamp(44px, calc(28px + 0.8px * var(--importance)), 120px)`,
-                backgroundColor: form.color,
-                width: 'var(--diam)',
-                height: 'var(--diam)',
-              } as React.CSSProperties}
+                style={{
+                  '--importance': form.importance,
+                  '--diam': `clamp(44px, calc(28px + 0.8px * var(--importance)), 120px)`,
+                  backgroundColor: form.color,
+                  width: 'var(--diam)',
+                  height: 'var(--diam)',
+                } as React.CSSProperties}
                 className="flex items-center justify-center rounded-full shadow-inner"
               >
                 <span className="text-white" style={{ fontSize: 'min(44px, calc(var(--diam)*0.48))' }}>
@@ -201,19 +293,21 @@ export default function FlavorsClient({
                 </span>
               </div>
             </div>
+            {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 save();
               }}
-              className="space-y-3"
+              className="grid grid-cols-1 gap-4 md:grid-cols-2"
             >
-              <div>
-                <label className="block text-sm font-medium" htmlFor={`name-input`}>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium" htmlFor={`f7avourn4me-frm-${userId}`}>
                   Name
                 </label>
                 <input
-                  id={`f7avourn4me${editing ? editing.id : 'new'}-${userId}`}
+                  ref={nameRef}
+                  id={`f7avourn4me-frm-${userId}`}
                   className="w-full rounded border p-1"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -222,17 +316,24 @@ export default function FlavorsClient({
                   maxLength={40}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium" htmlFor={`desc-input`}>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium" htmlFor={`f7avourde5cr-frm-${userId}`}>
                   Description
                 </label>
                 <textarea
-                  id={`f7avourde5cr${editing ? editing.id : 'new'}-${userId}`}
-                  className="w-full rounded border p-1"
+                  ref={descRef}
+                  id={`f7avourde5cr-frm-${userId}`}
+                  className="w-full resize-none rounded border p-1"
                   value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  onChange={(e) => setForm({ ...form, description: e.target.value.slice(0, 280) })}
                   maxLength={280}
+                  rows={4}
                 />
+                <div className="mt-1 text-right text-xs">
+                  <span className={descCount >= 280 ? 'text-gray-400' : 'text-gray-500'}>
+                    {descCount}/280
+                  </span>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium">Color</label>
@@ -256,9 +357,11 @@ export default function FlavorsClient({
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium" htmlFor={`importance`}>Importance</label>
+                <label className="block text-sm font-medium" htmlFor={`f7avour1mp-frm-${userId}`}>
+                  Importance
+                </label>
                 <input
-                  id={`f7avour1mp${editing ? editing.id : 'new'}-${userId}`}
+                  id={`f7avour1mp-frm-${userId}`}
                   type="range"
                   min={0}
                   max={100}
@@ -268,14 +371,18 @@ export default function FlavorsClient({
                 <span className="ml-2 text-sm">{form.importance}</span>
               </div>
               <div>
-                <label className="block text-sm font-medium" htmlFor={`target`}>Target %</label>
+                <label className="block text-sm font-medium" htmlFor={`f7avourt4rg-frm-${userId}`}>
+                  Target %
+                </label>
                 <input
-                  id={`f7avourt4rg${editing ? editing.id : 'new'}-${userId}`}
+                  id={`f7avourt4rg-frm-${userId}`}
                   type="number"
                   min={0}
                   max={100}
                   value={form.targetMix}
-                  onChange={(e) => setForm({ ...form, targetMix: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({ ...form, targetMix: Math.max(0, Math.min(100, Number(e.target.value))) })
+                  }
                 />
               </div>
               <div>
@@ -291,18 +398,20 @@ export default function FlavorsClient({
                   ))}
                 </select>
               </div>
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="md:col-span-2 mt-4 flex justify-end gap-2 border-t pt-4">
                 <button
                   type="button"
+                  id={`f7avourcnl-frm-${userId}`}
                   className="rounded border px-3 py-1"
-                  onClick={() => setDrawerOpen(false)}
+                  onClick={requestClose}
                 >
                   Cancel
                 </button>
                 <button
-                  id={`f7avour5ave${editing ? editing.id : 'new'}-${userId}`}
+                  id={`f7avoursav-frm-${userId}`}
                   type="submit"
-                  className="rounded bg-orange-500 px-3 py-1 text-white"
+                  disabled={isPending}
+                  className="rounded bg-orange-500 px-3 py-1 text-white disabled:opacity-50"
                 >
                   Save
                 </button>
