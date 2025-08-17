@@ -34,4 +34,5 @@
 - 2025-08-27: Added account visibility API and settings control; only open accounts are visible in People page.
  - 2025-08-27: Validated follower existence in follow action to prevent foreign key errors.
  - 2025-08-27: Auto-created missing user records during follow to avoid "User not found" errors.
- - 2025-08-27: Reconciled session users with DB via email, preventing duplicate records and hiding self on People page.
+- 2025-08-27: Reconciled session users with DB via email, preventing duplicate records and hiding self on People page.
+- 2025-08-28: Enabled class-based dark mode toggle, added account visibility API route, and sent inbox notifications for auto-accepted follows.
