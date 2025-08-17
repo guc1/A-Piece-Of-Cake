@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { CSSProperties, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { t } from '@/lib/i18n';
 import { slices } from './slices';
@@ -39,6 +39,17 @@ export function Cake3D({
   const cakeScale = 1.3;
   const radius = baseSize / 2;
   const leftNudge = radius * 0.1;
+  const thetaUnit = (Math.PI * 2) / slices.length;
+  const gap = 0.025;
+
+  function sectorPath(r: number, start: number, length: number) {
+    const x1 = r + r * Math.cos(start);
+    const y1 = r + r * Math.sin(start);
+    const end = start + length;
+    const x2 = r + r * Math.cos(end);
+    const y2 = r + r * Math.sin(end);
+    return `M ${r} ${r} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
+  }
 
   return (
     <div
@@ -53,13 +64,28 @@ export function Cake3D({
         }}
       >
         {slices.map((slice, i) => {
-          const rotate = i * 60;
-          const mid = rotate + 30;
-          const rad = (mid * Math.PI) / 180;
+          const thetaStart = i * thetaUnit + gap / 2;
+          const thetaLength = thetaUnit - gap;
+          const mid = thetaStart + thetaLength / 2;
           const isActive = activeSlug === slice.slug;
-          const dx = isActive ? Math.cos(rad) * distance : 0;
-          const dz = isActive ? Math.sin(rad) * distance : 0;
+          const dx = isActive ? Math.cos(mid) * distance : 0;
+          const dz = isActive ? Math.sin(mid) * distance : 0;
           const s = isActive ? scaleActive : 1;
+          const d = sectorPath(radius, thetaStart, thetaLength);
+          const clip = `path('${d}')`;
+
+          const style: CSSProperties = {
+            transform: `translate3d(${dx}px,0,${dz}px) scale(${s})`,
+            transition,
+            clipPath: clip,
+            WebkitClipPath: clip,
+          };
+
+          const segStyle: CSSProperties = {
+            backgroundColor: slice.color,
+            clipPath: clip,
+            WebkitClipPath: clip,
+          };
 
           return (
             <button
@@ -79,18 +105,13 @@ export function Cake3D({
               onPointerLeave={() => setHoveredSlug(null)}
               onFocus={() => setHoveredSlug(slice.slug)}
               onBlur={() => setHoveredSlug(null)}
-              className="absolute inset-0 flex cursor-pointer items-center justify-center bg-transparent"
-              style={{
-                transform: `translate3d(${dx}px,0,${dz}px) scale(${s})`,
-                transition,
-              }}
+              className="absolute inset-0 cursor-pointer bg-transparent"
+              style={style}
             >
               <div
-                className="absolute left-1/2 top-1/2 h-1/2 w-1/2 -translate-x-full -translate-y-full origin-bottom-left rounded-br-[100%] shadow-md"
-                style={{
-                  transform: `rotate(${rotate}deg)`,
-                  backgroundColor: slice.color,
-                }}
+                id={`cak3seg-${slice.slug}-${userId}`}
+                className="absolute inset-0 pointer-events-none shadow-md"
+                style={segStyle}
               />
             </button>
           );
