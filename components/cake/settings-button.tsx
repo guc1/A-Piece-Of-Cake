@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 
 function GearIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -23,10 +24,7 @@ function GearIcon(props: React.SVGProps<SVGSVGElement>) {
 export function SettingsButton() {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
-  const [visibility, setVisibility] = useState<
-    'open' | 'closed' | 'private' | null
-  >(null);
-  const followers = 0; // TODO: replace with real follower count
+  const [followers, setFollowers] = useState(0);
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('color-mode');
@@ -34,10 +32,23 @@ export function SettingsButton() {
       setDark(true);
       document.documentElement.classList.add('dark');
     }
-    fetch('/api/account/visibility')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setVisibility(data?.accountVisibility ?? 'open'));
   }, []);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    async function refresh() {
+      const res = await fetch('/api/account/followers');
+      const data = res.ok ? await res.json() : null;
+      setFollowers(data?.count ?? 0);
+    }
+    if (open) {
+      refresh();
+      interval = setInterval(refresh, 5000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (dark) {
@@ -49,17 +60,8 @@ export function SettingsButton() {
     }
   }, [dark]);
 
-  async function changeVisibility(v: 'open' | 'closed' | 'private') {
-    setVisibility(v);
-    await fetch('/api/account/visibility', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accountVisibility: v }),
-    });
-  }
-
   return (
-    <div className="absolute right-4 top-4 text-[var(--text)]">
+    <div className="absolute right-4 top-4 z-50 text-[var(--text)]">
       <button
         aria-label="Settings"
         onClick={() => setOpen((v) => !v)}
@@ -76,24 +78,15 @@ export function SettingsButton() {
               type="checkbox"
               checked={dark}
               onChange={(e) => setDark(e.target.checked)}
+              className="cursor-pointer"
             />
           </div>
-          <div className="mb-2 flex items-center justify-between">
-            <span>Account</span>
-            <select
-              value={visibility ?? ''}
-              onChange={(e) =>
-                changeVisibility(
-                  e.target.value as 'open' | 'closed' | 'private',
-                )
-              }
-              className="rounded border px-1 py-0.5"
-            >
-              <option value="open">open</option>
-              <option value="closed">closed</option>
-              <option value="private">private</option>
-            </select>
-          </div>
+          <Link
+            href="/settings/account"
+            className="mb-2 block rounded bg-[var(--surface)] px-3 py-1 text-center hover:bg-[var(--accent)] hover:text-white"
+          >
+            Account settings
+          </Link>
           <button
             className="mt-2 w-full rounded bg-[var(--accent)] px-3 py-1 text-white hover:opacity-90"
             onClick={() => signOut()}
