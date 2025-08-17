@@ -18,3 +18,12 @@ Examples:
 - `cak3seg-{slug}-{userId}` → cake slice segment (e.g., `cak3seg-planning-42`).
 - `n4vbox-{slug}-{userId}` → navigation light box (e.g., `n4vbox-planning-42`).
 - `cak3titleText` → page heading text.
+
+Modal form IDs:
+- `f7avourmdl-{mode}-{userId}` → flavor modal root (`mode`: new|edit).
+- `f7avourn4me-frm-{userId}` → flavor form name input.
+- `f7avourde5cr-frm-{userId}` → flavor form description textarea.
+- `f7avour1mp-frm-{userId}` → flavor form importance slider.
+- `f7avourt4rg-frm-{userId}` → flavor form target percentage input.
+- `f7avoursav-frm-{userId}` → flavor form save button.
+- `f7avourcnl-frm-{userId}` → flavor form cancel button.
