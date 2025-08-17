@@ -31,6 +31,7 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
   const baseSize = 256; // px
   const cakeScale = 1.3;
   const radius = baseSize / 2;
+  const leftNudge = radius * 0.1;
   const labelRadius = radius * 0.58;
   const labelFont = Math.max(10, radius * 0.18);
 
@@ -41,8 +42,10 @@ export function Cake3D({ activeSlug, userId }: Cake3DProps) {
       data-active-slice={activeSlug ?? 'none'}
     >
       <div
-        className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 [transform-style:preserve-3d]"
-        style={{ transform: `rotateX(-16deg) scale(${cakeScale})` }}
+        className="absolute left-1/2 top-1/2 h-full w-full [transform-style:preserve-3d]"
+        style={{
+          transform: `translate(calc(-50% - ${leftNudge}px), -50%) rotateX(-16deg) scale(${cakeScale})`,
+        }}
       >
         {slices.map((slice, i) => {
           const rotate = i * 60;
