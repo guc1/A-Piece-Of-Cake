@@ -1,7 +1,11 @@
 import { db } from '@/lib/db';
 import { users, follows } from '@/lib/db/schema';
 import { auth } from '@/lib/auth';
-import { followRequest, cancelFollowRequest, unfollow } from '../../people/actions';
+import {
+  followRequest,
+  cancelFollowRequest,
+  unfollow,
+} from '../../people/actions';
 import { eq, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -32,17 +36,31 @@ export default async function ProfilePage({
   }
 
   let relation: 'self' | 'accepted' | 'pending' | 'none' = 'none';
+  let inbound: 'accepted' | 'pending' | null = null;
   if (viewerId) {
     if (viewerId === user.id) {
       relation = 'self';
     } else {
-      const [follow] = await db
+      const [outgoing] = await db
         .select()
         .from(follows)
         .where(
-          and(eq(follows.followerId, viewerId), eq(follows.followingId, user.id)),
+          and(
+            eq(follows.followerId, viewerId),
+            eq(follows.followingId, user.id),
+          ),
         );
-      if (follow) relation = follow.status as 'accepted' | 'pending';
+      if (outgoing) relation = outgoing.status as 'accepted' | 'pending';
+      const [incoming] = await db
+        .select()
+        .from(follows)
+        .where(
+          and(
+            eq(follows.followerId, user.id),
+            eq(follows.followingId, viewerId),
+          ),
+        );
+      if (incoming) inbound = incoming.status as 'accepted' | 'pending';
     }
   }
 
@@ -53,7 +71,9 @@ export default async function ProfilePage({
   ) {
     return (
       <section className="space-y-4">
-        <h1 className="text-2xl font-bold">{user.displayName ?? user.handle}</h1>
+        <h1 className="text-2xl font-bold">
+          {user.displayName ?? user.handle}
+        </h1>
         <p>@{user.handle}</p>
         {relation === 'pending' ? (
           <form action={cancelFollowRequest.bind(null, user.id)}>
@@ -79,6 +99,10 @@ export default async function ProfilePage({
       ) : relation === 'pending' ? (
         <form action={cancelFollowRequest.bind(null, user.id)}>
           <Button variant="outline">Cancel request</Button>
+        </form>
+      ) : inbound === 'accepted' ? (
+        <form action={followRequest.bind(null, user.id)}>
+          <Button>Follow back</Button>
         </form>
       ) : (
         <form action={followRequest.bind(null, user.id)}>

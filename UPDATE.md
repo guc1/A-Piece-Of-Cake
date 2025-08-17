@@ -39,3 +39,4 @@
 - 2025-08-30: Added followers API, updated settings menu with live follower count, dark mode toggle fix, and link to new account settings page for visibility changes.
 - 2025-08-30: Fixed follow visibility and notifications; renamed People page section to "Following" so followed users remain discoverable.
 - 2025-08-30: Kept closed-account follows visible, added unfollow notifications, and surfaced them in the inbox.
+- 2025-08-30: Enabled follow-back after accepting requests, added decline notifications, and ensured closed accounts appear in Discover.

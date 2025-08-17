@@ -49,13 +49,11 @@ export default async function InboxPage() {
           <ul className="divide-y">
             {requests.map((r) => (
               <li key={r.id} className="flex items-center justify-between py-2">
-                <div>
-                  <div className="font-semibold">
+                <div className="text-sm">
+                  <span className="font-semibold">
                     {r.displayName ?? r.handle}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    @{r.handle}
-                  </div>
+                  </span>{' '}
+                  (@{r.handle}) wants to follow you
                 </div>
                 <div className="flex gap-2">
                   <form action={acceptFollowRequest.bind(null, r.id)}>
@@ -85,8 +83,10 @@ export default async function InboxPage() {
                   {a.type === 'follow_accepted'
                     ? 'accepted your follow request'
                     : a.type === 'unfollow'
-                    ? 'unfollowed you'
-                    : 'started following you'}
+                      ? 'unfollowed you'
+                      : a.type === 'follow_declined'
+                        ? 'declined your follow request'
+                        : 'started following you'}
                 </div>
               </li>
             ))}

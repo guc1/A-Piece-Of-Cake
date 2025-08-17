@@ -139,5 +139,10 @@ export async function declineFollowRequest(
         eq(follows.status, 'pending'),
       ),
     );
+  await db.insert(notifications).values({
+    toUserId: requesterId,
+    fromUserId: me,
+    type: 'follow_declined',
+  });
   revalidatePath('/people');
 }
