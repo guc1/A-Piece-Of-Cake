@@ -41,3 +41,4 @@
 - 2025-08-30: Kept closed-account follows visible, added unfollow notifications, and surfaced them in the inbox.
 - 2025-08-30: Enabled follow-back after accepting requests, added decline notifications, and ensured closed accounts appear in Discover.
 - 2025-08-30: Fixed profile route params handling and ensured inbox shows follow requests/notifications for all users.
+- 2025-08-31: Added profile overview and read-only View Account pages with visibility rules, introduced viewId and view context utilities, and updated People follow states.
