@@ -7,17 +7,18 @@ import { redirect } from 'next/navigation';
 export default async function SubflavorsPage({
   params,
 }: {
-  params: { flavorId: string };
+  params: Promise<{ flavorId: string }>;
 }) {
+  const { flavorId } = await params;
   const session = await auth();
   if (!session) redirect('/');
   const me = await ensureUser(session);
   const userId = String(me.id);
-  const subflavors = await listSubflavors(userId, params.flavorId);
+  const subflavors = await listSubflavors(userId, flavorId);
   return (
     <SubflavorsClient
       userId={userId}
-      flavorId={params.flavorId}
+      flavorId={flavorId}
       initialSubflavors={subflavors}
     />
   );

@@ -14,7 +14,7 @@ export async function followRequest(
 ): Promise<void> {
   const session = await auth();
   const self = await ensureUser(session);
-  await assertOwner(self.id);
+  await assertOwner(self.id, self.id);
   const me = self.id;
   if (me === targetId) throw new Error('Cannot follow yourself.');
 
@@ -68,7 +68,7 @@ export async function cancelFollowRequest(
 ): Promise<void> {
   const session = await auth();
   const self = await ensureUser(session);
-  await assertOwner(self.id);
+  await assertOwner(self.id, self.id);
   const me = self.id;
   await db
     .delete(follows)
@@ -89,7 +89,7 @@ export async function acceptFollowRequest(
 ): Promise<void> {
   const session = await auth();
   const self = await ensureUser(session);
-  await assertOwner(self.id);
+  await assertOwner(self.id, self.id);
   const me = self.id;
   const [req] = await db
     .select()
@@ -117,7 +117,7 @@ export async function unfollow(
 ): Promise<void> {
   const session = await auth();
   const self = await ensureUser(session);
-  await assertOwner(self.id);
+  await assertOwner(self.id, self.id);
   const me = self.id;
   await db
     .delete(follows)
@@ -138,7 +138,7 @@ export async function declineFollowRequest(
 ): Promise<void> {
   const session = await auth();
   const self = await ensureUser(session);
-  await assertOwner(self.id);
+  await assertOwner(self.id, self.id);
   const me = self.id;
   await db
     .delete(follows)
