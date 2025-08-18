@@ -9,6 +9,7 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default async function ProfilePage({
   params,
@@ -88,6 +89,11 @@ export default async function ProfilePage({
     );
   }
 
+  const canViewAccount =
+    viewerId === user.id ||
+    user.accountVisibility === 'open' ||
+    relation === 'accepted';
+
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-bold">{user.displayName ?? user.handle}</h1>
@@ -110,6 +116,11 @@ export default async function ProfilePage({
             {user.accountVisibility === 'open' ? 'Follow' : 'Request to follow'}
           </Button>
         </form>
+      )}
+      {canViewAccount && (
+        <Link href={`/u/${user.handle}/account`}>
+          <Button variant="outline">View profile</Button>
+        </Link>
       )}
     </section>
   );
