@@ -3,16 +3,11 @@ import { follows, users } from '@/lib/db/schema';
 import { auth } from '@/lib/auth';
 import { followRequest, unfollow, cancelFollowRequest } from './actions';
 import { ensureUser } from '@/lib/users';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { eq, ne } from 'drizzle-orm';
 import { Button } from '@/components/ui/button';
 
-export default async function PeoplePage({
-  searchParams,
-}: {
-  searchParams?: { uid?: string };
-}) {
+export default async function PeoplePage() {
   const session = await auth();
   if (!session?.user?.email) {
     return (
@@ -23,9 +18,6 @@ export default async function PeoplePage({
     );
   }
   const self = await ensureUser(session);
-  if (!searchParams?.uid || Number(searchParams.uid) !== self.id) {
-    redirect(`/people?uid=${self.id}`);
-  }
   const me = self.id;
 
   type DBUser = {

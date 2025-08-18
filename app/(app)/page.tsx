@@ -12,17 +12,9 @@ export function CakeHome() {
   );
 }
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ uid?: string }>;
-}) {
+export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect('/');
-  const me = await ensureUser(session);
-  const { uid } = await searchParams;
-  if (!uid || Number(uid) !== me.id) {
-    redirect(`/?uid=${me.id}`);
-  }
+  await ensureUser(session);
   return <CakeHome />;
 }
