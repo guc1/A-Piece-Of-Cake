@@ -52,3 +52,4 @@
 - 2025-09-24: Blocked People tab for profile viewers and fixed edit mode detection after exiting view.
 - 2025-09-24: Disabled save and delete buttons in viewing mode to prevent accidental edits.
 - 2025-09-24: Awaited subflavor route params and added view-mode subflavor path so profile viewers can browse without editing.
+- 2025-09-25: Added Planning landing with mode buttons and next-day planner editor with draggable time blocks, metadata panel, persistence, and read-only viewer mode.

@@ -4,6 +4,7 @@ import {
   text,
   varchar,
   timestamp,
+  date,
   integer,
   pgEnum,
   uniqueIndex,
@@ -108,4 +109,33 @@ export const notifications = pgTable('notifications', {
   type: notificationTypeEnum('type').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   readAt: timestamp('read_at'),
+});
+
+export const plans = pgTable(
+  'plans',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').references(() => users.id).notNull(),
+    date: date('date').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserDate: uniqueIndex('plans_user_date_unique').on(
+      table.userId,
+      table.date,
+    ),
+  }),
+);
+
+export const planBlocks = pgTable('plan_blocks', {
+  id: text('id').primaryKey(),
+  planId: integer('plan_id').references(() => plans.id).notNull(),
+  start: timestamp('start').notNull(),
+  end: timestamp('end').notNull(),
+  title: varchar('title', { length: 60 }),
+  description: text('description'),
+  color: varchar('color', { length: 10 }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
