@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { slices } from './slices';
 import { Cake3D } from './cake-3d';
 import { SettingsButton } from './settings-button';
+import { useViewContext } from '@/lib/view-context';
+import { getSectionHref, type Section } from '@/lib/navigation';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -13,7 +15,8 @@ export function CakeNavigation() {
   const [offsetVh, setOffsetVh] = useState(-8);
   const [boxesOffsetVh, setBoxesOffsetVh] = useState(-6);
   const [reduced, setReduced] = useState(false);
-  const userId = '42';
+  const ctx = useViewContext();
+  const userId = String(ctx.ownerId);
   const clearTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -79,7 +82,7 @@ export function CakeNavigation() {
       className="relative grid w-full justify-items-center"
       style={{ minHeight: 'calc(100vh - 64px)' }}
     >
-      <SettingsButton />
+      {ctx.editable && <SettingsButton />}
       <div
         className="grid w-full place-items-center"
         style={{ marginBottom: 'clamp(24px,3vh,36px)' }}
@@ -130,7 +133,11 @@ export function CakeNavigation() {
                 id={`n4vbox-${slice.slug}-${userId}`}
                 data-popped={popped ? true : undefined}
                 aria-label={slice.label}
-                onClick={() => router.push(slice.href)}
+                onClick={() =>
+                  router.push(
+                    getSectionHref(slice.slug as Section, ctx),
+                  )
+                }
                 onMouseEnter={() => handleEnter(slice.slug)}
                 onMouseLeave={handleLeave}
                 onFocus={() => handleEnter(slice.slug)}

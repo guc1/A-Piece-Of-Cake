@@ -6,6 +6,7 @@ import { follows, notifications, users } from '@/lib/db/schema';
 import { ensureUser } from '@/lib/users';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { assertOwner } from '@/lib/profile';
 
 export async function followRequest(
   targetId: number,
@@ -14,6 +15,7 @@ export async function followRequest(
   const session = await auth();
   const self = await ensureUser(session);
   const me = self.id;
+  await assertOwner(me);
   if (me === targetId) throw new Error('Cannot follow yourself.');
 
   const [target] = await db
@@ -67,6 +69,7 @@ export async function cancelFollowRequest(
   const session = await auth();
   const self = await ensureUser(session);
   const me = self.id;
+  await assertOwner(me);
   await db
     .delete(follows)
     .where(
@@ -87,6 +90,7 @@ export async function acceptFollowRequest(
   const session = await auth();
   const self = await ensureUser(session);
   const me = self.id;
+  await assertOwner(me);
   const [req] = await db
     .select()
     .from(follows)
@@ -114,6 +118,7 @@ export async function unfollow(
   const session = await auth();
   const self = await ensureUser(session);
   const me = self.id;
+  await assertOwner(me);
   await db
     .delete(follows)
     .where(and(eq(follows.followerId, me), eq(follows.followingId, targetId)));
@@ -134,6 +139,7 @@ export async function declineFollowRequest(
   const session = await auth();
   const self = await ensureUser(session);
   const me = self.id;
+  await assertOwner(me);
   await db
     .delete(follows)
     .where(
