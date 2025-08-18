@@ -13,17 +13,33 @@ export function ViewerBar() {
       className="fixed bottom-4 left-4 z-40 rounded-md bg-black/30 px-3 py-2 text-sm text-white backdrop-blur-sm shadow-sm dark:bg-white/40 dark:text-black"
     >
       <span className="flex items-center gap-2">
-        Viewing
+        Viewing (live)
         <span
           id={`v13wbar-live-${ctx.ownerId}-${ctx.viewerId || 0}`}
           aria-label="live"
           className="h-2 w-2 rounded-full bg-green-500"
         />
+        &bull;
         <button
           id={`v13wbar-exit-${ctx.ownerId}-${ctx.viewerId || 0}`}
-          onClick={() => router.push('/')}
+          onClick={() => {
+            const ref = document.referrer;
+            if (ref) {
+              try {
+                const url = new URL(ref);
+                if (
+                  url.origin === window.location.origin &&
+                  !url.pathname.startsWith('/view')
+                ) {
+                  router.back();
+                  return;
+                }
+              } catch {}
+            }
+            router.push('/');
+          }}
           aria-label="Exit viewing and return to my account"
-          className="ml-2 underline"
+          className="underline"
         >
           Exit
         </button>

@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useViewContext } from '@/lib/view-context';
+import { hrefFor } from '@/lib/navigation';
 import type { Flavor, Visibility } from '@/types/flavor';
 import { createFlavor, updateFlavor } from './actions';
 
@@ -48,6 +50,7 @@ export default function FlavorsClient({
   initialFlavors: Flavor[];
 }) {
   const router = useRouter();
+  const ctx = useViewContext();
   const [flavors, setFlavors] = useState<Flavor[]>(sortFlavors(initialFlavors));
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Flavor | null>(null);
@@ -254,7 +257,7 @@ export default function FlavorsClient({
                 className="mt-2 text-xs text-blue-600 underline"
                 onClick={(e) => {
                   e.stopPropagation();
-                  router.push(`/flavors/${f.id}/subflavors`);
+                  router.push(hrefFor(`/flavors/${f.id}/subflavors`, ctx));
                 }}
               >
                 View Subflavors
