@@ -68,3 +68,5 @@
 - 2025-09-28: Stored live planning adjustments locally without altering next-day plans.
 - 2025-09-29: Added hidden TimeMachine overlay triggered by clicking the "c" in "Piece" five times to override site date/time for testing.
 - 2025-09-29: Added reset-to-current-time option (Dutch timezone) and auto-close behavior when applying overrides.
+- 2025-09-30: Added slide-out calendar panel on home screen with past 30 days and upcoming week view.
+- 2025-09-30: Enabled month navigation in slide-out calendar to jump one month backward or forward.
