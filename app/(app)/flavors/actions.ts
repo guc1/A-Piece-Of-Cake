@@ -8,6 +8,7 @@ import {
 import { revalidatePath } from 'next/cache';
 import type { Flavor, FlavorInput } from '@/types/flavor';
 import { assertOwner } from '@/lib/profile';
+import { ensureUser } from '@/lib/users';
 
 function sanitize(body: any): FlavorInput {
   if (
@@ -61,8 +62,9 @@ export async function createFlavor(form: any): Promise<Flavor> {
   if (!userId) {
     throw new Error('Please sign in.');
   }
-  await assertOwner(Number(userId));
-  const flavor = await createFlavorStore(userId, sanitize(form));
+  const user = await ensureUser(session);
+  await assertOwner(user.id);
+  const flavor = await createFlavorStore(user.id.toString(), sanitize(form));
   revalidatePath('/flavors');
   return flavor;
 }
@@ -73,8 +75,13 @@ export async function updateFlavor(id: string, form: any): Promise<Flavor> {
   if (!userId) {
     throw new Error('Please sign in.');
   }
-  await assertOwner(Number(userId));
-  const updated = await updateFlavorStore(userId, id, sanitize(form));
+  const user = await ensureUser(session);
+  await assertOwner(user.id);
+  const updated = await updateFlavorStore(
+    user.id.toString(),
+    id,
+    sanitize(form),
+  );
   if (!updated) {
     throw new Error('Not found');
   }
