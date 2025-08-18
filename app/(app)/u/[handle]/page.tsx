@@ -6,6 +6,7 @@ import {
   cancelFollowRequest,
   unfollow,
 } from '../../people/actions';
+import { viewAccount } from '../../viewer/actions';
 import { eq, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ export default async function ProfilePage({
   const [user] = await db
     .select({
       id: users.id,
+      viewId: users.viewId,
       handle: users.handle,
       displayName: users.displayName,
       accountVisibility: users.accountVisibility,
@@ -88,6 +90,11 @@ export default async function ProfilePage({
     );
   }
 
+  const canViewAccount =
+    viewerId === user.id ||
+    user.accountVisibility === 'open' ||
+    relation === 'accepted';
+
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-bold">{user.displayName ?? user.handle}</h1>
@@ -109,6 +116,11 @@ export default async function ProfilePage({
           <Button>
             {user.accountVisibility === 'open' ? 'Follow' : 'Request to follow'}
           </Button>
+        </form>
+      )}
+      {canViewAccount && (
+        <form action={viewAccount.bind(null, user.viewId)}>
+          <Button variant="outline">View profile</Button>
         </form>
       )}
     </section>

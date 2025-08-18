@@ -1,5 +1,6 @@
 import { getServerSession, type NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import { cookies } from 'next/headers';
 import { getUserByEmail, verifyPassword } from '@/lib/users';
 
 // NextAuth configuration used both by the route handler and server helpers
@@ -46,6 +47,13 @@ export const authOptions: NextAuthOptions = {
 };
 
 // Helper to retrieve the current session on the server
-export function auth() {
-  return getServerSession(authOptions);
+export async function auth() {
+  const session = await getServerSession(authOptions);
+  const cookieStore = await cookies();
+  const viewId = cookieStore.get('viewId')?.value;
+  if (session?.user && viewId) {
+    (session.user as any).originalId = (session.user as any).id;
+    (session.user as any).id = viewId;
+  }
+  return session;
 }
