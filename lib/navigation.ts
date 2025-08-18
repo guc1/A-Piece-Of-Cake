@@ -40,6 +40,7 @@ export function hrefFor(
       case 'review':
         return `${base}/review`;
       case 'people':
+        // viewer hits blocked People page
         return `${base}/people`;
       case 'visibility':
         return base; // no visibility route for viewers
