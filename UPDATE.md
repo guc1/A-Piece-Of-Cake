@@ -55,3 +55,6 @@
 - 2025-09-25: Added Planning landing with mode buttons and next-day planner editor with draggable time blocks, metadata panel, persistence, and read-only viewer mode.
 - 2025-09-25: Enabled block edge resizing with 15-minute snap, kept next-day planner open on save, and tightened timeline to show all hours with side labels.
 - 2025-09-26: Improved next-day planner with cursor feedback near block edges, persistent metadata panel on click, and hourly time column from 00:00 to 24:00.
+- 2025-09-27: Aligned planner metadata times with timeline, added block deletion, and enabled cross-day navigation by dragging beyond timeline bounds.
+- 2025-09-27: Prevented planner glitches by clamping blocks to 23:59 and restricting cross-day jumps to block moves.
+- 2025-09-27: Awaited planner search params to remove runtime warnings when loading the next-day page.
