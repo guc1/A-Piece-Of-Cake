@@ -3,6 +3,8 @@
 import React, { CSSProperties, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { slices } from './slices';
+import { useViewContext } from '@/lib/view-context';
+import { getSectionHref, type Section } from '@/lib/navigation';
 
 interface Cake3DProps {
   activeSlug: string | null;
@@ -20,6 +22,7 @@ export function Cake3D({
   userId,
 }: Cake3DProps) {
   const router = useRouter();
+  const ctx = useViewContext();
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
@@ -95,11 +98,13 @@ export function Cake3D({
               aria-label={slice.label}
               role="link"
               tabIndex={0}
-              onClick={() => router.push(slice.href)}
+              onClick={() =>
+                router.push(getSectionHref(slice.slug as Section, ctx))
+              }
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  router.push(slice.href);
+                  router.push(getSectionHref(slice.slug as Section, ctx));
                 }
               }}
               onPointerEnter={() => onHover(slice.slug)}
