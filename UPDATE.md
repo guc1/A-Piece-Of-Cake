@@ -54,3 +54,4 @@
 - 2025-09-24: Awaited subflavor route params and added view-mode subflavor path so profile viewers can browse without editing.
 - 2025-09-25: Added Planning landing with mode buttons and next-day planner editor with draggable time blocks, metadata panel, persistence, and read-only viewer mode.
 - 2025-09-25: Enabled block edge resizing with 15-minute snap, kept next-day planner open on save, and tightened timeline to show all hours with side labels.
+- 2025-09-26: Improved next-day planner with cursor feedback near block edges, persistent metadata panel on click, and hourly time column from 00:00 to 24:00.

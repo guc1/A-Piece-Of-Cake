@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useViewContext } from '@/lib/view-context';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
@@ -38,6 +38,7 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     () => blocks.find((b) => b.id === selectedId) || null,
     [blocks, selectedId],
   );
+  const draggingRef = useRef(false);
 
   function minutesFromIso(iso: string) {
     const d = new Date(iso);
@@ -145,13 +146,20 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     }
   }
 
-  function onDragStart(e: React.PointerEvent, b: PlanBlock, mode: 'move' | 'start' | 'end') {
+  function onDragStart(
+    e: React.PointerEvent,
+    b: PlanBlock,
+    mode: 'move' | 'start' | 'end',
+    dragRef: React.MutableRefObject<boolean>,
+  ) {
     if (!editable) return;
     e.preventDefault();
+    dragRef.current = false;
     const startY = e.clientY;
     const initStart = minutesFromIso(b.start);
     const initEnd = minutesFromIso(b.end);
     function onMove(ev: PointerEvent) {
+      dragRef.current = true;
       const delta = Math.round((ev.clientY - startY) / PIXELS_PER_MINUTE / 15) * 15;
       if (mode === 'move') {
         let newStart = initStart + delta;
@@ -191,7 +199,7 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
       <div
         className={`relative overflow-y-hidden ${selected ? 'w-1/2' : 'w-full'}`}
         id={`p1an-timecol-${userId}`}
-        onClick={() => setSelectedId(null)}
+        onPointerDown={() => setSelectedId(null)}
       >
         {editable ? (
           <button
@@ -215,72 +223,100 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
             + Add timeslot
           </button>
         )}
-        <div style={{ height: 24 * 60 * PIXELS_PER_MINUTE }} className="relative">
-          {Array.from({ length: 24 }).map((_, h) => (
-            <div key={h}>
-              <div
-                id={`p1an-hour-${h}-${userId}`}
-                className="absolute left-0 right-0 border-t border-gray-300"
-                style={{ top: h * 60 * PIXELS_PER_MINUTE }}
-              />
+        <div
+          style={{ height: 24 * 60 * PIXELS_PER_MINUTE }}
+          className="relative"
+        >
+          <div className="absolute left-0 top-0 w-12">
+            {Array.from({ length: 25 }).map((_, h) => (
               <span
-                className="absolute -left-10 -translate-y-1/2 text-[10px] text-gray-500"
+                key={h}
+                className="absolute right-1 -translate-y-1/2 text-[10px] text-gray-500"
                 style={{ top: h * 60 * PIXELS_PER_MINUTE }}
               >
                 {String(h).padStart(2, '0')}:00
               </span>
-              {[15, 30, 45].map((m) => (
+            ))}
+          </div>
+          <div className="absolute left-12 right-0 top-0">
+            {Array.from({ length: 25 }).map((_, h) => (
+              <div key={h}>
                 <div
-                  key={m}
-                  className="absolute left-0 right-0 border-t border-gray-100"
-                  style={{ top: (h * 60 + m) * PIXELS_PER_MINUTE }}
+                  id={`p1an-hour-${h}-${userId}`}
+                  className="absolute left-0 right-0 border-t border-gray-300"
+                  style={{ top: h * 60 * PIXELS_PER_MINUTE }}
                 />
-              ))}
-            </div>
-          ))}
-          {sortedBlocks.map((b) => {
-            const top = minutesFromIso(b.start) * PIXELS_PER_MINUTE;
-            const height =
-              (minutesFromIso(b.end) - minutesFromIso(b.start)) *
-              PIXELS_PER_MINUTE;
-            const z = 10000 - minutesFromIso(b.start);
-            const textColor = '#000000';
-            return (
-              <div
-                key={b.id}
-                id={`p1an-blk-${b.id}-${userId}`}
-                data-selected={selectedId === b.id ? 'true' : 'false'}
-                aria-label={`${b.title}, ${b.start} to ${b.end}`}
-                className="absolute left-1 right-1 rounded p-1 text-xs"
-                style={{
-                  top,
-                  height,
-                  background: b.color,
-                  zIndex: z,
-                  color: textColor,
-                  cursor: editable ? 'move' : 'default',
-                }}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setSelectedId(b.id);
-                  if (!editable) return;
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  const offset = e.clientY - rect.top;
-                  const mode =
-                    offset < 8
-                      ? 'start'
-                      : rect.height - offset < 8
-                      ? 'end'
-                      : 'move';
-                  onDragStart(e, b, mode);
-                }}
-              >
-                <span className="pointer-events-none block truncate">
-                  {b.title}
-                </span>
+                {h < 24 &&
+                  [15, 30, 45].map((m) => (
+                    <div
+                      key={m}
+                      className="absolute left-0 right-0 border-t border-gray-100"
+                      style={{ top: (h * 60 + m) * PIXELS_PER_MINUTE }}
+                    />
+                  ))}
               </div>
-            );
-          })}
+            ))}
+            {sortedBlocks.map((b) => {
+              const top = minutesFromIso(b.start) * PIXELS_PER_MINUTE;
+              const height =
+                (minutesFromIso(b.end) - minutesFromIso(b.start)) *
+                PIXELS_PER_MINUTE;
+              const z = 10000 - minutesFromIso(b.start);
+              const textColor = '#000000';
+              return (
+                <div
+                  key={b.id}
+                  id={`p1an-blk-${b.id}-${userId}`}
+                  data-selected={selectedId === b.id ? 'true' : 'false'}
+                  aria-label={`${b.title}, ${b.start} to ${b.end}`}
+                  className="absolute left-1 right-1 rounded p-1 text-xs"
+                  style={{
+                    top,
+                    height,
+                    background: b.color,
+                    zIndex: z,
+                    color: textColor,
+                    cursor: editable ? 'move' : 'default',
+                  }}
+                  onPointerMove={(e) => {
+                    if (!editable) return;
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const offset = e.clientY - rect.top;
+                    (e.currentTarget as HTMLElement).style.cursor =
+                      offset < 8 || rect.height - offset < 8
+                        ? 'ns-resize'
+                        : 'move';
+                  }}
+                  onPointerLeave={(e) => {
+                    if (!editable) return;
+                    (e.currentTarget as HTMLElement).style.cursor = 'move';
+                  }}
+                  onPointerDown={(e) => {
+                    if (!editable) return;
+                    e.stopPropagation();
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const offset = e.clientY - rect.top;
+                    const mode =
+                      offset < 8
+                        ? 'start'
+                        : rect.height - offset < 8
+                        ? 'end'
+                        : 'move';
+                    onDragStart(e, b, mode, draggingRef);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (draggingRef.current) return;
+                    setSelectedId(b.id);
+                  }}
+                >
+                  <span className="pointer-events-none block truncate">
+                    {b.title}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
         {editable ? (
           <button
