@@ -7,6 +7,7 @@ import { Cake3D } from './cake-3d';
 import { SettingsButton } from './settings-button';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor, type Section } from '@/lib/navigation';
+import TimeMachine from '@/components/dev/time-machine';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -18,6 +19,9 @@ export function CakeNavigation() {
   const ctx = useViewContext();
   const userId = String(ctx.ownerId);
   const clearTimer = useRef<NodeJS.Timeout | null>(null);
+  const secretTimer = useRef<NodeJS.Timeout | null>(null);
+  const secretClicks = useRef(0);
+  const [timeMachineOpen, setTimeMachineOpen] = useState(false);
 
   useEffect(() => {
     const computeOffset = () => {
@@ -95,7 +99,24 @@ export function CakeNavigation() {
             fontSize: 'clamp(22px,2.4vw,32px)',
           }}
         >
-          A Piece Of Cake
+          A Pie
+          <span
+            onClick={() => {
+              secretClicks.current += 1;
+              if (secretClicks.current >= 5) {
+                setTimeMachineOpen(true);
+                secretClicks.current = 0;
+              }
+              if (secretTimer.current) clearTimeout(secretTimer.current);
+              secretTimer.current = setTimeout(() => {
+                secretClicks.current = 0;
+              }, 1000);
+            }}
+            className="cursor-default select-none"
+          >
+            c
+          </span>
+          e Of Cake
         </h1>
       </div>
       <div
@@ -133,9 +154,7 @@ export function CakeNavigation() {
                 id={`n4vbox-${slice.slug}-${userId}`}
                 data-popped={popped ? true : undefined}
                 aria-label={slice.label}
-                onClick={() =>
-                  router.push(hrefFor(slice.slug as Section, ctx))
-                }
+                onClick={() => router.push(hrefFor(slice.slug as Section, ctx))}
                 onMouseEnter={() => handleEnter(slice.slug)}
                 onMouseLeave={handleLeave}
                 onFocus={() => handleEnter(slice.slug)}
@@ -163,6 +182,10 @@ export function CakeNavigation() {
       <p className="sr-only" aria-live="polite">
         {hoveredLabel}
       </p>
+      <TimeMachine
+        open={timeMachineOpen}
+        onClose={() => setTimeMachineOpen(false)}
+      />
     </div>
   );
 }

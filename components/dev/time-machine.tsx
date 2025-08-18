@@ -1,0 +1,129 @@
+'use client';
+
+import { useRef, useState } from 'react';
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function TimeMachine({ open, onClose }: Props) {
+  const [stage, setStage] = useState<'code' | 'time'>('code');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [date, setDate] = useState('');
+  const realDateRef = useRef<DateConstructor | null>(null);
+
+  if (!open) return null;
+
+  function handleVerify() {
+    if (code.trim() === 'hsug') {
+      setStage('time');
+      setCode('');
+      setError('');
+    } else {
+      setError('Incorrect code');
+    }
+  }
+
+  function applyOverride() {
+    if (!date) return;
+    const t = new Date(date).getTime();
+    if (!realDateRef.current) {
+      realDateRef.current = Date;
+    }
+    const RealDate = realDateRef.current;
+    class MockDate extends RealDate {
+      constructor(...args: any[]) {
+        if (args.length === 0) {
+          super(t);
+        } else {
+          // @ts-ignore -- spread args for Date constructor
+          super(...args);
+        }
+      }
+      static now() {
+        return t;
+      }
+    }
+    (globalThis as any).Date = MockDate as unknown as DateConstructor;
+  }
+
+  function resetOverride() {
+    if (realDateRef.current) {
+      (globalThis as any).Date = realDateRef.current;
+      realDateRef.current = null;
+    }
+  }
+
+  function handleClose() {
+    setStage('code');
+    setCode('');
+    setError('');
+    setDate('');
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[1000] grid place-items-center bg-black/50"
+      onClick={handleClose}
+    >
+      <div
+        className="relative w-[min(90%,320px)] rounded bg-[var(--surface)] p-4 text-[var(--text)] shadow"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={handleClose}
+          className="absolute right-2 top-2 rounded px-2 text-sm text-[var(--text)] hover:bg-[var(--surface)]/80"
+        >
+          ×
+        </button>
+        {stage === 'code' ? (
+          <div className="mt-2">
+            <p className="mb-2">Enter code</p>
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="mb-2 w-full rounded border border-[var(--border)] bg-transparent p-2"
+              type="password"
+            />
+            {error && <p className="mb-2 text-sm text-red-500">{error}</p>}
+            <button
+              onClick={handleVerify}
+              className="rounded bg-[var(--accent)] px-3 py-1 text-white"
+            >
+              Submit
+            </button>
+          </div>
+        ) : (
+          <div className="mt-2">
+            <p className="mb-2">Set site date & time</p>
+            <input
+              type="datetime-local"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="mb-2 w-full rounded border border-[var(--border)] bg-transparent p-2"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={applyOverride}
+                className="rounded bg-[var(--accent)] px-3 py-1 text-white"
+              >
+                Apply
+              </button>
+              <button
+                onClick={resetOverride}
+                className="rounded border border-[var(--border)] px-3 py-1"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default TimeMachine;
