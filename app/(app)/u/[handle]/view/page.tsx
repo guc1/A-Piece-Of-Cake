@@ -1,17 +1,12 @@
 import { db } from '@/lib/db';
 import { users, follows } from '@/lib/db/schema';
 import { auth } from '@/lib/auth';
-import {
-  followRequest,
-  cancelFollowRequest,
-  unfollow,
-} from '../../people/actions';
+import { listFlavors } from '@/lib/flavors-store';
 import { eq, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { Button, buttonVariants } from '@/components/ui/button';
-import Link from 'next/link';
+import type { Flavor } from '@/types/flavor';
 
-export default async function ProfilePage({
+export default async function ViewAccountPage({
   params,
 }: {
   params: Promise<{ handle: string }>;
@@ -64,42 +59,52 @@ export default async function ProfilePage({
       if (incoming) inbound = incoming.status as 'accepted' | 'pending';
     }
   }
+
   const canViewAccount =
     user.accountVisibility === 'open' ||
     relation === 'accepted' ||
     relation === 'self';
 
+  if (!canViewAccount) {
+    notFound();
+  }
+
+  const flavors = await listFlavors(String(user.id));
+  const isFriend = relation === 'accepted' && inbound === 'accepted';
+  const isFollower = relation === 'accepted';
+  const visibleFlavors: Flavor[] = flavors.filter((f) => {
+    if (relation === 'self') return true;
+    switch (f.visibility) {
+      case 'public':
+        return true;
+      case 'followers':
+        return isFollower;
+      case 'friends':
+        return isFriend;
+      default:
+        return false;
+    }
+  });
+
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-bold">{user.displayName ?? user.handle}</h1>
       <p>@{user.handle}</p>
-      {relation === 'self' ? null : relation === 'accepted' ? (
-        <form action={unfollow.bind(null, user.id)}>
-          <Button variant="outline">Unfollow</Button>
-        </form>
-      ) : relation === 'pending' ? (
-        <form action={cancelFollowRequest.bind(null, user.id)}>
-          <Button variant="outline">Cancel request</Button>
-        </form>
-      ) : inbound === 'accepted' ? (
-        <form action={followRequest.bind(null, user.id)}>
-          <Button>Follow back</Button>
-        </form>
-      ) : (
-        <form action={followRequest.bind(null, user.id)}>
-          <Button>
-            {user.accountVisibility === 'open' ? 'Follow' : 'Request to follow'}
-          </Button>
-        </form>
-      )}
-      {canViewAccount && (
-        <Link
-          href={`/u/${user.handle}/view`}
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          View account
-        </Link>
-      )}
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Flavors</h2>
+        {visibleFlavors.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No flavors to show.</p>
+        ) : (
+          <ul className="space-y-2">
+            {visibleFlavors.map((f) => (
+              <li key={f.id} className="flex items-center gap-2">
+                <span>{f.icon}</span>
+                <span>{f.name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }
