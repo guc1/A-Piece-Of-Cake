@@ -1,14 +1,14 @@
 import { db } from '@/lib/db';
 import { follows, notifications, users } from '@/lib/db/schema';
 import { auth } from '@/lib/auth';
+import { ensureUser } from '@/lib/users';
 import { acceptFollowRequest, declineFollowRequest } from '../actions';
 import { eq, and } from 'drizzle-orm';
 import { Button } from '@/components/ui/button';
 
 export default async function InboxPage() {
   const session = await auth();
-  const me = Number(session?.user?.id);
-  if (!me) {
+  if (!session?.user?.email) {
     return (
       <section>
         <h1 className="text-2xl font-bold">Inbox</h1>
@@ -16,6 +16,8 @@ export default async function InboxPage() {
       </section>
     );
   }
+  const self = await ensureUser(session);
+  const me = self.id;
 
   const requests = await db
     .select({

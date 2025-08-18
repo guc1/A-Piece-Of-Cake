@@ -57,6 +57,7 @@ export async function followRequest(
   }
 
   revalidatePath('/people');
+  revalidatePath('/people/inbox');
 }
 
 export async function cancelFollowRequest(
@@ -76,6 +77,7 @@ export async function cancelFollowRequest(
       ),
     );
   revalidatePath('/people');
+  revalidatePath('/people/inbox');
 }
 
 export async function acceptFollowRequest(
@@ -102,6 +104,7 @@ export async function acceptFollowRequest(
     type: 'follow_accepted',
   });
   revalidatePath('/people');
+  revalidatePath('/people/inbox');
 }
 
 export async function unfollow(
@@ -121,6 +124,7 @@ export async function unfollow(
     type: 'unfollow',
   });
   revalidatePath('/people');
+  revalidatePath('/people/inbox');
 }
 
 export async function declineFollowRequest(
@@ -145,4 +149,5 @@ export async function declineFollowRequest(
     type: 'follow_declined',
   });
   revalidatePath('/people');
+  revalidatePath('/people/inbox');
 }
