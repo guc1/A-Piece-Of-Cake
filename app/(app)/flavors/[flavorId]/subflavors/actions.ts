@@ -7,6 +7,7 @@ import {
 } from '@/lib/subflavors-store';
 import { revalidatePath } from 'next/cache';
 import type { Subflavor, SubflavorInput } from '@/types/subflavor';
+import { assertOwner } from '@/lib/profile';
 
 function sanitize(body: any): SubflavorInput {
   if (
@@ -64,6 +65,7 @@ export async function createSubflavor(
   if (!userId) {
     throw new Error('Please sign in.');
   }
+  await assertOwner(Number(userId));
   const subflavor = await createSubflavorStore(
     userId,
     flavorId,
@@ -83,6 +85,7 @@ export async function updateSubflavor(
   if (!userId) {
     throw new Error('Please sign in.');
   }
+  await assertOwner(Number(userId));
   const updated = await updateSubflavorStore(userId, id, sanitize(form));
   if (!updated) {
     throw new Error('Not found');
