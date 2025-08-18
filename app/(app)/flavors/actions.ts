@@ -1,11 +1,9 @@
 'use server';
 
-import { auth } from '@/lib/auth';
 import {
   createFlavor as createFlavorStore,
   updateFlavor as updateFlavorStore,
 } from '@/lib/flavors-store';
-import { ensureUser } from '@/lib/users';
 import { revalidatePath } from 'next/cache';
 import type { Flavor, FlavorInput } from '@/types/flavor';
 import { assertOwner } from '@/lib/profile';
@@ -56,21 +54,27 @@ function clamp(n: number) {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
-export async function createFlavor(form: any): Promise<Flavor> {
-  const session = await auth();
-  const self = await ensureUser(session);
-  await assertOwner(self.id);
-  const flavor = await createFlavorStore(String(self.id), sanitize(form));
+export async function createFlavor(
+  boundOwnerId: number,
+  form: any,
+): Promise<Flavor> {
+  await assertOwner(boundOwnerId);
+  const flavor = await createFlavorStore(
+    String(boundOwnerId),
+    sanitize(form),
+  );
   revalidatePath('/flavors');
   return flavor;
 }
 
-export async function updateFlavor(id: string, form: any): Promise<Flavor> {
-  const session = await auth();
-  const self = await ensureUser(session);
-  await assertOwner(self.id);
+export async function updateFlavor(
+  boundOwnerId: number,
+  id: string,
+  form: any,
+): Promise<Flavor> {
+  await assertOwner(boundOwnerId);
   const updated = await updateFlavorStore(
-    String(self.id),
+    String(boundOwnerId),
     id,
     sanitize(form),
   );

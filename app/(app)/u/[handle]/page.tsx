@@ -90,13 +90,13 @@ export default async function ProfilePage({
         <p>@{user.handle}</p>
         <div className="text-sm">Closed account</div>
         {relation === 'pending' ? (
-          <form action={cancelFollowRequest.bind(null, user.id)}>
+          <form action={cancelFollowRequest.bind(null, viewerId, user.id)}>
             <Button id={`pr0ovr-ccl-${user.id}-${viewerId}`} variant="outline">
               Requested
             </Button>
           </form>
         ) : (
-          <form action={followRequest.bind(null, user.id)}>
+          <form action={followRequest.bind(null, viewerId, user.id)}>
             <Button id={`pr0ovr-req-${user.id}-${viewerId}`}>
               Request to follow
             </Button>
@@ -128,25 +128,25 @@ export default async function ProfilePage({
       </div>
       <div className="flex gap-2">
         {relation === 'self' ? null : relation === 'accepted' ? (
-          <form action={unfollow.bind(null, user.id)}>
+          <form action={unfollow.bind(null, viewerId, user.id)}>
             <Button id={`pr0ovr-unf-${user.id}-${viewerId}`} variant="outline">
               Unfollow
             </Button>
           </form>
         ) : relation === 'pending' ? (
-          <form action={cancelFollowRequest.bind(null, user.id)}>
+          <form action={cancelFollowRequest.bind(null, viewerId, user.id)}>
             <Button id={`pr0ovr-ccl-${user.id}-${viewerId}`} variant="outline">
               Requested
             </Button>
           </form>
         ) : inbound === 'accepted' ? (
-          <form action={followRequest.bind(null, user.id)}>
+          <form action={followRequest.bind(null, viewerId, user.id)}>
             <Button id={`pr0ovr-fol-${user.id}-${viewerId}`}>
               Follow back
             </Button>
           </form>
         ) : (
-          <form action={followRequest.bind(null, user.id)}>
+          <form action={followRequest.bind(null, viewerId, user.id)}>
             <Button
               id={`pr0ovr-${user.accountVisibility === 'open' ? 'fol' : 'req'}-${user.id}-${viewerId}`}
             >

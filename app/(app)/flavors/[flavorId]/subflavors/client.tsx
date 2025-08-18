@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Subflavor, Visibility } from '@/types/subflavor';
-import { createSubflavor, updateSubflavor } from './actions';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
 const VISIBILITIES: Visibility[] = [
@@ -43,10 +42,19 @@ export default function SubflavorsClient({
   userId,
   flavorId,
   initialSubflavors,
+  createSubflavorAction,
+  updateSubflavorAction,
+  editable = true,
 }: {
   userId: string;
   flavorId: string;
   initialSubflavors: Subflavor[];
+  createSubflavorAction?: (
+    flavorId: string,
+    form: any,
+  ) => Promise<Subflavor>;
+  updateSubflavorAction?: (id: string, form: any) => Promise<Subflavor>;
+  editable?: boolean;
 }) {
   const [subflavors, setSubflavors] = useState<Subflavor[]>(
     sortSubflavors(initialSubflavors),
@@ -82,6 +90,7 @@ export default function SubflavorsClient({
   const mode = editing ? 'edit' : 'new';
 
   function openCreate(e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     setEditing(null);
     const blank = {
@@ -100,6 +109,7 @@ export default function SubflavorsClient({
   }
 
   function openEdit(f: Subflavor, e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     const current = {
       name: f.name,
@@ -118,6 +128,7 @@ export default function SubflavorsClient({
   }
 
   async function remove(f: Subflavor) {
+    if (!editable) return;
     if (!confirm(`Delete '${f.name}'? This can't be undone.`)) return;
     await fetch(`/api/subflavors/${f.id}`, { method: 'DELETE' });
     setSubflavors((prev) => prev.filter((p) => p.id !== f.id));
@@ -141,8 +152,9 @@ export default function SubflavorsClient({
     setError('');
     try {
       const data = editing
-        ? await updateSubflavor(flavorId, editing.id, form)
-        : await createSubflavor(flavorId, form);
+        ? await updateSubflavorAction?.(editing.id, form)
+        : await createSubflavorAction?.(flavorId, form);
+      if (!data) throw new Error('No action');
       if (editing) {
         setSubflavors((prev) =>
           sortSubflavors(prev.map((p) => (p.id === data.id ? data : p))),
@@ -204,29 +216,37 @@ export default function SubflavorsClient({
 
   return (
     <section>
-      <div className="mb-4 flex justify-end">
-        <button
-          onClick={(e) => openCreate(e.currentTarget)}
-          className="rounded bg-orange-500 px-3 py-2 text-white"
-          id={`s7ubflavoured1tnew-${userId}`}
-        >
-          New Subflavor
-        </button>
-      </div>
+      {editable && (
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={(e) => openCreate(e.currentTarget)}
+            className="rounded bg-orange-500 px-3 py-2 text-white"
+            id={`s7ubflavoured1tnew-${userId}`}
+          >
+            New Subflavor
+          </button>
+        </div>
+      )}
       <ul className="flex flex-col gap-4" id={`s7ubflavourli5t-${userId}`}>
         {subflavors.map((f) => (
           <li
             key={f.id}
             id={`s7ubflavourrow${f.id}-${userId}`}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => openEdit(f, e.currentTarget)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter')
-                openEdit(f, e.currentTarget as HTMLElement);
-              if (e.key === 'Delete') remove(f);
-            }}
-            className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+            className={`flex items-center gap-4 p-2 ${
+              editable ? 'hover:bg-gray-50 focus:bg-gray-50 focus:outline-none' : ''
+            }`}
+            {...(editable
+              ? {
+                  role: 'button',
+                  tabIndex: 0,
+                  onClick: (e: any) => openEdit(f, e.currentTarget),
+                  onKeyDown: (e: any) => {
+                    if (e.key === 'Enter')
+                      openEdit(f, e.currentTarget as HTMLElement);
+                    if (e.key === 'Delete') remove(f);
+                  },
+                }
+              : {})}
           >
             <div
               id={`s7ubflavourava${f.id}-${userId}`}

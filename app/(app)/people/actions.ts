@@ -1,21 +1,18 @@
 'use server';
 
-import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { follows, notifications, users } from '@/lib/db/schema';
-import { ensureUser } from '@/lib/users';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { assertOwner } from '@/lib/profile';
 
 export async function followRequest(
+  boundOwnerId: number,
   targetId: number,
   _formData?: FormData,
 ): Promise<void> {
-  const session = await auth();
-  const self = await ensureUser(session);
-  await assertOwner(self.id);
-  const me = self.id;
+  await assertOwner(boundOwnerId);
+  const me = boundOwnerId;
   if (me === targetId) throw new Error('Cannot follow yourself.');
 
   const [target] = await db
@@ -63,13 +60,12 @@ export async function followRequest(
 }
 
 export async function cancelFollowRequest(
+  boundOwnerId: number,
   targetId: number,
   _formData?: FormData,
 ): Promise<void> {
-  const session = await auth();
-  const self = await ensureUser(session);
-  await assertOwner(self.id);
-  const me = self.id;
+  await assertOwner(boundOwnerId);
+  const me = boundOwnerId;
   await db
     .delete(follows)
     .where(
@@ -84,13 +80,12 @@ export async function cancelFollowRequest(
 }
 
 export async function acceptFollowRequest(
+  boundOwnerId: number,
   requesterId: number,
   _formData?: FormData,
 ): Promise<void> {
-  const session = await auth();
-  const self = await ensureUser(session);
-  await assertOwner(self.id);
-  const me = self.id;
+  await assertOwner(boundOwnerId);
+  const me = boundOwnerId;
   const [req] = await db
     .select()
     .from(follows)
@@ -112,13 +107,12 @@ export async function acceptFollowRequest(
 }
 
 export async function unfollow(
+  boundOwnerId: number,
   targetId: number,
   _formData?: FormData,
 ): Promise<void> {
-  const session = await auth();
-  const self = await ensureUser(session);
-  await assertOwner(self.id);
-  const me = self.id;
+  await assertOwner(boundOwnerId);
+  const me = boundOwnerId;
   await db
     .delete(follows)
     .where(and(eq(follows.followerId, me), eq(follows.followingId, targetId)));
@@ -133,13 +127,12 @@ export async function unfollow(
 }
 
 export async function declineFollowRequest(
+  boundOwnerId: number,
   requesterId: number,
   _formData?: FormData,
 ): Promise<void> {
-  const session = await auth();
-  const self = await ensureUser(session);
-  await assertOwner(self.id);
-  const me = self.id;
+  await assertOwner(boundOwnerId);
+  const me = boundOwnerId;
   await db
     .delete(follows)
     .where(

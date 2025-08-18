@@ -58,10 +58,10 @@ export default async function InboxPage() {
                   (@{r.handle}) wants to follow you
                 </div>
                 <div className="flex gap-2">
-                  <form action={acceptFollowRequest.bind(null, r.id)}>
+                  <form action={acceptFollowRequest.bind(null, me, r.id)}>
                     <Button size="sm">Accept</Button>
                   </form>
-                  <form action={declineFollowRequest.bind(null, r.id)}>
+                  <form action={declineFollowRequest.bind(null, me, r.id)}>
                     <Button variant="outline" size="sm">
                       Decline
                     </Button>
