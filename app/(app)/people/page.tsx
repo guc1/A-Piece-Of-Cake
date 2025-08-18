@@ -3,7 +3,6 @@ import { follows, users } from '@/lib/db/schema';
 import { auth } from '@/lib/auth';
 import { followRequest, unfollow, cancelFollowRequest } from './actions';
 import { ensureUser } from '@/lib/users';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { eq, ne } from 'drizzle-orm';
 import { Button } from '@/components/ui/button';
@@ -11,9 +10,9 @@ import { Button } from '@/components/ui/button';
 export default async function PeoplePage({
   searchParams,
 }: {
-  searchParams: Promise<{ uid?: string }>;
+  searchParams?: Promise<{ uid?: string }>;
 }) {
-  const params = await searchParams;
+  const params = (await searchParams) || {};
   const session = await auth();
   if (!session?.user?.email) {
     return (
@@ -24,10 +23,9 @@ export default async function PeoplePage({
     );
   }
   const self = await ensureUser(session);
-  if (!params?.uid || Number(params.uid) !== self.id) {
-    redirect(`/people?uid=${self.id}`);
-  }
-  const me = self.id;
+  const viewerId = self.id;
+  const ownerId = params.uid ? Number(params.uid) : viewerId;
+  const me = ownerId;
 
   type DBUser = {
     id: number;
@@ -90,15 +88,15 @@ export default async function PeoplePage({
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Friends</h2>
-        <UserList viewerId={me} users={friends} relation="friend" />
+        <UserList viewerId={viewerId} users={friends} relation="friend" />
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Following</h2>
-        <UserList viewerId={me} users={following} relation="following" />
+        <UserList viewerId={viewerId} users={following} relation="following" />
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Discover</h2>
-        <UserList viewerId={me} users={discover} relation="discover" />
+        <UserList viewerId={viewerId} users={discover} relation="discover" />
       </div>
     </section>
   );
@@ -184,6 +182,7 @@ function UserAction({
             <Link
               id={`p30pl3-view-${user.id}-${viewerId}`}
               href={`/view/${user.viewId}`}
+              onClick={() => console.log(`/view/${user.viewId}`)}
               className="text-sm underline"
               aria-label={`View @${user.handle}'s account (read-only)`}
             >
@@ -205,6 +204,7 @@ function UserAction({
               <Link
                 id={`p30pl3-view-${user.id}-${viewerId}`}
                 href={`/view/${user.viewId}`}
+                onClick={() => console.log(`/view/${user.viewId}`)}
                 className="text-sm underline"
                 aria-label={`View @${user.handle}'s account (read-only)`}
               >
@@ -227,6 +227,7 @@ function UserAction({
             <Link
               id={`p30pl3-view-${user.id}-${viewerId}`}
               href={`/view/${user.viewId}`}
+              onClick={() => console.log(`/view/${user.viewId}`)}
               className="text-sm underline"
               aria-label={`View @${user.handle}'s account (read-only)`}
             >
