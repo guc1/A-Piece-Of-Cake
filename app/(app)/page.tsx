@@ -1,7 +1,4 @@
 import { CakeNavigation } from '@/components/cake/cake-navigation';
-import { auth } from '@/lib/auth';
-import { ensureUser } from '@/lib/users';
-import { redirect } from 'next/navigation';
 
 export function CakeHome() {
   return (
@@ -12,17 +9,6 @@ export function CakeHome() {
   );
 }
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ uid?: string }>;
-}) {
-  const session = await auth();
-  if (!session) redirect('/');
-  const me = await ensureUser(session);
-  const { uid } = await searchParams;
-  if (!uid || Number(uid) !== me.id) {
-    redirect(`/?uid=${me.id}`);
-  }
+export default function DashboardPage() {
   return <CakeHome />;
 }

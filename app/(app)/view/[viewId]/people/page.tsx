@@ -12,7 +12,7 @@ export default async function ViewPeoplePage({
   if (!user) notFound();
   return (
     <section id={`v13w-peep-${user.id}`}>
-      <PeoplePage searchParams={Promise.resolve({ uid: String(user.id) })} />
+      <PeoplePage params={{ viewId }} />
     </section>
   );
 }

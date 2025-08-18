@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useViewContext } from '@/lib/view-context';
+import { hrefFor } from '@/lib/navigation';
 import { signOut } from 'next-auth/react';
 
 function GearIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -25,6 +27,7 @@ export function SettingsButton() {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const [followers, setFollowers] = useState(0);
+  const ctx = useViewContext();
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('color-mode');
@@ -82,7 +85,7 @@ export function SettingsButton() {
             />
           </div>
           <Link
-            href="/settings/account"
+            href={hrefFor('/settings/account', ctx)}
             className="mb-2 block rounded bg-[var(--surface)] px-3 py-1 text-center hover:bg-[var(--accent)] hover:text-white"
           >
             Account settings
