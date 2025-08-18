@@ -62,3 +62,4 @@
 - 2025-09-27: Enabled viewing next-day planning in read-only mode via view routes and added test coverage.
 - 2025-09-27: Ensured nested planning blocks render above their containers and added regression test.
 - 2025-09-27: Removed planning metadata save button and enabled automatic persistence on edit with updated tests.
+- 2025-09-27: Added adjustable planner range with default 05:00–22:00 view, earlier/later loading, and custom time inputs to resize the timeline.
