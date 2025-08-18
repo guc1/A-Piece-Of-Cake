@@ -18,7 +18,12 @@ export default async function AppLayout({
     redirect('/');
   }
   const { viewId } = await params;
-  const viewerId = Number(session.user.id);
+  let viewerId = Number(session.user.id);
+  let self;
+  if (Number.isNaN(viewerId)) {
+    self = await ensureUser(session);
+    viewerId = self.id;
+  }
 
   let ctx;
   if (viewId) {
@@ -34,7 +39,7 @@ export default async function AppLayout({
     if (!allowed) notFound();
     ctx = buildViewContext(user.id, viewerId, viewId);
   } else {
-    const me = await ensureUser(session);
+    const me = self ?? (await ensureUser(session));
     ctx = buildViewContext(me.id, viewerId, me.viewId);
   }
 

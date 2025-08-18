@@ -65,7 +65,7 @@ export async function createSubflavor(
   if (!userId) {
     throw new Error('Please sign in.');
   }
-  await assertOwner(Number(userId));
+  assertOwner(Number(userId), Number(userId));
   const subflavor = await createSubflavorStore(
     userId,
     flavorId,
@@ -85,7 +85,7 @@ export async function updateSubflavor(
   if (!userId) {
     throw new Error('Please sign in.');
   }
-  await assertOwner(Number(userId));
+  assertOwner(Number(userId), Number(userId));
   const updated = await updateSubflavorStore(userId, id, sanitize(form));
   if (!updated) {
     throw new Error('Not found');

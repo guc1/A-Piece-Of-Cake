@@ -5,6 +5,7 @@ import {
   createFlavor as createFlavorStore,
   updateFlavor as updateFlavorStore,
 } from '@/lib/flavors-store';
+import { ensureUser } from '@/lib/users';
 import { revalidatePath } from 'next/cache';
 import type { Flavor, FlavorInput } from '@/types/flavor';
 import { assertOwner } from '@/lib/profile';
@@ -57,11 +58,9 @@ function clamp(n: number) {
 
 export async function createFlavor(form: any): Promise<Flavor> {
   const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    throw new Error('Please sign in.');
-  }
-  await assertOwner(Number(userId));
+  const self = await ensureUser(session);
+  const userId = String(self.id);
+  assertOwner(self.id, self.id);
   const flavor = await createFlavorStore(userId, sanitize(form));
   revalidatePath('/flavors');
   return flavor;
@@ -69,11 +68,9 @@ export async function createFlavor(form: any): Promise<Flavor> {
 
 export async function updateFlavor(id: string, form: any): Promise<Flavor> {
   const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    throw new Error('Please sign in.');
-  }
-  await assertOwner(Number(userId));
+  const self = await ensureUser(session);
+  const userId = String(self.id);
+  assertOwner(self.id, self.id);
   const updated = await updateFlavorStore(userId, id, sanitize(form));
   if (!updated) {
     throw new Error('Not found');

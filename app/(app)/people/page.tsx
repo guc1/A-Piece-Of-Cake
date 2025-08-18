@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button';
 export default async function PeoplePage({
   searchParams,
 }: {
-  searchParams?: { uid?: string };
+  searchParams: Promise<{ uid?: string }>;
 }) {
+  const params = await searchParams;
   const session = await auth();
   if (!session?.user?.email) {
     return (
@@ -23,7 +24,7 @@ export default async function PeoplePage({
     );
   }
   const self = await ensureUser(session);
-  if (!searchParams?.uid || Number(searchParams.uid) !== self.id) {
+  if (!params?.uid || Number(params.uid) !== self.id) {
     redirect(`/people?uid=${self.id}`);
   }
   const me = self.id;

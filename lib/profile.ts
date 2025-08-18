@@ -50,10 +50,8 @@ export async function canViewProfile({
   }
 }
 
-export async function assertOwner(ownerId: number) {
-  const session = await auth();
-  const me = Number(session?.user?.id);
-  if (me !== ownerId) {
+export function assertOwner(viewerId: number, ownerId: number) {
+  if (viewerId !== ownerId) {
     throw new Error("Read-only: you cannot edit another user's account.");
   }
 }
