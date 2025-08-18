@@ -49,3 +49,4 @@
 - 2025-09-02: Bound owner vs viewer mode to route prefix, added auth-based assertOwner helper, removed uid query params, and scoped People and navigation reads by ownerId.
 - 2025-09-03: Added hrefFor navigation helper so view mode persists across routes and logged viewer bar presence.
 - 2025-09-03: Split owner and viewer layouts with context-based routing, migrated view routes to their own group, and refined viewer bar exit behavior.
+- 2025-09-04: Blocked People tab access when viewing others and allowed self-view to enter owner mode for editing.
