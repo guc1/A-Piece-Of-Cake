@@ -23,7 +23,8 @@ export function ViewerBar() {
         <button
           id={`v13wbar-exit-${ctx.ownerId}-${ctx.viewerId || 0}`}
           onClick={() => {
-            if (window.history.length > 1) router.back();
+            const prev = document.referrer;
+            if (prev && !prev.includes('/view/')) router.back();
             else router.push('/');
           }}
           aria-label="Exit viewing and return to my account"

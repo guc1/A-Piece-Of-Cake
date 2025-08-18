@@ -12,7 +12,6 @@ export function ViewLink({ id, href, handle }: ViewLinkProps) {
     <Link
       id={id}
       href={href}
-      onClick={() => console.log('View Account href', href)}
       className="text-sm underline"
       aria-label={`View @${handle}'s account (read-only)`}
     >

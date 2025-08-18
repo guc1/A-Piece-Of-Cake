@@ -1,8 +1,8 @@
 import { getUserByViewId } from '@/lib/users';
 import { notFound } from 'next/navigation';
-import { IngredientsHome } from '../../../ingredients/page';
+import FlavorsPage from '@/app/(app)/flavors/page';
 
-export default async function ViewIngredientsPage({
+export default async function ViewFlavorsPage({
   params,
 }: {
   params: Promise<{ viewId: string }>;
@@ -11,8 +11,8 @@ export default async function ViewIngredientsPage({
   const user = await getUserByViewId(viewId);
   if (!user) notFound();
   return (
-    <section id={`v13w-igrd-${user.id}`}>
-      <IngredientsHome />
+    <section id={`v13w-flav-${user.id}`}>
+      <FlavorsPage params={{ viewId }} />
     </section>
   );
 }
