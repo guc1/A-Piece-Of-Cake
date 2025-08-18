@@ -63,7 +63,7 @@ export async function createSubflavor(
 ): Promise<Subflavor> {
   const session = await auth();
   const user = await ensureUser(session);
-  await assertOwner(user.id);
+  await assertOwner(user.id, user.id);
   const subflavor = await createSubflavorStore(
     String(user.id),
     flavorId,
@@ -80,7 +80,7 @@ export async function updateSubflavor(
 ): Promise<Subflavor> {
   const session = await auth();
   const user = await ensureUser(session);
-  await assertOwner(user.id);
+  await assertOwner(user.id, user.id);
   const updated = await updateSubflavorStore(
     String(user.id),
     id,
