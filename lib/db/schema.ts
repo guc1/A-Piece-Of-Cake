@@ -29,6 +29,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
+  viewId: serial('view_id').unique(),
   handle: varchar('handle', { length: 50 }).notNull().unique(),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),

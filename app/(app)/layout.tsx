@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
+import { exitViewing } from './viewer/actions';
 
 export default async function AppLayout({
   children,
@@ -12,6 +13,8 @@ export default async function AppLayout({
   if (!session) {
     redirect('/');
   }
+
+  const viewing = (session.user as any).originalId;
 
   return (
     <html lang="en">
@@ -31,6 +34,16 @@ export default async function AppLayout({
           </form>
         </nav>
         <main className="p-4">{children}</main>
+        {viewing && (
+          <div className="fixed left-4 bottom-4 z-50 flex gap-2">
+            <Button variant="outline" disabled>
+              Viewer
+            </Button>
+            <form action={exitViewing}>
+              <Button variant="outline">Exit</Button>
+            </form>
+          </div>
+        )}
       </body>
     </html>
   );
