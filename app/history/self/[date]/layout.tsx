@@ -2,32 +2,28 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
 import { buildViewContext } from '@/lib/profile';
-import { ensureDailyProfileSnapshot } from '@/lib/profile-snapshots';
 import { ViewContextProvider } from '@/lib/view-context';
 import { AppNav } from '@/components/app-nav';
+import { ViewerBar } from '@/components/viewer-bar';
 
-export default async function AppLayout({
+export default async function HistoryLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<{ date: string }>;
 }) {
+  const { date } = await params;
   const session = await auth();
-  if (!session) {
-    redirect('/');
-  }
+  if (!session) redirect('/');
   const me = await ensureUser(session);
-  await ensureDailyProfileSnapshot(me.id);
   const ctx = buildViewContext({
     ownerId: me.id,
     viewerId: me.id,
-    mode: 'owner',
+    mode: 'historical',
     viewId: me.viewId,
+    snapshotDate: date,
   });
-
-  if (process.env.NODE_ENV !== 'production') {
-    console.log({ mode: ctx.mode, ownerId: ctx.ownerId, viewerId: ctx.viewerId });
-  }
-
   return (
     <html lang="en">
       <body>
@@ -36,6 +32,7 @@ export default async function AppLayout({
           <main className="p-4">
             <div id={`v13wctx-${ctx.ownerId}-${ctx.viewerId}`}>{children}</div>
           </main>
+          <ViewerBar />
         </ViewContextProvider>
       </body>
     </html>

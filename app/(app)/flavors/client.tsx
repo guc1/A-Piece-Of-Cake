@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Flavor, Visibility } from '@/types/flavor';
 import { createFlavor, updateFlavor } from './actions';
 import { useViewContext } from '@/lib/view-context';
+import { hrefFor } from '@/lib/navigation';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
 const VISIBILITIES: Visibility[] = [
@@ -49,7 +50,8 @@ export default function FlavorsClient({
   initialFlavors: Flavor[];
 }) {
   const router = useRouter();
-  const { editable, viewId } = useViewContext();
+  const ctx = useViewContext();
+  const { editable } = ctx;
   const [flavors, setFlavors] = useState<Flavor[]>(sortFlavors(initialFlavors));
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Flavor | null>(null);
@@ -263,7 +265,7 @@ export default function FlavorsClient({
                   e.stopPropagation();
                   const href = editable
                     ? `/flavors/${f.id}/subflavors`
-                    : `/view/${viewId}/flavors/${f.id}/subflavors`;
+                    : hrefFor(`/flavors/${f.id}/subflavors`, ctx);
                   router.push(href);
                 }}
               >

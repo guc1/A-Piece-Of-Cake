@@ -1,11 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useViewContext } from '@/lib/view-context';
 
-export function SideCalendar() {
+export function SideCalendar({ snapshotDates }: { snapshotDates: string[] }) {
   const [open, setOpen] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
+  const router = useRouter();
+  const ctx = useViewContext();
 
   const today = new Date();
   const base = new Date(today);
@@ -71,16 +75,31 @@ export function SideCalendar() {
             ))}
             {days.map((date) => {
               const isToday = date.toDateString() === today.toDateString();
+              const iso = date.toISOString().slice(0, 10);
+              const hasSnap = snapshotDates.includes(iso);
               return (
-                <div
+                <button
                   key={date.toISOString()}
+                  disabled={!hasSnap}
+                  onClick={() => {
+                    if (!hasSnap) return;
+                    const path =
+                      ctx.mode === 'owner' ||
+                      (ctx.mode === 'historical' && ctx.viewerId === ctx.ownerId)
+                        ? `/history/self/${iso}`
+                        : `/history/${ctx.viewId}/${iso}`;
+                    router.push(path);
+                  }}
                   className={cn(
                     'p-1 rounded',
+                    hasSnap
+                      ? 'cursor-pointer hover:bg-orange-100'
+                      : 'text-zinc-400 cursor-default',
                     isToday && 'bg-orange-500 text-white font-bold',
                   )}
                 >
                   {date.getDate()}
-                </div>
+                </button>
               );
             })}
           </div>
