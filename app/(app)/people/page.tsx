@@ -35,10 +35,11 @@ export default async function PeoplePage({
   const ownerId = owner.id;
   const viewerId = viewer.id;
 
+  const mode = ownerId === viewerId ? 'owner' : params?.viewId ? 'viewer' : 'owner';
   const ctx = buildViewContext({
     ownerId,
     viewerId,
-    mode: params?.viewId ? 'viewer' : 'owner',
+    mode,
     viewId: owner.viewId,
   });
 

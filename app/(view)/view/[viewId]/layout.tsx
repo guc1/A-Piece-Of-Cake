@@ -27,10 +27,11 @@ export default async function ViewLayout({
   });
   if (!allowed) notFound();
 
+  const mode = viewerId === owner.id ? 'owner' : 'viewer';
   const ctx = buildViewContext({
     ownerId: owner.id,
     viewerId,
-    mode: 'viewer',
+    mode,
     viewId,
   });
 
