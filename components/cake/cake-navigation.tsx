@@ -6,14 +6,21 @@ import { slices } from './slices';
 import { Cake3D } from './cake-3d';
 import { SettingsButton } from './settings-button';
 
-export function CakeNavigation() {
+interface CakeNavigationProps {
+  userId?: string | number;
+  readOnly?: boolean;
+}
+
+export function CakeNavigation({
+  userId = 'self',
+  readOnly = false,
+}: CakeNavigationProps) {
   const router = useRouter();
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const [offsetVh, setOffsetVh] = useState(-8);
   const [boxesOffsetVh, setBoxesOffsetVh] = useState(-6);
   const [reduced, setReduced] = useState(false);
-  const userId = '42';
   const clearTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -79,7 +86,7 @@ export function CakeNavigation() {
       className="relative grid w-full justify-items-center"
       style={{ minHeight: 'calc(100vh - 64px)' }}
     >
-      <SettingsButton />
+      {!readOnly && <SettingsButton />}
       <div
         className="grid w-full place-items-center"
         style={{ marginBottom: 'clamp(24px,3vh,36px)' }}
