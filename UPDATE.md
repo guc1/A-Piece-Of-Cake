@@ -44,3 +44,4 @@
 - 2025-08-31: Added profile overview and read-only View Account pages with visibility rules, introduced viewId and view context utilities, and updated People follow states.
 - 2025-08-31: Refined View Account to land on Cake home, added viewer bar with Exit, dynamic view routing, and navigation helper.
 - 2025-08-31: Added userId query parameter to owner routes and redirect to own account, switching to viewId when viewing others.
+- 2025-09-01: Ensured flavor actions create missing user records to avoid foreign key errors when inserting flavors.
