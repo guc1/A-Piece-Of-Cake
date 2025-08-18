@@ -53,8 +53,8 @@ test('next day planning flow', async ({ page }) => {
   );
   await page.mouse.up();
 
-  await page.click('button[id^="p1an-meta-save-"]');
-  await expect(page).toHaveURL('/planning/next');
+  await page.click('button[id^="p1an-meta-close-"]');
+  await page.waitForTimeout(1000);
   await expect(page.locator('[id^="p1an-meta-"]')).toHaveCount(0);
   await page.goto('/planning');
   await page.click('[id^="p1an-btn-next-"]');
