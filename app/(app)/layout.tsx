@@ -17,25 +17,24 @@ export default async function AppLayout({
   if (!session) {
     redirect('/');
   }
+  const self = await ensureUser(session);
   const { viewId } = await params;
-  const viewerId = Number(session.user.id);
 
   let ctx;
   if (viewId) {
     const user = await getUserByViewId(viewId);
     if (!user) notFound();
     const allowed = await canViewProfile({
-      viewerId,
+      viewerId: self.id,
       targetUser: {
         id: user.id,
         accountVisibility: user.accountVisibility as any,
       },
     });
     if (!allowed) notFound();
-    ctx = buildViewContext(user.id, viewerId, viewId);
+    ctx = buildViewContext(user.id, self.id, viewId);
   } else {
-    const me = await ensureUser(session);
-    ctx = buildViewContext(me.id, viewerId, me.viewId);
+    ctx = buildViewContext(self.id, self.id, self.viewId);
   }
 
   return (

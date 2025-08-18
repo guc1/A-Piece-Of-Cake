@@ -2,6 +2,7 @@ import { db } from './db';
 import { follows } from './db/schema';
 import { eq, and } from 'drizzle-orm';
 import { auth } from './auth';
+import { ensureUser } from './users';
 
 export interface ViewContext {
   ownerId: number;
@@ -52,8 +53,8 @@ export async function canViewProfile({
 
 export async function assertOwner(ownerId: number) {
   const session = await auth();
-  const me = Number(session?.user?.id);
-  if (me !== ownerId) {
+  const self = await ensureUser(session);
+  if (self.id !== ownerId) {
     throw new Error("Read-only: you cannot edit another user's account.");
   }
 }

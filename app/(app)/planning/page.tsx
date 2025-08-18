@@ -10,16 +10,9 @@ export function PlanningHome() {
   );
 }
 
-export default async function PlanningPage({
-  searchParams,
-}: {
-  searchParams: { uid?: string };
-}) {
+export default async function PlanningPage() {
   const session = await auth();
   if (!session) redirect('/');
-  const me = await ensureUser(session);
-  if (!searchParams.uid || Number(searchParams.uid) !== me.id) {
-    redirect(`/planning?uid=${me.id}`);
-  }
+  await ensureUser(session);
   return <PlanningHome />;
 }

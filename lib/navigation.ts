@@ -11,10 +11,5 @@ export type Section =
 
 export function getSectionHref(section: Section, ctx: ViewContext): string {
   const base = ctx.mode === 'viewer' && ctx.viewId ? `/view/${ctx.viewId}` : '';
-  const path = section === 'cake' ? (base || '/') : `${base}/${section}`;
-  if (ctx.mode === 'owner') {
-    const sep = path.includes('?') ? '&' : '?';
-    return `${path}${sep}uid=${ctx.ownerId}`;
-  }
-  return path;
+  return section === 'cake' ? (base || '/') : `${base}/${section}`;
 }
