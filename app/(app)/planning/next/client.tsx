@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useViewContext } from '@/lib/view-context';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
@@ -129,20 +129,53 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     setSelectedId(id);
   }
 
-  function onSave() {
-    const payload: PlanBlockInput[] = blocks.map((b) => ({
-      id: b.id,
-      start: b.start,
-      end: b.end,
-      title: b.title,
-      description: b.description,
-      color: b.color,
-    }));
-    savePlanAction(date, payload).then((plan) => {
-      setBlocks(plan.blocks);
-      setSelectedId(null);
-    });
-  }
+  const lastSaved = useRef(JSON.stringify(initialPlan?.blocks ?? []));
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blocksRef = useRef(blocks);
+  useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
+
+  useEffect(() => {
+    if (!editable) return;
+    const serialized = JSON.stringify(blocks);
+    if (serialized === lastSaved.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const payload: PlanBlockInput[] = blocks.map((b) => ({
+        id: b.id,
+        start: b.start,
+        end: b.end,
+        title: b.title,
+        description: b.description,
+        color: b.color,
+      }));
+      savePlanAction(date, payload).then((plan) => {
+        setBlocks(plan.blocks);
+        lastSaved.current = JSON.stringify(plan.blocks);
+      });
+      saveTimer.current = null;
+    }, 500);
+  }, [blocks, date, editable]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        const payload: PlanBlockInput[] = blocksRef.current.map((b) => ({
+          id: b.id,
+          start: b.start,
+          end: b.end,
+          title: b.title,
+          description: b.description,
+          color: b.color,
+        }));
+        void savePlanAction(date, payload).then((plan) => {
+          lastSaved.current = JSON.stringify(plan.blocks);
+        });
+      }
+    };
+  }, [date]);
 
   function handleTimeChange(id: string, field: 'start' | 'end', value: string) {
     const [h, m] = value.split(':').map((n) => parseInt(n, 10));
@@ -495,19 +528,6 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
             </div>
           </div>
           <div className="mt-4 flex gap-2">
-            {editable ? (
-              <Button id={`p1an-meta-save-${userId}`} onClick={onSave}>
-                Save
-              </Button>
-            ) : (
-              <Button
-                id={`p1an-meta-save-${userId}`}
-                disabled
-                title="Read-only in viewing mode"
-              >
-                Save
-              </Button>
-            )}
             {editable ? (
               <Button
                 variant="outline"

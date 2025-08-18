@@ -61,3 +61,4 @@
 - 2025-09-27: Dropped dragging when the cursor leaves the timeline, preventing disappearing planner blocks.
 - 2025-09-27: Enabled viewing next-day planning in read-only mode via view routes and added test coverage.
 - 2025-09-27: Ensured nested planning blocks render above their containers and added regression test.
+- 2025-09-27: Removed planning metadata save button and enabled automatic persistence on edit with updated tests.

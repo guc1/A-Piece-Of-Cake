@@ -24,7 +24,8 @@ test('viewer can read next-day plan without editing', async ({ page }) => {
   await page.click('[id^="p1an-btn-next-"]');
   await page.click('[id^="p1an-add-top-"]');
   await page.fill('input[id^="p1an-meta-ttl-"]', 'Task');
-  await page.click('button[id^="p1an-meta-save-"]');
+  await page.click('button[id^="p1an-meta-close-"]');
+  await page.waitForTimeout(1000);
 
   // fetch view link for owner
   await page.goto(`/u/${handleA}`);
@@ -51,6 +52,6 @@ test('viewer can read next-day plan without editing', async ({ page }) => {
   await expect(page.locator('[id^="p1an-blk-"]')).toHaveCount(1);
   await page.click('[id^="p1an-blk-"]');
   await expect(page.locator('[id^="p1an-meta-"]')).toBeVisible();
-  await expect(page.locator('button[id^="p1an-meta-save-"]')).toBeDisabled();
+  await expect(page.locator('button[id^="p1an-meta-save-"]')).toHaveCount(0);
   await expect(page.locator('input[id^="p1an-meta-ttl-"]')).toBeDisabled();
 });
