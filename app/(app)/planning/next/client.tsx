@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useViewContext } from '@/lib/view-context';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
@@ -30,6 +31,7 @@ interface Props {
 
 export default function EditorClient({ userId, date, initialPlan }: Props) {
   const { editable } = useViewContext();
+  const router = useRouter();
   const [blocks, setBlocks] = useState<PlanBlock[]>(
     initialPlan?.blocks ?? [],
   );
@@ -40,19 +42,50 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
   );
   const draggingRef = useRef(false);
 
-  function minutesFromIso(iso: string) {
-    const d = new Date(iso);
-    return d.getHours() * 60 + d.getMinutes();
+  const minutesFromIso = useCallback(
+    (iso: string) => {
+      const d = new Date(iso);
+      const base = new Date(`${date}T00:00:00`);
+      return Math.round((d.getTime() - base.getTime()) / 60000);
+    },
+    [date],
+  );
+  const isoFromMinutes = useCallback(
+    (min: number) => {
+      const base = new Date(`${date}T00:00:00`);
+      return new Date(base.getTime() + min * 60000).toISOString();
+    },
+    [date],
+  );
+
+  function formatTime(iso: string) {
+    const mins = minutesFromIso(iso);
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
-  function isoFromMinutes(min: number) {
-    const base = new Date(`${date}T00:00:00`);
-    return new Date(base.getTime() + min * 60000).toISOString();
+
+  function prevDate(d: string) {
+    const dt = new Date(d);
+    dt.setDate(dt.getDate() - 1);
+    return dt.toISOString().slice(0, 10);
+  }
+
+  function nextDate(d: string) {
+    const dt = new Date(d);
+    dt.setDate(dt.getDate() + 1);
+    return dt.toISOString().slice(0, 10);
   }
 
   function updateBlock(id: string, updates: Partial<PlanBlock>) {
     setBlocks((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...updates } : b)),
     );
+  }
+
+  function deleteBlock(id: string) {
+    setBlocks((prev) => prev.filter((b) => b.id !== id));
+    setSelectedId(null);
   }
 
   function addBlock() {
@@ -132,7 +165,6 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
   function handleTimeChange(id: string, field: 'start' | 'end', value: string) {
     const [h, m] = value.split(':').map((n) => parseInt(n, 10));
     const minutes = h * 60 + m;
-    const iso = isoFromMinutes(minutes);
     if (field === 'start') {
       const dur = minutesFromIso(selected!.end) - minutesFromIso(selected!.start);
       const newStart = Math.min(Math.max(minutes, 0), 24 * 60 - 15);
@@ -158,11 +190,15 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     const startY = e.clientY;
     const initStart = minutesFromIso(b.start);
     const initEnd = minutesFromIso(b.end);
+    let overflow: 'prev' | 'next' | null = null;
     function onMove(ev: PointerEvent) {
       dragRef.current = true;
       const delta = Math.round((ev.clientY - startY) / PIXELS_PER_MINUTE / 15) * 15;
       if (mode === 'move') {
         let newStart = initStart + delta;
+        overflow = null;
+        if (newStart < 0) overflow = 'prev';
+        if (newStart > 24 * 60 - (initEnd - initStart)) overflow = 'next';
         newStart = Math.max(0, Math.min(newStart, 24 * 60 - (initEnd - initStart)));
         updateBlock(b.id, {
           start: isoFromMinutes(newStart),
@@ -170,10 +206,14 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
         });
       } else if (mode === 'start') {
         let newStart = initStart + delta;
+        overflow = null;
+        if (newStart < 0) overflow = 'prev';
         newStart = Math.max(0, Math.min(newStart, initEnd - 15));
         updateBlock(b.id, { start: isoFromMinutes(newStart) });
       } else {
         let newEnd = initEnd + delta;
+        overflow = null;
+        if (newEnd > 24 * 60) overflow = 'next';
         newEnd = Math.max(initStart + 15, Math.min(newEnd, 24 * 60));
         updateBlock(b.id, { end: isoFromMinutes(newEnd) });
       }
@@ -181,6 +221,11 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     function onUp() {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      if (overflow === 'prev') {
+        router.push(`/planning/next?date=${prevDate(date)}`);
+      } else if (overflow === 'next') {
+        router.push(`/planning/next?date=${nextDate(date)}`);
+      }
     }
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -191,7 +236,7 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
       [...blocks].sort(
         (a, b) => minutesFromIso(a.start) - minutesFromIso(b.start),
       ),
-    [blocks],
+    [blocks, minutesFromIso],
   );
 
   return (
@@ -397,7 +442,7 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
               <input
                 type="time"
                 id={`p1an-meta-tms-${selected.id}-${userId}`}
-                value={selected.start.substring(11, 16)}
+                value={formatTime(selected.start)}
                 disabled={!editable}
                 onChange={(e) => handleTimeChange(selected.id, 'start', e.target.value)}
               />
@@ -409,7 +454,7 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
               <input
                 type="time"
                 id={`p1an-meta-tme-${selected.id}-${userId}`}
-                value={selected.end.substring(11, 16)}
+                value={formatTime(selected.end)}
                 disabled={!editable}
                 onChange={(e) => handleTimeChange(selected.id, 'end', e.target.value)}
               />
@@ -429,6 +474,15 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
                 Save
               </Button>
             )}
+            {editable ? (
+              <Button
+                variant="destructive"
+                id={`p1an-meta-del-${selected.id}-${userId}`}
+                onClick={() => deleteBlock(selected.id)}
+              >
+                Delete
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               id={`p1an-meta-close-${userId}`}
