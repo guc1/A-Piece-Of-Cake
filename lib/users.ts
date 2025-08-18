@@ -1,7 +1,7 @@
 import { db } from './db';
 import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
-import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+import { randomBytes, scryptSync, timingSafeEqual, randomUUID } from 'crypto';
 import type { Session } from 'next-auth';
 
 export interface NewUser {
@@ -39,6 +39,7 @@ export async function createUser(input: NewUser) {
       accountVisibility: input.accountVisibility ?? 'open',
       name: input.name,
       passwordHash,
+      viewId: randomUUID(),
     })
     .returning();
   return user;

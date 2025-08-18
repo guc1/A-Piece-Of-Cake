@@ -17,7 +17,12 @@ export const authOptions: NextAuthOptions = {
         if (!user) return null;
         const ok = verifyPassword(credentials.password, user.passwordHash);
         if (!ok) return null;
-        return { id: user.id.toString(), name: user.name ?? undefined, email: user.email };
+        return {
+          id: user.id.toString(),
+          name: user.name ?? undefined,
+          email: user.email,
+          viewId: user.viewId,
+        } as any;
       },
     }),
   ],
@@ -27,6 +32,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         // On initial sign in, the user object is available and we store the id
         token.id = (user as any).id;
+        (token as any).viewId = (user as any).viewId;
       }
       return token;
     },
@@ -34,6 +40,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         // Expose the user id on the session for server actions/routes
         (session.user as any).id = token.id as string;
+        (session.user as any).viewId = (token as any).viewId as string;
       }
       return session;
     },

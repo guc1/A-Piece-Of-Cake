@@ -7,7 +7,9 @@ import {
   integer,
   pgEnum,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core';
+import { randomUUID } from 'crypto';
 
 export const accountVisibilityEnum = pgEnum('account_visibility', [
   'open',
@@ -29,6 +31,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
+  viewId: uuid('view_id').notNull().unique().$defaultFn(() => randomUUID()),
   handle: varchar('handle', { length: 50 }).notNull().unique(),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
