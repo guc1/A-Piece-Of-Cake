@@ -60,3 +60,4 @@
 - 2025-09-27: Awaited planner search params to remove runtime warnings when loading the next-day page.
 - 2025-09-27: Dropped dragging when the cursor leaves the timeline, preventing disappearing planner blocks.
 - 2025-09-27: Enabled viewing next-day planning in read-only mode via view routes and added test coverage.
+- 2025-09-27: Ensured nested planning blocks render above their containers and added regression test.

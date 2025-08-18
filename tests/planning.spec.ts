@@ -37,15 +37,15 @@ test('next day planning flow', async ({ page }) => {
   const box = await block.boundingBox();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + yFor(7) + box!.height / 2);
+  await page.mouse.move(
+    box!.x + box!.width / 2,
+    box!.y + yFor(7) + box!.height / 2,
+  );
   await page.mouse.up();
 
   // resize end to 08:30
   const box2 = await block.boundingBox();
-  await page.mouse.move(
-    box2!.x + box2!.width / 2,
-    box2!.y + box2!.height - 1,
-  );
+  await page.mouse.move(box2!.x + box2!.width / 2, box2!.y + box2!.height - 1);
   await page.mouse.down();
   await page.mouse.move(
     box2!.x + box2!.width / 2,
@@ -61,4 +61,60 @@ test('next day planning flow', async ({ page }) => {
   const blk2 = page.locator('[id^="p1an-blk-"]');
   const top2 = await blk2.evaluate((el) => parseInt(getComputedStyle(el).top));
   expect(top2).toBe(yFor(7));
+});
+
+test('nested block appears on top', async ({ page }) => {
+  const handle = `user${Date.now()}n`;
+  const email = `${handle}@example.com`;
+  const password = 'pass1234';
+  await page.goto('/signup');
+  await page.fill('input[placeholder="Name"]', 'Tester');
+  await page.fill('input[placeholder="Handle"]', handle);
+  await page.fill('input[placeholder="Email"]', email);
+  await page.fill('input[placeholder="Password"]', password);
+  await page.click('text=Sign Up');
+  await page.goto('/planning');
+  await page.click('[id^="p1an-btn-next-"]');
+
+  await page.click('[id^="p1an-add-top-"]');
+  const block1 = page.locator('[id^="p1an-blk-"]').nth(0);
+
+  const box1 = await block1.boundingBox();
+  await page.mouse.move(box1!.x + box1!.width / 2, box1!.y + box1!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    box1!.x + box1!.width / 2,
+    box1!.y + yFor(6) + box1!.height / 2,
+  );
+  await page.mouse.up();
+  const box1b = await block1.boundingBox();
+  await page.mouse.move(
+    box1b!.x + box1b!.width / 2,
+    box1b!.y + box1b!.height - 1,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    box1b!.x + box1b!.width / 2,
+    box1b!.y + box1b!.height + yFor(5),
+  );
+  await page.mouse.up();
+
+  await page.click('[id^="p1an-add-top-"]');
+  const block2 = page.locator('[id^="p1an-blk-"]').nth(1);
+  const box2 = await block2.boundingBox();
+  await page.mouse.move(box2!.x + box2!.width / 2, box2!.y + box2!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    box2!.x + box2!.width / 2,
+    box2!.y - yFor(4) + box2!.height / 2,
+  );
+  await page.mouse.up();
+
+  const z1 = await block1.evaluate((el) =>
+    parseInt(getComputedStyle(el).zIndex),
+  );
+  const z2 = await block2.evaluate((el) =>
+    parseInt(getComputedStyle(el).zIndex),
+  );
+  expect(z2).toBeGreaterThan(z1);
 });

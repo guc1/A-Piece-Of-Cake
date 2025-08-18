@@ -22,6 +22,7 @@ const COLORS = [
 // shrink timeline so 24h fits on one screen
 const PIXELS_PER_MINUTE = 0.5;
 const MAX_MINUTES = 24 * 60 - 1; // 23:59 in minutes
+const Z_BASE = 10000;
 
 interface Props {
   userId: string;
@@ -42,7 +43,9 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
   const minutesFromIso = useCallback(
     (iso: string) => {
       const base = new Date(`${date}T00:00:00`);
-      const diff = Math.round((new Date(iso).getTime() - base.getTime()) / 60000);
+      const diff = Math.round(
+        (new Date(iso).getTime() - base.getTime()) / 60000,
+      );
       return Math.max(0, Math.min(diff, MAX_MINUTES));
     },
     [date],
@@ -174,9 +177,9 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     const startY = e.clientY;
     const initStart = minutesFromIso(b.start);
     const initEnd = minutesFromIso(b.end);
-    const bounds = (document
+    const bounds = document
       .getElementById(`p1an-timecol-${userId}`)
-      ?.getBoundingClientRect() ?? { top: 0, bottom: 0 });
+      ?.getBoundingClientRect() ?? { top: 0, bottom: 0 };
     const marginPx = 10; // drop a little early to avoid glitches at edges
     function onMove(ev: PointerEvent) {
       dragRef.current = true;
@@ -226,6 +229,23 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
       ),
     [blocks, minutesFromIso],
   );
+
+  const blockDepth = useMemo(() => {
+    const depthMap: Record<string, number> = {};
+    const starts = sortedBlocks.map((b) => minutesFromIso(b.start));
+    const ends = sortedBlocks.map((b) => minutesFromIso(b.end));
+    sortedBlocks.forEach((b, i) => {
+      const bStart = starts[i];
+      const bEnd = ends[i];
+      let depth = 0;
+      sortedBlocks.forEach((o, j) => {
+        if (i === j) return;
+        if (starts[j] <= bStart && ends[j] >= bEnd) depth++;
+      });
+      depthMap[b.id] = depth;
+    });
+    return depthMap;
+  }, [sortedBlocks, minutesFromIso]);
 
   return (
     <div className="flex h-full">
@@ -294,7 +314,9 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
               const height =
                 (minutesFromIso(b.end) - minutesFromIso(b.start)) *
                 PIXELS_PER_MINUTE;
-              const z = 10000 - minutesFromIso(b.start);
+              const z =
+                (blockDepth[b.id] || 0) * Z_BASE +
+                (Z_BASE - minutesFromIso(b.start));
               const textColor = '#000000';
               return (
                 <div
