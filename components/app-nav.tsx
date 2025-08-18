@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useViewContext } from '@/lib/view-context';
-import { getSectionHref, type Section } from '@/lib/navigation';
+import { hrefFor, type Section } from '@/lib/navigation';
 import { Button } from '@/components/ui/button';
 
 const labels: Record<Section, string> = {
@@ -27,7 +27,7 @@ export function AppNav() {
     <nav className="flex items-center justify-between border-b p-4">
       <ul className="flex gap-4">
         {sections.map((sec) => {
-          const href = getSectionHref(sec, ctx);
+          const href = hrefFor(sec, ctx);
           const active = pathname === href;
           return (
             <li key={sec}>

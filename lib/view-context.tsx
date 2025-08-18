@@ -5,6 +5,7 @@ import type { ViewContext } from './profile';
 const Ctx = createContext<ViewContext>({
   ownerId: 0,
   viewerId: null,
+  viewId: undefined,
   mode: 'owner',
   editable: true,
 });

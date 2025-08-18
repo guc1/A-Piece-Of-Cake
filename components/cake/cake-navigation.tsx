@@ -6,7 +6,7 @@ import { slices } from './slices';
 import { Cake3D } from './cake-3d';
 import { SettingsButton } from './settings-button';
 import { useViewContext } from '@/lib/view-context';
-import { getSectionHref, type Section } from '@/lib/navigation';
+import { hrefFor, type Section } from '@/lib/navigation';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -134,9 +134,7 @@ export function CakeNavigation() {
                 data-popped={popped ? true : undefined}
                 aria-label={slice.label}
                 onClick={() =>
-                  router.push(
-                    getSectionHref(slice.slug as Section, ctx),
-                  )
+                  router.push(hrefFor(slice.slug as Section, ctx))
                 }
                 onMouseEnter={() => handleEnter(slice.slug)}
                 onMouseLeave={handleLeave}
