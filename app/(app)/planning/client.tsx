@@ -6,8 +6,14 @@ import { Button } from '@/components/ui/button';
 
 export default function PlanningLanding({ userId }: { userId: string }) {
   const router = useRouter();
-  const { editable } = useViewContext();
+  const { editable, viewId } = useViewContext();
   const tooltip = editable ? undefined : 'Read-only in viewing mode.';
+
+  function handleNext() {
+    if (editable) router.push('/planning/next');
+    else if (viewId) router.push(`/view/${viewId}/planning/next`);
+  }
+
   return (
     <section
       id={`p1an-landing-${userId}`}
@@ -15,9 +21,8 @@ export default function PlanningLanding({ userId }: { userId: string }) {
     >
       <Button
         id={`p1an-btn-next-${userId}`}
-        disabled={!editable}
         title={tooltip}
-        onClick={() => editable && router.push('/planning/next')}
+        onClick={handleNext}
       >
         Planning for Next Day
       </Button>
