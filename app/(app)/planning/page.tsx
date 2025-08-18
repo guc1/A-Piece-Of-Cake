@@ -1,11 +1,11 @@
-export function PlanningHome() {
-  return (
-    <section>
-      <h1 className="text-2xl font-bold">Planning</h1>
-    </section>
-  );
-}
+import { auth } from '@/lib/auth';
+import { ensureUser } from '@/lib/users';
+import { notFound } from 'next/navigation';
+import PlanningLanding from './client';
 
-export default function PlanningPage() {
-  return <PlanningHome />;
+export default async function PlanningPage() {
+  const session = await auth();
+  if (!session) notFound();
+  const me = await ensureUser(session);
+  return <PlanningLanding userId={String(me.id)} />;
 }
