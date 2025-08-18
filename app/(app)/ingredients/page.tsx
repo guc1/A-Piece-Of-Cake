@@ -10,16 +10,9 @@ export function IngredientsHome() {
   );
 }
 
-export default async function IngredientsPage({
-  searchParams,
-}: {
-  searchParams: { uid?: string };
-}) {
+export default async function IngredientsPage() {
   const session = await auth();
   if (!session) redirect('/');
-  const me = await ensureUser(session);
-  if (!searchParams.uid || Number(searchParams.uid) !== me.id) {
-    redirect(`/ingredients?uid=${me.id}`);
-  }
+  await ensureUser(session);
   return <IngredientsHome />;
 }

@@ -10,16 +10,9 @@ export function ReviewHome() {
   );
 }
 
-export default async function ReviewPage({
-  searchParams,
-}: {
-  searchParams: { uid?: string };
-}) {
+export default async function ReviewPage() {
   const session = await auth();
   if (!session) redirect('/');
-  const me = await ensureUser(session);
-  if (!searchParams.uid || Number(searchParams.uid) !== me.id) {
-    redirect(`/review?uid=${me.id}`);
-  }
+  await ensureUser(session);
   return <ReviewHome />;
 }

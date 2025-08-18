@@ -12,11 +12,11 @@ export interface ViewContext {
 }
 
 export function buildViewContext(
+  mode: 'owner' | 'viewer',
   ownerId: number,
   viewerId: number | null,
   viewId?: string,
 ): ViewContext {
-  const mode = viewerId === ownerId ? 'owner' : 'viewer';
   return { ownerId, viewerId, viewId, mode, editable: mode === 'owner' };
 }
 
@@ -50,8 +50,9 @@ export async function canViewProfile({
   }
 }
 
-export function assertOwner(viewerId: number, ownerId: number) {
-  if (viewerId !== ownerId) {
-    throw new Error("Read-only: you cannot edit another user's account.");
+export async function assertOwner(ownerId: number) {
+  const me = Number((await auth())?.user?.id);
+  if (me !== ownerId) {
+    throw new Error("Read-only: cannot edit another user's account.");
   }
 }

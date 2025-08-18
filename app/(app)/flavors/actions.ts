@@ -60,7 +60,7 @@ export async function createFlavor(form: any): Promise<Flavor> {
   const session = await auth();
   const self = await ensureUser(session);
   const userId = String(self.id);
-  assertOwner(self.id, self.id);
+  await assertOwner(self.id);
   const flavor = await createFlavorStore(userId, sanitize(form));
   revalidatePath('/flavors');
   return flavor;
@@ -70,7 +70,7 @@ export async function updateFlavor(id: string, form: any): Promise<Flavor> {
   const session = await auth();
   const self = await ensureUser(session);
   const userId = String(self.id);
-  assertOwner(self.id, self.id);
+  await assertOwner(self.id);
   const updated = await updateFlavorStore(userId, id, sanitize(form));
   if (!updated) {
     throw new Error('Not found');
