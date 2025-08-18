@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Subflavor, Visibility } from '@/types/subflavor';
 import { createSubflavor, updateSubflavor } from './actions';
+import { useViewContext } from '@/lib/view-context';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
 const VISIBILITIES: Visibility[] = [
@@ -48,6 +49,7 @@ export default function SubflavorsClient({
   flavorId: string;
   initialSubflavors: Subflavor[];
 }) {
+  const { editable } = useViewContext();
   const [subflavors, setSubflavors] = useState<Subflavor[]>(
     sortSubflavors(initialSubflavors),
   );
@@ -82,6 +84,7 @@ export default function SubflavorsClient({
   const mode = editing ? 'edit' : 'new';
 
   function openCreate(e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     setEditing(null);
     const blank = {
@@ -100,6 +103,7 @@ export default function SubflavorsClient({
   }
 
   function openEdit(f: Subflavor, e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     const current = {
       name: f.name,
@@ -118,6 +122,7 @@ export default function SubflavorsClient({
   }
 
   async function remove(f: Subflavor) {
+    if (!editable) return;
     if (!confirm(`Delete '${f.name}'? This can't be undone.`)) return;
     await fetch(`/api/subflavors/${f.id}`, { method: 'DELETE' });
     setSubflavors((prev) => prev.filter((p) => p.id !== f.id));
@@ -206,9 +211,10 @@ export default function SubflavorsClient({
     <section>
       <div className="mb-4 flex justify-end">
         <button
-          onClick={(e) => openCreate(e.currentTarget)}
-          className="rounded bg-orange-500 px-3 py-2 text-white"
+          onClick={editable ? (e) => openCreate(e.currentTarget) : undefined}
+          className="rounded bg-orange-500 px-3 py-2 text-white disabled:opacity-50"
           id={`s7ubflavoured1tnew-${userId}`}
+          disabled={!editable}
         >
           New Subflavor
         </button>
@@ -220,8 +226,9 @@ export default function SubflavorsClient({
             id={`s7ubflavourrow${f.id}-${userId}`}
             role="button"
             tabIndex={0}
-            onClick={(e) => openEdit(f, e.currentTarget)}
+            onClick={editable ? (e) => openEdit(f, e.currentTarget) : undefined}
             onKeyDown={(e) => {
+              if (!editable) return;
               if (e.key === 'Enter')
                 openEdit(f, e.currentTarget as HTMLElement);
               if (e.key === 'Delete') remove(f);
@@ -275,15 +282,17 @@ export default function SubflavorsClient({
             >
               <button
                 id={`s7ubflavoured1t${f.id}-${userId}`}
-                className="text-sm text-blue-600 underline"
-                onClick={(e) => openEdit(f, e.currentTarget)}
+                className="text-sm text-blue-600 underline disabled:opacity-50"
+                onClick={editable ? (e) => openEdit(f, e.currentTarget) : undefined}
+                disabled={!editable}
               >
                 Edit ▸
               </button>
               <button
                 id={`s7ubflavourd3l${f.id}-${userId}`}
-                className="text-sm text-red-600 underline"
-                onClick={() => remove(f)}
+                className="text-sm text-red-600 underline disabled:opacity-50"
+                onClick={editable ? () => remove(f) : undefined}
+                disabled={!editable}
               >
                 Delete
               </button>
@@ -488,7 +497,7 @@ export default function SubflavorsClient({
                 <button
                   id={`s7ubflavoursav-frm-${userId}`}
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || !editable}
                   className="rounded bg-orange-500 px-3 py-1 text-white disabled:opacity-50"
                 >
                   Save

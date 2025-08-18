@@ -55,8 +55,14 @@ export async function canViewProfile({
   }
 }
 
-export async function assertOwner(ownerId: number) {
-  const me = Number((await auth())?.user?.id);
+export async function assertOwner(
+  ownerId: number,
+  viewerId?: number | null,
+) {
+  const me =
+    viewerId !== undefined && viewerId !== null
+      ? viewerId
+      : Number((await auth())?.user?.id);
   if (me !== ownerId) {
     throw new Error("Read-only: cannot edit another user's account.");
   }
