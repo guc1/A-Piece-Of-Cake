@@ -41,3 +41,5 @@
 - 2025-08-30: Kept closed-account follows visible, added unfollow notifications, and surfaced them in the inbox.
 - 2025-08-30: Enabled follow-back after accepting requests, added decline notifications, and ensured closed accounts appear in Discover.
 - 2025-08-30: Fixed profile route params handling and ensured inbox shows follow requests/notifications for all users.
+- 2025-08-31: Added profile overview view-account button and read-only account page respecting visibility settings.
+- 2025-09-01: View account now opens the full cake interface in viewer mode with exit control; added read-only profile page.
