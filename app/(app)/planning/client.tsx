@@ -14,6 +14,11 @@ export default function PlanningLanding({ userId }: { userId: string }) {
     else if (viewId) router.push(`/view/${viewId}/planning/next`);
   }
 
+  function handleLive() {
+    if (editable) router.push('/planning/live');
+    else if (viewId) router.push(`/view/${viewId}/planning/live`);
+  }
+
   return (
     <section
       id={`p1an-landing-${userId}`}
@@ -32,8 +37,8 @@ export default function PlanningLanding({ userId }: { userId: string }) {
         </span>
         <Button
           id={`p1an-btn-live-${userId}`}
-          disabled={!editable}
           title={tooltip}
+          onClick={handleLive}
         >
           Live Planning
         </Button>
