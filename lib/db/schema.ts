@@ -32,6 +32,7 @@ export const users = pgTable('users', {
   handle: varchar('handle', { length: 50 }).notNull().unique(),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
+  viewId: text('view_id').notNull().unique(),
   accountVisibility: accountVisibilityEnum('account_visibility')
     .notNull()
     .default('open'),
