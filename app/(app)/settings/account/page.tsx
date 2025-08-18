@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useViewContext } from '@/lib/view-context';
 
 export default function AccountSettingsPage() {
+  const { editable } = useViewContext();
   const [visibility, setVisibility] = useState<'open' | 'closed' | 'private'>('open');
   const [saving, setSaving] = useState(false);
   useEffect(() => {
@@ -37,8 +39,8 @@ export default function AccountSettingsPage() {
         </select>
       </label>
       <button
-        onClick={save}
-        disabled={saving}
+        onClick={editable ? save : undefined}
+        disabled={saving || !editable}
         className="rounded bg-[var(--accent)] px-4 py-1 text-white hover:opacity-90 disabled:opacity-50"
       >
         Save

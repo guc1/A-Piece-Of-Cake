@@ -59,7 +59,7 @@ function clamp(n: number) {
 export async function createFlavor(form: any): Promise<Flavor> {
   const session = await auth();
   const self = await ensureUser(session);
-  await assertOwner(self.id);
+  await assertOwner(self.id, self.id);
   const flavor = await createFlavorStore(String(self.id), sanitize(form));
   revalidatePath('/flavors');
   return flavor;
@@ -68,7 +68,7 @@ export async function createFlavor(form: any): Promise<Flavor> {
 export async function updateFlavor(id: string, form: any): Promise<Flavor> {
   const session = await auth();
   const self = await ensureUser(session);
-  await assertOwner(self.id);
+  await assertOwner(self.id, self.id);
   const updated = await updateFlavorStore(
     String(self.id),
     id,

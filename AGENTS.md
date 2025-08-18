@@ -538,6 +538,10 @@ Respect Explicit Instructions: Agents.md provides general guidance, but if a spe
 Continuous Learning: After each major step or PR, the agent should take into account any feedback (if provided by humans) and update the approach. If maintainers modify the agent’s code, review those changes to avoid repeating mistakes.
 INCLUDE in the README instructions on how to install the dependencies, how to launch the project locally etc. make it detailed
 
+### Viewing Mode
+
+- Interfaces rendered with `ViewContext` where `editable` is false must be strictly read-only. Disable save, update, delete, and similar controls, and ensure navigation stays on `/view/[viewId]` paths for viewers.
+
 
 By following the above, the AI agent will function as a reliable, efficient collaborator in building A Piece of Cake. These rules help ensure that even as multiple tasks and iterations proceed, the project remains coherent, secure, and aligned with its vision.
 
