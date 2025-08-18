@@ -10,11 +10,9 @@ export type Section =
   | 'visibility';
 
 export function getSectionHref(section: Section, ctx: ViewContext): string {
-  const base = ctx.mode === 'viewer' && ctx.viewId ? `/view/${ctx.viewId}` : '';
-  const path = section === 'cake' ? (base || '/') : `${base}/${section}`;
-  if (ctx.mode === 'owner') {
-    const sep = path.includes('?') ? '&' : '?';
-    return `${path}${sep}uid=${ctx.ownerId}`;
+  if (ctx.mode === 'viewer') {
+    const base = `/view/${ctx.viewId}`;
+    return section === 'cake' ? base : `${base}/${section}`;
   }
-  return path;
+  return section === 'cake' ? '/' : `/${section}`;
 }

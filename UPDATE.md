@@ -46,3 +46,4 @@
 - 2025-08-31: Added userId query parameter to owner routes and redirect to own account, switching to viewId when viewing others.
 - 2025-09-01: Ensured flavor actions create missing user records to avoid foreign key errors when inserting flavors.
 - 2025-09-01: Fixed view context to default to the current user, added viewer check helper, and awaited People page search params to silence runtime warnings.
+- 2025-09-02: Bound owner vs viewer mode to route prefix, added auth-based assertOwner helper, removed uid query params, and scoped People and navigation reads by ownerId.

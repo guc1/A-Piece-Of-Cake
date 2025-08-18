@@ -37,10 +37,20 @@ export default async function AppLayout({
       },
     });
     if (!allowed) notFound();
-    ctx = buildViewContext(user.id, viewerId, viewId);
+    ctx = buildViewContext({
+      ownerId: user.id,
+      viewerId,
+      mode: 'viewer',
+      viewId,
+    });
   } else {
     const me = self ?? (await ensureUser(session));
-    ctx = buildViewContext(me.id, viewerId, me.viewId);
+    ctx = buildViewContext({
+      ownerId: me.id,
+      viewerId,
+      mode: 'owner',
+      viewId: me.viewId,
+    });
   }
 
   return (
