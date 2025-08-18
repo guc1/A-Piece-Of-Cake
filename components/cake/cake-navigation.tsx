@@ -5,15 +5,18 @@ import { useRouter } from 'next/navigation';
 import { slices } from './slices';
 import { Cake3D } from './cake-3d';
 import { SettingsButton } from './settings-button';
+import { useViewContext } from '@/lib/view-context';
+import { getSectionHref, Section } from '@/lib/profile';
 
 export function CakeNavigation() {
   const router = useRouter();
+  const ctx = useViewContext();
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const [offsetVh, setOffsetVh] = useState(-8);
   const [boxesOffsetVh, setBoxesOffsetVh] = useState(-6);
   const [reduced, setReduced] = useState(false);
-  const userId = '42';
+  const userId = String(ctx.ownerId);
   const clearTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -130,7 +133,11 @@ export function CakeNavigation() {
                 id={`n4vbox-${slice.slug}-${userId}`}
                 data-popped={popped ? true : undefined}
                 aria-label={slice.label}
-                onClick={() => router.push(slice.href)}
+                onClick={() =>
+                  router.push(
+                    getSectionHref(slice.slug as Section, ctx),
+                  )
+                }
                 onMouseEnter={() => handleEnter(slice.slug)}
                 onMouseLeave={handleLeave}
                 onFocus={() => handleEnter(slice.slug)}

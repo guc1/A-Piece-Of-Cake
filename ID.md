@@ -20,6 +20,7 @@ Examples:
 - `cak3titleText` → page heading text.
 
 Modal form IDs:
+
 - `f7avourmdl-{mode}-{userId}` → flavor modal root (`mode`: new|edit).
 - `f7avourn4me-frm-{userId}` → flavor form name input.
 - `f7avourde5cr-frm-{userId}` → flavor form description textarea.
@@ -27,3 +28,25 @@ Modal form IDs:
 - `f7avourt4rg-frm-{userId}` → flavor form target percentage input.
 - `f7avoursav-frm-{userId}` → flavor form save button.
 - `f7avourcnl-frm-{userId}` → flavor form cancel button.
+
+## Profile Viewing
+
+- `pr0ovr-{ownerId}-{viewerId}` → profile overview root container.
+- `pr0ovr-view-{ownerId}-{viewerId}` → View Account button in overview.
+- `pr0ovr-fol-{ownerId}-{viewerId}` → Follow button in overview.
+- `pr0ovr-req-{ownerId}-{viewerId}` → Request to follow button in overview.
+- `pr0ovr-unf-{ownerId}-{viewerId}` → Unfollow button in overview.
+- `pr0ovr-ccl-{ownerId}-{viewerId}` → Cancel request button in overview.
+- `p30pl3-view-{ownerId}-{viewerId}` → View Account quick action in People lists.
+- `v13wctx-{ownerId}-{viewerId}` → View Account page root container.
+- Viewer bar on View Account pages:
+  - `v13wbar-{ownerId}-{viewerId}` → viewer bar root.
+  - `v13wbar-live-{ownerId}-{viewerId}` → live indicator dot.
+  - `v13wbar-exit-{ownerId}-{viewerId}` → exit button.
+- Section anchors on View Account pages:
+  - `v13w-cake-{ownerId}`
+  - `v13w-plan-{ownerId}`
+  - `v13w-flav-{ownerId}`
+  - `v13w-igrd-{ownerId}`
+  - `v13w-revw-{ownerId}`
+  - `v13w-peep-{ownerId}`

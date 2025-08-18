@@ -20,12 +20,20 @@ export default async function PeoplePage() {
   const self = await ensureUser(session);
   const me = self.id;
 
-  const allUsers = await db
+  type DBUser = {
+    id: number;
+    handle: string;
+    displayName: string | null;
+    accountVisibility: string;
+    viewId: string;
+  };
+  const allUsers: DBUser[] = await db
     .select({
       id: users.id,
       handle: users.handle,
       displayName: users.displayName,
       accountVisibility: users.accountVisibility,
+      viewId: users.viewId,
     })
     .from(users)
     .where(ne(users.id, me));
@@ -45,20 +53,21 @@ export default async function PeoplePage() {
     inboundFollows.map((f) => [f.followerId, f.status]),
   );
 
-  const friends: typeof allUsers = [];
-  const following: ((typeof allUsers)[number] & { status?: string })[] = [];
-  const discover: ((typeof allUsers)[number] & { status?: string })[] = [];
+  const friends: UserInfo[] = [];
+  const following: (UserInfo & { status?: string })[] = [];
+  const discover: (UserInfo & { status?: string })[] = [];
 
   for (const u of allUsers) {
     if (u.accountVisibility === 'private') continue;
     const myStatus = myMap.get(u.id);
     const theirStatus = inboundMap.get(u.id);
+    const canView = u.accountVisibility === 'open' || myStatus === 'accepted';
     if (myStatus === 'accepted' && theirStatus === 'accepted') {
-      friends.push(u);
+      friends.push({ ...u, canView });
     } else if (myStatus === 'accepted' || myStatus === 'pending') {
-      following.push({ ...u, status: myStatus });
+      following.push({ ...u, status: myStatus, canView });
     } else {
-      discover.push({ ...u, status: theirStatus });
+      discover.push({ ...u, status: theirStatus, canView });
     }
   }
 
@@ -72,15 +81,15 @@ export default async function PeoplePage() {
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Friends</h2>
-        <UserList users={friends} relation="friend" />
+        <UserList viewerId={me} users={friends} relation="friend" />
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Following</h2>
-        <UserList users={following} relation="following" />
+        <UserList viewerId={me} users={following} relation="following" />
       </div>
       <div>
         <h2 className="text-xl font-semibold mb-2">Discover</h2>
-        <UserList users={discover} relation="discover" />
+        <UserList viewerId={me} users={discover} relation="discover" />
       </div>
     </section>
   );
@@ -91,12 +100,16 @@ interface UserInfo {
   handle: string;
   displayName: string | null;
   accountVisibility: string;
+  viewId: string;
+  canView: boolean;
 }
 
 function UserList({
+  viewerId,
   users,
   relation,
 }: {
+  viewerId: number;
   users: (UserInfo & { status?: string })[];
   relation: 'friend' | 'following' | 'discover';
 }) {
@@ -113,7 +126,7 @@ function UserList({
             </Link>
             <div className="text-sm text-muted-foreground">@{u.handle}</div>
           </div>
-          <UserAction user={u} relation={relation} />
+          <UserAction viewerId={viewerId} user={u} relation={relation} />
         </li>
       ))}
     </ul>
@@ -121,9 +134,11 @@ function UserList({
 }
 
 function UserAction({
+  viewerId,
   user,
   relation,
 }: {
+  viewerId: number;
   user: UserInfo & { status?: string };
   relation: 'friend' | 'following' | 'discover';
 }) {
@@ -132,34 +147,84 @@ function UserAction({
     case 'following':
       if (user.status === 'pending') {
         return (
-          <form action={cancelFollowRequest.bind(null, user.id)}>
-            <Button variant="outline" size="sm">
-              Cancel request
-            </Button>
-          </form>
+          <div className="flex gap-2">
+            <form action={cancelFollowRequest.bind(null, user.id)}>
+              <Button
+                id={`p30pl3-ccl-${user.id}-${viewerId}`}
+                variant="outline"
+                size="sm"
+              >
+                Requested
+              </Button>
+            </form>
+          </div>
         );
       }
       return (
-        <form action={unfollow.bind(null, user.id)}>
-          <Button variant="outline" size="sm">
-            Unfollow
-          </Button>
-        </form>
+        <div className="flex gap-2">
+          <form action={unfollow.bind(null, user.id)}>
+            <Button
+              id={`p30pl3-unf-${user.id}-${viewerId}`}
+              variant="outline"
+              size="sm"
+            >
+              Unfollow
+            </Button>
+          </form>
+          {user.canView && (
+            <Link
+              id={`p30pl3-view-${user.id}-${viewerId}`}
+              href={`/view/${user.viewId}`}
+              className="text-sm underline"
+              aria-label={`View @${user.handle}'s account (read-only)`}
+            >
+              View
+            </Link>
+          )}
+        </div>
       );
     case 'discover':
       if (user.status === 'accepted') {
         return (
-          <form action={followRequest.bind(null, user.id)}>
-            <Button size="sm">Follow back</Button>
-          </form>
+          <div className="flex gap-2">
+            <form action={followRequest.bind(null, user.id)}>
+              <Button id={`p30pl3-fol-${user.id}-${viewerId}`} size="sm">
+                Follow back
+              </Button>
+            </form>
+            {user.canView && (
+              <Link
+                id={`p30pl3-view-${user.id}-${viewerId}`}
+                href={`/view/${user.viewId}`}
+                className="text-sm underline"
+                aria-label={`View @${user.handle}'s account (read-only)`}
+              >
+                View
+              </Link>
+            )}
+          </div>
         );
       }
       return (
-        <form action={followRequest.bind(null, user.id)}>
-          <Button size="sm">
-            {user.accountVisibility === 'open' ? 'Follow' : 'Request to follow'}
-          </Button>
-        </form>
+        <div className="flex gap-2">
+          <form action={followRequest.bind(null, user.id)}>
+            <Button id={`p30pl3-fol-${user.id}-${viewerId}`} size="sm">
+              {user.accountVisibility === 'open'
+                ? 'Follow'
+                : 'Request to follow'}
+            </Button>
+          </form>
+          {user.canView && (
+            <Link
+              id={`p30pl3-view-${user.id}-${viewerId}`}
+              href={`/view/${user.viewId}`}
+              className="text-sm underline"
+              aria-label={`View @${user.handle}'s account (read-only)`}
+            >
+              View
+            </Link>
+          )}
+        </div>
       );
     default:
       return null;

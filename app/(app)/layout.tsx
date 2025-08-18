@@ -1,7 +1,9 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { Button } from '@/components/ui/button';
+import AppNav from '@/components/app-nav';
+import { ensureUser } from '@/lib/users';
+import { buildViewContext } from '@/lib/profile';
+import { ViewContextProvider } from '@/lib/view-context';
 
 export default async function AppLayout({
   children,
@@ -12,25 +14,16 @@ export default async function AppLayout({
   if (!session) {
     redirect('/');
   }
+  const me = await ensureUser(session);
+  const ctx = buildViewContext(me.id, me.viewId, me.id);
 
   return (
     <html lang="en">
       <body>
-        <nav className="flex items-center justify-between border-b p-4">
-          <ul className="flex gap-4">
-            <li><Link href="/">Cake</Link></li>
-            <li><Link href="/planning">Planning</Link></li>
-            <li><Link href="/flavors">Flavors</Link></li>
-            <li><Link href="/ingredients">Ingredients</Link></li>
-            <li><Link href="/review">Review</Link></li>
-            <li><Link href="/people">People</Link></li>
-            <li><Link href="/visibility">Visibility</Link></li>
-          </ul>
-          <form action="/api/auth/signout" method="post">
-            <Button type="submit">Sign out</Button>
-          </form>
-        </nav>
-        <main className="p-4">{children}</main>
+        <ViewContextProvider value={ctx}>
+          <AppNav />
+          <main className="p-4">{children}</main>
+        </ViewContextProvider>
       </body>
     </html>
   );
