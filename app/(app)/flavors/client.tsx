@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Flavor, Visibility } from '@/types/flavor';
 import { createFlavor, updateFlavor } from './actions';
+import { useViewContext } from '@/lib/view-context';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
 const VISIBILITIES: Visibility[] = [
@@ -48,6 +49,7 @@ export default function FlavorsClient({
   initialFlavors: Flavor[];
 }) {
   const router = useRouter();
+  const ctx = useViewContext();
   const [flavors, setFlavors] = useState<Flavor[]>(sortFlavors(initialFlavors));
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Flavor | null>(null);
@@ -80,6 +82,7 @@ export default function FlavorsClient({
   const mode = editing ? 'edit' : 'new';
 
   function openCreate(e: HTMLElement) {
+    if (!ctx.editable) return;
     triggerRef.current = e;
     setEditing(null);
     const blank = {
@@ -98,6 +101,7 @@ export default function FlavorsClient({
   }
 
   function openEdit(f: Flavor, e: HTMLElement) {
+    if (!ctx.editable) return;
     triggerRef.current = e;
     const current = {
       name: f.name,
@@ -116,6 +120,7 @@ export default function FlavorsClient({
   }
 
   async function remove(f: Flavor) {
+    if (!ctx.editable) return;
     if (!confirm(`Delete '${f.name}'? This can't be undone.`)) return;
     await fetch(`/api/flavors/${f.id}`, { method: 'DELETE' });
     setFlavors((prev) => prev.filter((p) => p.id !== f.id));
@@ -135,6 +140,7 @@ export default function FlavorsClient({
   }, []);
 
   async function save() {
+    if (!ctx.editable) return;
     setSubmitting(true);
     setError('');
     try {
@@ -204,8 +210,9 @@ export default function FlavorsClient({
     <section>
       <div className="mb-4 flex justify-end">
         <button
-          onClick={(e) => openCreate(e.currentTarget)}
-          className="rounded bg-orange-500 px-3 py-2 text-white"
+          onClick={(e) => ctx.editable && openCreate(e.currentTarget)}
+          className="rounded bg-orange-500 px-3 py-2 text-white disabled:opacity-50"
+          disabled={!ctx.editable}
           id={`f7avoured1tnew-${userId}`}
         >
           New Flavor
@@ -216,15 +223,21 @@ export default function FlavorsClient({
           <li
             key={f.id}
             id={`f7avourrow${f.id}-${userId}`}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => openEdit(f, e.currentTarget)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter')
-                openEdit(f, e.currentTarget as HTMLElement);
-              if (e.key === 'Delete') remove(f);
-            }}
-            className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+            role={ctx.editable ? 'button' : undefined}
+            tabIndex={ctx.editable ? 0 : -1}
+            onClick={ctx.editable ? (e) => openEdit(f, e.currentTarget) : undefined}
+            onKeyDown={
+              ctx.editable
+                ? (e) => {
+                    if (e.key === 'Enter')
+                      openEdit(f, e.currentTarget as HTMLElement);
+                    if (e.key === 'Delete') remove(f);
+                  }
+                : undefined
+            }
+            className={`flex items-center gap-4 p-2 ${
+              ctx.editable ? 'hover:bg-gray-50 focus:bg-gray-50 focus:outline-none' : ''
+            }`}
           >
             <div className="flex flex-col items-center">
               <div
@@ -279,29 +292,31 @@ export default function FlavorsClient({
                 <span>{f.visibility}</span>
               </div>
             </div>
-            <div
-              className="ml-auto flex gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                id={`f7avoured1t${f.id}-${userId}`}
-                className="text-sm text-blue-600 underline"
-                onClick={(e) => openEdit(f, e.currentTarget)}
+            {ctx.editable && (
+              <div
+                className="ml-auto flex gap-2"
+                onClick={(e) => e.stopPropagation()}
               >
-                Edit ▸
-              </button>
-              <button
-                id={`f7avourd3l${f.id}-${userId}`}
-                className="text-sm text-red-600 underline"
-                onClick={() => remove(f)}
-              >
-                Delete
-              </button>
-            </div>
+                <button
+                  id={`f7avoured1t${f.id}-${userId}`}
+                  className="text-sm text-blue-600 underline"
+                  onClick={(e) => openEdit(f, e.currentTarget)}
+                >
+                  Edit ▸
+                </button>
+                <button
+                  id={`f7avourd3l${f.id}-${userId}`}
+                  className="text-sm text-red-600 underline"
+                  onClick={() => remove(f)}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>
-      {modalOpen && (
+      {modalOpen && ctx.editable && (
         <div
           id={`f7avourmdl-${mode}-${userId}`}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md"
@@ -498,7 +513,7 @@ export default function FlavorsClient({
                 <button
                   id={`f7avoursav-frm-${userId}`}
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || !ctx.editable}
                   className="rounded bg-orange-500 px-3 py-1 text-white disabled:opacity-50"
                 >
                   Save
