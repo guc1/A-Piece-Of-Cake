@@ -20,8 +20,11 @@ const COLORS = [
 ];
 
 // shrink timeline so 24h fits on one screen
-const PIXELS_PER_MINUTE = 0.5;
-const MAX_MINUTES = 24 * 60 - 1; // 23:59 in minutes
+const BASE_PIXELS_PER_MINUTE = 0.5;
+const TIMELINE_HEIGHT = 24 * 60 * BASE_PIXELS_PER_MINUTE; // full-day height
+const MAX_MINUTES = 24 * 60; // minutes in a day
+const DEFAULT_START = 5 * 60; // 05:00
+const DEFAULT_END = 22 * 60; // 22:00
 const Z_BASE = 10000;
 
 interface Props {
@@ -39,6 +42,15 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     [blocks, selectedId],
   );
   const draggingRef = useRef(false);
+  const [startMinute, setStartMinute] = useState(DEFAULT_START);
+  const [endMinute, setEndMinute] = useState(DEFAULT_END);
+  const [showCustom, setShowCustom] = useState(false);
+  const [customStart, setCustomStart] = useState(minutesToTime(DEFAULT_START));
+  const [customEnd, setCustomEnd] = useState(minutesToTime(DEFAULT_END));
+  const visibleMinutes = endMinute - startMinute;
+  const PIXELS_PER_MINUTE = TIMELINE_HEIGHT / visibleMinutes;
+  const startHour = Math.floor(startMinute / 60);
+  const endHour = Math.ceil(endMinute / 60);
 
   const minutesFromIso = useCallback(
     (iso: string) => {
@@ -59,6 +71,11 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     },
     [minutesFromIso],
   );
+  function minutesToTime(min: number) {
+    const h = String(Math.floor(min / 60)).padStart(2, '0');
+    const m = String(min % 60).padStart(2, '0');
+    return `${h}:${m}`;
+  }
   function isoFromMinutes(min: number) {
     const base = new Date(`${date}T00:00:00`);
     return new Date(base.getTime() + min * 60000).toISOString();
@@ -75,15 +92,6 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     const sorted = [...blocks].sort(
       (a, b) => minutesFromIso(a.start) - minutesFromIso(b.start),
     );
-    let start = 0;
-    if (sorted.length) {
-      const last = sorted.reduce((p, c) =>
-        minutesFromIso(c.end) > minutesFromIso(p.end) ? c : p,
-      );
-      start = minutesFromIso(last.end);
-    }
-    const duration = 60;
-    let candidate = start;
     function isFree(s: number, e: number) {
       return !sorted.some(
         (b) =>
@@ -91,16 +99,51 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
           Math.min(e, minutesFromIso(b.end)),
       );
     }
-    let placed = false;
-    while (candidate + duration <= MAX_MINUTES) {
-      if (isFree(candidate, candidate + duration)) {
-        placed = true;
-        break;
+
+    let candidate: number | null = null;
+    let duration = 60;
+    const customRange =
+      startMinute !== DEFAULT_START || endMinute !== DEFAULT_END;
+
+    if (customRange) {
+      const findSlot = (dur: number) => {
+        let c = startMinute;
+        while (c + dur <= endMinute) {
+          if (isFree(c, c + dur)) return c;
+          c += 15;
+        }
+        return null;
+      };
+
+      candidate = findSlot(60);
+      if (candidate === null) {
+        const small = findSlot(30);
+        if (small !== null) {
+          duration = 30;
+          candidate = small;
+        }
       }
-      candidate += 15;
-    }
-    if (!placed) {
-      candidate = 0;
+
+      if (candidate === null) {
+        const maxStart = endMinute - duration;
+        if (maxStart <= startMinute) {
+          candidate = startMinute;
+        } else {
+          const steps = Math.floor((maxStart - startMinute) / 15);
+          candidate =
+            startMinute + Math.floor(Math.random() * (steps + 1)) * 15;
+        }
+      }
+    } else {
+      let start = 0;
+      if (sorted.length) {
+        const last = sorted.reduce((p, c) =>
+          minutesFromIso(c.end) > minutesFromIso(p.end) ? c : p,
+        );
+        start = minutesFromIso(last.end);
+      }
+      candidate = start;
+      let placed = false;
       while (candidate + duration <= MAX_MINUTES) {
         if (isFree(candidate, candidate + duration)) {
           placed = true;
@@ -108,17 +151,30 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
         }
         candidate += 15;
       }
+      if (!placed) {
+        candidate = 0;
+        while (candidate + duration <= MAX_MINUTES) {
+          if (isFree(candidate, candidate + duration)) {
+            placed = true;
+            break;
+          }
+          candidate += 15;
+        }
+      }
+      if (!placed) {
+        alert('No 1-hour slot available.');
+        return;
+      }
     }
-    if (!placed) {
-      alert('No 1-hour slot available.');
-      return;
-    }
+
+    // candidate is guaranteed to be set here
+    const start = candidate as number;
     const id = crypto.randomUUID();
     const newBlock: PlanBlock = {
       id,
       planId: initialPlan?.id || '',
-      start: isoFromMinutes(candidate),
-      end: isoFromMinutes(candidate + duration),
+      start: isoFromMinutes(start),
+      end: isoFromMinutes(start + duration),
       title: '',
       description: '',
       color: COLORS[0],
@@ -196,6 +252,20 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
       );
       updateBlock(id, { end: isoFromMinutes(newEnd) });
     }
+  }
+
+  function applyCustomRange() {
+    const [sh, sm] = customStart.split(':').map((n) => parseInt(n, 10));
+    const [eh, em] = customEnd.split(':').map((n) => parseInt(n, 10));
+    const start = sh * 60 + sm;
+    const end = eh * 60 + em;
+    if (isNaN(start) || isNaN(end) || start >= end) {
+      alert('Invalid time range');
+      return;
+    }
+    setStartMinute(Math.max(0, Math.min(start, MAX_MINUTES)));
+    setEndMinute(Math.max(0, Math.min(end, MAX_MINUTES)));
+    setShowCustom(false);
   }
 
   function onDragStart(
@@ -287,69 +357,145 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
         id={`p1an-timecol-${userId}`}
         onPointerDown={() => setSelectedId(null)}
       >
-        {editable ? (
-          <button
-            id={`p1an-add-top-${userId}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              addBlock();
-            }}
-            className="sticky top-0 z-10 w-full bg-gray-100 py-2 text-sm"
-            disabled={!editable}
-          >
-            + Add timeslot
-          </button>
-        ) : (
-          <button
-            id={`p1an-add-top-${userId}`}
-            className="sticky top-0 z-10 w-full bg-gray-100 py-2 text-sm"
-            disabled
-            title="Read-only in viewing mode"
-          >
-            + Add timeslot
-          </button>
-        )}
         <div
-          style={{ height: 24 * 60 * PIXELS_PER_MINUTE }}
-          className="relative"
+          className="sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-gray-100 p-2 text-sm"
+          onClick={(e) => e.stopPropagation()}
         >
+          {editable ? (
+            <button
+              id={`p1an-add-top-${userId}`}
+              onClick={() => addBlock()}
+              disabled={!editable}
+              className="rounded border px-2 py-1"
+            >
+              + Add timeslot
+            </button>
+          ) : (
+            <button
+              id={`p1an-add-top-${userId}`}
+              className="rounded border px-2 py-1"
+              disabled
+              title="Read-only in viewing mode"
+            >
+              + Add timeslot
+            </button>
+          )}
+          <button
+            id={`p1an-range-btn-${userId}`}
+            className="rounded border px-2 py-1"
+            onClick={() => setShowCustom((s) => !s)}
+          >
+            Add custom time
+          </button>
+          {startMinute > 0 && (
+            <button
+              id={`p1an-load-early-${userId}`}
+              className="rounded border px-2 py-1"
+              onClick={() => setStartMinute(0)}
+            >
+              Load earlier
+            </button>
+          )}
+          {endMinute < MAX_MINUTES && (
+            <button
+              id={`p1an-load-late-${userId}`}
+              className="rounded border px-2 py-1"
+              onClick={() => setEndMinute(MAX_MINUTES)}
+            >
+              Load later
+            </button>
+          )}
+          {(startMinute !== DEFAULT_START || endMinute !== DEFAULT_END) && (
+            <button
+              id={`p1an-close-range-${userId}`}
+              className="rounded border px-2 py-1"
+              onClick={() => {
+                setStartMinute(DEFAULT_START);
+                setEndMinute(DEFAULT_END);
+              }}
+            >
+              Close
+            </button>
+          )}
+        </div>
+        {showCustom && (
+          <div
+            className="sticky top-[48px] z-10 flex items-center gap-2 bg-gray-50 p-2 text-xs"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span>Start:</span>
+            <input
+              type="time"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="border p-1"
+            />
+            <span>End:</span>
+            <input
+              type="time"
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              className="border p-1"
+            />
+            <button
+              className="rounded border px-2 py-1"
+              onClick={applyCustomRange}
+            >
+              Apply
+            </button>
+          </div>
+        )}
+        <div style={{ height: TIMELINE_HEIGHT }} className="relative">
           <div className="absolute left-0 top-0 w-12">
-            {Array.from({ length: 25 }).map((_, h) => (
-              <span
-                key={h}
-                className="absolute right-1 -translate-y-1/2 text-[10px] text-gray-500"
-                style={{ top: h * 60 * PIXELS_PER_MINUTE }}
-              >
-                {String(h).padStart(2, '0')}:00
-              </span>
-            ))}
+            {Array.from({ length: endHour - startHour + 1 }).map((_, i) => {
+              const h = startHour + i;
+              return (
+                <span
+                  key={h}
+                  className="absolute right-1 -translate-y-1/2 text-[10px] text-gray-500"
+                  style={{
+                    top: (h * 60 - startMinute) * PIXELS_PER_MINUTE,
+                  }}
+                >
+                  {String(h).padStart(2, '0')}:00
+                </span>
+              );
+            })}
           </div>
           <div className="absolute left-12 right-0 top-0">
-            {Array.from({ length: 25 }).map((_, h) => (
-              <div key={h}>
-                <div
-                  id={`p1an-hour-${h}-${userId}`}
-                  className="absolute left-0 right-0 border-t border-gray-300"
-                  style={{ top: h * 60 * PIXELS_PER_MINUTE }}
-                />
-                {h < 24 &&
-                  [15, 30, 45].map((m) => (
-                    <div
-                      key={m}
-                      className="absolute left-0 right-0 border-t border-gray-100"
-                      style={{ top: (h * 60 + m) * PIXELS_PER_MINUTE }}
-                    />
-                  ))}
-              </div>
-            ))}
+            {Array.from({ length: endHour - startHour + 1 }).map((_, i) => {
+              const h = startHour + i;
+              return (
+                <div key={h}>
+                  <div
+                    id={`p1an-hour-${h}-${userId}`}
+                    className="absolute left-0 right-0 border-t border-gray-300"
+                    style={{ top: (h * 60 - startMinute) * PIXELS_PER_MINUTE }}
+                  />
+                  {h < endHour &&
+                    [15, 30, 45].map((m) => (
+                      <div
+                        key={m}
+                        className="absolute left-0 right-0 border-t border-gray-100"
+                        style={{
+                          top: (h * 60 + m - startMinute) * PIXELS_PER_MINUTE,
+                        }}
+                      />
+                    ))}
+                </div>
+              );
+            })}
             {sortedBlocks.map((b) => {
-              const top = minutesFromIso(b.start) * PIXELS_PER_MINUTE;
-              const height =
-                (minutesFromIso(b.end) - minutesFromIso(b.start)) *
+              const bStart = minutesFromIso(b.start);
+              const bEnd = minutesFromIso(b.end);
+              if (bEnd <= startMinute || bStart >= endMinute) return null;
+              const top =
+                (Math.max(bStart, startMinute) - startMinute) *
                 PIXELS_PER_MINUTE;
-              const z =
-                (blockDepth[b.id] || 0) * Z_BASE +
-                (Z_BASE - minutesFromIso(b.start));
+              const height =
+                (Math.min(bEnd, endMinute) - Math.max(bStart, startMinute)) *
+                PIXELS_PER_MINUTE;
+              const z = (blockDepth[b.id] || 0) * Z_BASE + (Z_BASE - bStart);
               const textColor = '#000000';
               return (
                 <div
