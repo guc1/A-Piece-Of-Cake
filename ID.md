@@ -50,3 +50,6 @@ Modal form IDs:
   - `v13wbar-{ownerId}-{viewerId}` → viewer bar root container.
   - `v13wbar-live-{ownerId}-{viewerId}` → live indicator dot.
   - `v13wbar-exit-{ownerId}-{viewerId}` → Exit button.
+- Blocked People view:
+  - `v13w-peep-block-{ownerId}-{viewerId}`
+  - `v13w-peep-exit-{ownerId}-{viewerId}`

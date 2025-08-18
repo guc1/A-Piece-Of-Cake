@@ -19,6 +19,11 @@ export function hrefFor(
   sectionOrPath: Section | string,
   ctx: ViewContext,
 ): string {
+  if (sectionOrPath === 'people') {
+    return ctx.mode === 'viewer'
+      ? `/view/${ctx.viewId}/people`
+      : '/people';
+  }
   if (sectionOrPath.startsWith('/')) {
     // raw path case
     return ctx.mode === 'viewer'
@@ -39,8 +44,6 @@ export function hrefFor(
         return `${base}/ingredients`;
       case 'review':
         return `${base}/review`;
-      case 'people':
-        return `${base}/people`;
       case 'visibility':
         return base; // no visibility route for viewers
     }
@@ -57,8 +60,6 @@ export function hrefFor(
       return '/ingredients';
     case 'review':
       return '/review';
-    case 'people':
-      return '/people';
     case 'visibility':
       return '/visibility';
   }

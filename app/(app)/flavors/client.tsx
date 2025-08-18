@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Flavor, Visibility } from '@/types/flavor';
-import { createFlavor, updateFlavor } from './actions';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
 const VISIBILITIES: Visibility[] = [
@@ -43,9 +42,15 @@ type FormState = {
 export default function FlavorsClient({
   userId,
   initialFlavors,
+  createFlavorAction,
+  updateFlavorAction,
+  editable = true,
 }: {
   userId: string;
   initialFlavors: Flavor[];
+  createFlavorAction?: (form: any) => Promise<Flavor>;
+  updateFlavorAction?: (id: string, form: any) => Promise<Flavor>;
+  editable?: boolean;
 }) {
   const router = useRouter();
   const [flavors, setFlavors] = useState<Flavor[]>(sortFlavors(initialFlavors));
@@ -80,6 +85,7 @@ export default function FlavorsClient({
   const mode = editing ? 'edit' : 'new';
 
   function openCreate(e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     setEditing(null);
     const blank = {
@@ -98,6 +104,7 @@ export default function FlavorsClient({
   }
 
   function openEdit(f: Flavor, e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     const current = {
       name: f.name,
@@ -116,6 +123,7 @@ export default function FlavorsClient({
   }
 
   async function remove(f: Flavor) {
+    if (!editable) return;
     if (!confirm(`Delete '${f.name}'? This can't be undone.`)) return;
     await fetch(`/api/flavors/${f.id}`, { method: 'DELETE' });
     setFlavors((prev) => prev.filter((p) => p.id !== f.id));
@@ -139,8 +147,9 @@ export default function FlavorsClient({
     setError('');
     try {
       const data = editing
-        ? await updateFlavor(editing.id, form)
-        : await createFlavor(form);
+        ? await updateFlavorAction?.(editing.id, form)
+        : await createFlavorAction?.(form);
+      if (!data) throw new Error('No action');
       if (editing) {
         setFlavors((prev) =>
           sortFlavors(prev.map((p) => (p.id === data.id ? data : p))),
@@ -202,29 +211,37 @@ export default function FlavorsClient({
 
   return (
     <section>
-      <div className="mb-4 flex justify-end">
-        <button
-          onClick={(e) => openCreate(e.currentTarget)}
-          className="rounded bg-orange-500 px-3 py-2 text-white"
-          id={`f7avoured1tnew-${userId}`}
-        >
-          New Flavor
-        </button>
-      </div>
+      {editable && (
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={(e) => openCreate(e.currentTarget)}
+            className="rounded bg-orange-500 px-3 py-2 text-white"
+            id={`f7avoured1tnew-${userId}`}
+          >
+            New Flavor
+          </button>
+        </div>
+      )}
       <ul className="flex flex-col gap-4" id={`f7avourli5t-${userId}`}>
         {flavors.map((f) => (
           <li
             key={f.id}
             id={`f7avourrow${f.id}-${userId}`}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => openEdit(f, e.currentTarget)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter')
-                openEdit(f, e.currentTarget as HTMLElement);
-              if (e.key === 'Delete') remove(f);
-            }}
-            className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+            className={`flex items-center gap-4 p-2 ${
+              editable ? 'hover:bg-gray-50 focus:bg-gray-50 focus:outline-none' : ''
+            }`}
+            {...(editable
+              ? {
+                  role: 'button',
+                  tabIndex: 0,
+                  onClick: (e: any) => openEdit(f, e.currentTarget),
+                  onKeyDown: (e: any) => {
+                    if (e.key === 'Enter')
+                      openEdit(f, e.currentTarget as HTMLElement);
+                    if (e.key === 'Delete') remove(f);
+                  },
+                }
+              : {})}
           >
             <div className="flex flex-col items-center">
               <div
@@ -249,16 +266,18 @@ export default function FlavorsClient({
                   {f.icon}
                 </span>
               </div>
-              <button
-                id={`f7avsubfbtn${f.id}-${userId}`}
-                className="mt-2 text-xs text-blue-600 underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/flavors/${f.id}/subflavors`);
-                }}
-              >
-                View Subflavors
-              </button>
+              {editable && (
+                <button
+                  id={`f7avsubfbtn${f.id}-${userId}`}
+                  className="mt-2 text-xs text-blue-600 underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/flavors/${f.id}/subflavors`);
+                  }}
+                >
+                  View Subflavors
+                </button>
+              )}
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div

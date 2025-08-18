@@ -1,7 +1,5 @@
 'use server';
 
-import { auth } from '@/lib/auth';
-import { ensureUser } from '@/lib/users';
 import {
   createSubflavor as createSubflavorStore,
   updateSubflavor as updateSubflavorStore,
@@ -58,14 +56,13 @@ function clamp(n: number) {
 }
 
 export async function createSubflavor(
+  boundOwnerId: number,
   flavorId: string,
   form: any,
 ): Promise<Subflavor> {
-  const session = await auth();
-  const user = await ensureUser(session);
-  await assertOwner(user.id);
+  await assertOwner(boundOwnerId);
   const subflavor = await createSubflavorStore(
-    String(user.id),
+    String(boundOwnerId),
     flavorId,
     sanitize({ ...form, flavorId }),
   );
@@ -74,15 +71,14 @@ export async function createSubflavor(
 }
 
 export async function updateSubflavor(
+  boundOwnerId: number,
   flavorId: string,
   id: string,
   form: any,
 ): Promise<Subflavor> {
-  const session = await auth();
-  const user = await ensureUser(session);
-  await assertOwner(user.id);
+  await assertOwner(boundOwnerId);
   const updated = await updateSubflavorStore(
-    String(user.id),
+    String(boundOwnerId),
     id,
     sanitize(form),
   );

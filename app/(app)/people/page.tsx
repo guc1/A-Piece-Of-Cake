@@ -189,7 +189,7 @@ function UserAction({
   if (user.viewerStatus === 'pending') {
     return (
       <div className="flex gap-2">
-        <form action={cancelFollowRequest.bind(null, user.id)}>
+        <form action={cancelFollowRequest.bind(null, viewerId, user.id)}>
           <Button
             id={`p30pl3-ccl-${user.id}-${viewerId}`}
             variant="outline"
@@ -211,7 +211,7 @@ function UserAction({
   if (user.viewerStatus === 'accepted') {
     return (
       <div className="flex gap-2">
-        <form action={unfollow.bind(null, user.id)}>
+        <form action={unfollow.bind(null, viewerId, user.id)}>
           <Button
             id={`p30pl3-unf-${user.id}-${viewerId}`}
             variant="outline"
@@ -232,7 +232,7 @@ function UserAction({
   }
   return (
     <div className="flex gap-2">
-      <form action={followRequest.bind(null, user.id)}>
+      <form action={followRequest.bind(null, viewerId, user.id)}>
         <Button id={`p30pl3-fol-${user.id}-${viewerId}`} size="sm">
           {user.followsMe
             ? 'Follow back'
