@@ -66,3 +66,5 @@
 - 2025-09-27: Placed new timeslots within custom range, falling back to 30-minute or random 1-hour blocks when space is limited.
 - 2025-09-28: Introduced live planning view with real-time indicator, automatic block metadata selection, and viewer support.
 - 2025-09-28: Stored live planning adjustments locally without altering next-day plans.
+- 2025-09-29: Added hidden TimeMachine overlay triggered by clicking the "c" in "Piece" five times to override site date/time for testing.
+- 2025-09-29: Added reset-to-current-time option (Dutch timezone) and auto-close behavior when applying overrides.
