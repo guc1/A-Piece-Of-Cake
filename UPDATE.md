@@ -59,3 +59,4 @@
 - 2025-09-27: Prevented planner glitches by clamping blocks to 23:59 and restricting cross-day jumps to block moves.
 - 2025-09-27: Awaited planner search params to remove runtime warnings when loading the next-day page.
 - 2025-09-27: Dropped dragging when the cursor leaves the timeline, preventing disappearing planner blocks.
+- 2025-09-27: Enabled viewing next-day planning in read-only mode via view routes and added test coverage.
