@@ -21,11 +21,11 @@ export function hrefFor(
 ): string {
   if (sectionOrPath.startsWith('/')) {
     // raw path case
-    return ctx.mode === 'viewer'
+    return ctx.mode !== 'owner'
       ? `/view/${ctx.viewId}${sectionOrPath === '/' ? '' : sectionOrPath}`
       : sectionOrPath;
   }
-  if (ctx.mode === 'viewer') {
+  if (ctx.mode !== 'owner') {
     const base = `/view/${ctx.viewId}`;
     switch (sectionOrPath) {
       case 'cake':

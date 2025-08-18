@@ -7,8 +7,9 @@ export interface ViewContext {
   ownerId: number;
   viewerId: number | null;
   viewId?: string;
-  mode: 'owner' | 'viewer';
+  mode: 'owner' | 'viewer' | 'history';
   editable: boolean;
+  historyDate?: string;
 }
 
 export function buildViewContext({
@@ -16,13 +17,22 @@ export function buildViewContext({
   viewerId,
   mode,
   viewId,
+  historyDate,
 }: {
   ownerId: number;
   viewerId: number | null;
-  mode: 'owner' | 'viewer';
+  mode: 'owner' | 'viewer' | 'history';
   viewId?: string;
+  historyDate?: string;
 }): ViewContext {
-  return { ownerId, viewerId, viewId, mode, editable: mode === 'owner' };
+  return {
+    ownerId,
+    viewerId,
+    viewId,
+    mode,
+    editable: mode === 'owner',
+    historyDate,
+  };
 }
 
 export async function canViewProfile({

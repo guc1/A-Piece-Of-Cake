@@ -19,9 +19,9 @@ export function AppNav() {
   const ctx = useViewContext();
   const pathname = usePathname();
   const sections: Section[] =
-    ctx.mode === 'viewer'
-      ? ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people']
-      : ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people', 'visibility'];
+    ctx.mode === 'owner'
+      ? ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people', 'visibility']
+      : ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people'];
 
   return (
     <nav className="flex items-center justify-between border-b p-4">

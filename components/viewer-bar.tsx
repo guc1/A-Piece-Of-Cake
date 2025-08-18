@@ -13,11 +13,13 @@ export function ViewerBar() {
       className="fixed bottom-4 left-4 z-40 rounded-md bg-black/30 px-3 py-2 text-sm text-white backdrop-blur-sm shadow-sm dark:bg-white/40 dark:text-black"
     >
       <span className="flex items-center gap-2">
-        Viewing (live)
+        {ctx.mode === 'history' ? 'Historical viewing mode' : 'Viewing (live)'}
         <span
           id={`v13wbar-live-${ctx.ownerId}-${ctx.viewerId || 0}`}
-          aria-label="live"
-          className="h-2 w-2 rounded-full bg-green-500"
+          aria-label={ctx.mode === 'history' ? 'historical' : 'live'}
+          className={`h-2 w-2 rounded-full ${
+            ctx.mode === 'history' ? 'bg-blue-500' : 'bg-green-500'
+          }`}
         />
         &bull;
         <button

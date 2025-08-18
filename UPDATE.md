@@ -70,3 +70,4 @@
 - 2025-09-29: Added reset-to-current-time option (Dutch timezone) and auto-close behavior when applying overrides.
 - 2025-09-30: Added slide-out calendar panel on home screen with past 30 days and upcoming week view.
 - 2025-09-30: Enabled month navigation in slide-out calendar to jump one month backward or forward.
+- 2025-09-30: Introduced daily profile snapshots with historical viewing mode and calendar links to past profiles.
