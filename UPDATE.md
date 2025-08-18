@@ -70,3 +70,5 @@
 - 2025-09-29: Added reset-to-current-time option (Dutch timezone) and auto-close behavior when applying overrides.
 - 2025-09-30: Added slide-out calendar panel on home screen with past 30 days and upcoming week view.
 - 2025-09-30: Enabled month navigation in slide-out calendar to jump one month backward or forward.
+- 2025-08-18: Implemented profile snapshot system with historical viewing mode and calendar access.
+- 2025-08-19: Displayed historical snapshots using the full Cake home instead of raw JSON.
