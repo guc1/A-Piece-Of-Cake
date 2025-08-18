@@ -1,6 +1,6 @@
 import { getUserByViewId } from '@/lib/users';
 import { notFound } from 'next/navigation';
-import { PlanningHome } from '@/app/(app)/planning/page';
+import PlanningLanding from '@/app/(app)/planning/client';
 
 export default async function ViewPlanningPage({
   params,
@@ -12,7 +12,7 @@ export default async function ViewPlanningPage({
   if (!user) notFound();
   return (
     <section id={`v13w-plan-${user.id}`}>
-      <PlanningHome />
+      <PlanningLanding userId={String(user.id)} />
     </section>
   );
 }
