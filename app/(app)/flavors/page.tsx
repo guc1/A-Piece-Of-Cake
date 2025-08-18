@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { listFlavors } from '@/lib/flavors-store';
 import FlavorsClient from './client';
 import { getUserByViewId, ensureUser } from '@/lib/users';
+import { createFlavor, updateFlavor } from './actions';
 
 export default async function FlavorsPage({
   params,
@@ -22,5 +23,16 @@ export default async function FlavorsPage({
     ownerId = me.id;
   }
   const flavors = await listFlavors(String(ownerId));
-  return <FlavorsClient userId={String(ownerId)} initialFlavors={flavors} />;
+  const editable = ownerId === viewerId;
+  const createAction = createFlavor.bind(null, ownerId);
+  const updateAction = updateFlavor.bind(null, ownerId);
+  return (
+    <FlavorsClient
+      userId={String(ownerId)}
+      initialFlavors={flavors}
+      editable={editable}
+      createAction={editable ? createAction : undefined}
+      updateAction={editable ? updateAction : undefined}
+    />
+  );
 }

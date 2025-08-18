@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Flavor, Visibility } from '@/types/flavor';
-import { createFlavor, updateFlavor } from './actions';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
 const VISIBILITIES: Visibility[] = [
@@ -43,9 +42,15 @@ type FormState = {
 export default function FlavorsClient({
   userId,
   initialFlavors,
+  editable,
+  createAction,
+  updateAction,
 }: {
   userId: string;
   initialFlavors: Flavor[];
+  editable: boolean;
+  createAction?: (form: any) => Promise<Flavor>;
+  updateAction?: (id: string, form: any) => Promise<Flavor>;
 }) {
   const router = useRouter();
   const [flavors, setFlavors] = useState<Flavor[]>(sortFlavors(initialFlavors));
@@ -80,6 +85,7 @@ export default function FlavorsClient({
   const mode = editing ? 'edit' : 'new';
 
   function openCreate(e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     setEditing(null);
     const blank = {
@@ -98,6 +104,7 @@ export default function FlavorsClient({
   }
 
   function openEdit(f: Flavor, e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     const current = {
       name: f.name,
@@ -116,6 +123,7 @@ export default function FlavorsClient({
   }
 
   async function remove(f: Flavor) {
+    if (!editable) return;
     if (!confirm(`Delete '${f.name}'? This can't be undone.`)) return;
     await fetch(`/api/flavors/${f.id}`, { method: 'DELETE' });
     setFlavors((prev) => prev.filter((p) => p.id !== f.id));
@@ -135,12 +143,14 @@ export default function FlavorsClient({
   }, []);
 
   async function save() {
+    if (!editable) return;
     setSubmitting(true);
     setError('');
     try {
       const data = editing
-        ? await updateFlavor(editing.id, form)
-        : await createFlavor(form);
+        ? await updateAction?.(editing.id, form)
+        : await createAction?.(form);
+      if (!data) throw new Error('Error saving');
       if (editing) {
         setFlavors((prev) =>
           sortFlavors(prev.map((p) => (p.id === data.id ? data : p))),
@@ -202,28 +212,34 @@ export default function FlavorsClient({
 
   return (
     <section>
-      <div className="mb-4 flex justify-end">
-        <button
-          onClick={(e) => openCreate(e.currentTarget)}
-          className="rounded bg-orange-500 px-3 py-2 text-white"
-          id={`f7avoured1tnew-${userId}`}
-        >
-          New Flavor
-        </button>
-      </div>
+      {editable && (
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={(e) => openCreate(e.currentTarget)}
+            className="rounded bg-orange-500 px-3 py-2 text-white"
+            id={`f7avoured1tnew-${userId}`}
+          >
+            New Flavor
+          </button>
+        </div>
+      )}
       <ul className="flex flex-col gap-4" id={`f7avourli5t-${userId}`}>
         {flavors.map((f) => (
           <li
             key={f.id}
             id={`f7avourrow${f.id}-${userId}`}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => openEdit(f, e.currentTarget)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter')
-                openEdit(f, e.currentTarget as HTMLElement);
-              if (e.key === 'Delete') remove(f);
-            }}
+            {...(editable
+              ? {
+                  role: 'button',
+                  tabIndex: 0,
+                  onClick: (e: any) => openEdit(f, e.currentTarget),
+                  onKeyDown: (e: any) => {
+                    if (e.key === 'Enter')
+                      openEdit(f, e.currentTarget as HTMLElement);
+                    if (e.key === 'Delete') remove(f);
+                  },
+                }
+              : {})}
             className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
           >
             <div className="flex flex-col items-center">
@@ -279,25 +295,27 @@ export default function FlavorsClient({
                 <span>{f.visibility}</span>
               </div>
             </div>
-            <div
-              className="ml-auto flex gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                id={`f7avoured1t${f.id}-${userId}`}
-                className="text-sm text-blue-600 underline"
-                onClick={(e) => openEdit(f, e.currentTarget)}
+            {editable && (
+              <div
+                className="ml-auto flex gap-2"
+                onClick={(e) => e.stopPropagation()}
               >
-                Edit ▸
-              </button>
-              <button
-                id={`f7avourd3l${f.id}-${userId}`}
-                className="text-sm text-red-600 underline"
-                onClick={() => remove(f)}
-              >
-                Delete
-              </button>
-            </div>
+                <button
+                  id={`f7avoured1t${f.id}-${userId}`}
+                  className="text-sm text-blue-600 underline"
+                  onClick={(e) => openEdit(f, e.currentTarget)}
+                >
+                  Edit ▸
+                </button>
+                <button
+                  id={`f7avourd3l${f.id}-${userId}`}
+                  className="text-sm text-red-600 underline"
+                  onClick={() => remove(f)}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>
