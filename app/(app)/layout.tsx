@@ -1,4 +1,5 @@
 import { redirect, notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { auth } from '@/lib/auth';
 import { ensureUser, getUserByViewId } from '@/lib/users';
 import { buildViewContext, canViewProfile } from '@/lib/profile';
@@ -37,10 +38,25 @@ export default async function AppLayout({
       },
     });
     if (!allowed) notFound();
-    ctx = buildViewContext(user.id, viewerId, viewId);
+    ctx = buildViewContext({
+      ownerId: user.id,
+      viewerId,
+      mode: 'viewer',
+      viewId,
+    });
   } else {
     const me = self ?? (await ensureUser(session));
-    ctx = buildViewContext(me.id, viewerId, me.viewId);
+    ctx = buildViewContext({
+      ownerId: me.id,
+      viewerId,
+      mode: 'owner',
+      viewId: me.viewId,
+    });
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    const pathname = (await headers()).get('next-url') || '';
+    console.log({ pathname, mode: ctx.mode, ownerId: ctx.ownerId, viewerId: ctx.viewerId, viewId });
   }
 
   return (

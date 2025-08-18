@@ -1,6 +1,6 @@
 import { getUserByViewId } from '@/lib/users';
 import { notFound } from 'next/navigation';
-import { CakeHome } from '../../page';
+import { CakeHome } from '@/components/cake/cake-home';
 
 export default async function ViewCakePage({
   params,

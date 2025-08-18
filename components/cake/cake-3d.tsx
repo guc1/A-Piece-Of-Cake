@@ -4,7 +4,7 @@ import React, { CSSProperties, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { slices } from './slices';
 import { useViewContext } from '@/lib/view-context';
-import { getSectionHref, type Section } from '@/lib/navigation';
+import { hrefFor, type Section } from '@/lib/navigation';
 
 interface Cake3DProps {
   activeSlug: string | null;
@@ -99,12 +99,12 @@ export function Cake3D({
               role="link"
               tabIndex={0}
               onClick={() =>
-                router.push(getSectionHref(slice.slug as Section, ctx))
+                router.push(hrefFor(slice.slug as Section, ctx))
               }
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  router.push(getSectionHref(slice.slug as Section, ctx));
+                  router.push(hrefFor(slice.slug as Section, ctx));
                 }
               }}
               onPointerEnter={() => onHover(slice.slug)}
