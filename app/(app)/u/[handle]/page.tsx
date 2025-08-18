@@ -13,11 +13,11 @@ import { Button } from '@/components/ui/button';
 export default async function ProfilePage({
   params,
 }: {
-  params: { handle: string };
+  params: Promise<{ handle: string }>;
 }) {
   const session = await auth();
   const viewerId = Number(session?.user?.id);
-  const handle = params.handle;
+  const { handle } = await params;
 
   const [user] = await db
     .select({
