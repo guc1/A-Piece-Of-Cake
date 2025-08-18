@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useViewContext } from '@/lib/view-context';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
@@ -21,6 +21,7 @@ const COLORS = [
 
 // shrink timeline so 24h fits on one screen
 const PIXELS_PER_MINUTE = 0.5;
+const MAX_MINUTES = 24 * 60 - 1; // 23:59 in minutes
 
 interface Props {
   userId: string;
@@ -30,9 +31,7 @@ interface Props {
 
 export default function EditorClient({ userId, date, initialPlan }: Props) {
   const { editable } = useViewContext();
-  const [blocks, setBlocks] = useState<PlanBlock[]>(
-    initialPlan?.blocks ?? [],
-  );
+  const [blocks, setBlocks] = useState<PlanBlock[]>(initialPlan?.blocks ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(
     () => blocks.find((b) => b.id === selectedId) || null,
@@ -40,10 +39,23 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
   );
   const draggingRef = useRef(false);
 
-  function minutesFromIso(iso: string) {
-    const d = new Date(iso);
-    return d.getHours() * 60 + d.getMinutes();
-  }
+  const minutesFromIso = useCallback(
+    (iso: string) => {
+      const base = new Date(`${date}T00:00:00`);
+      const diff = Math.round((new Date(iso).getTime() - base.getTime()) / 60000);
+      return Math.max(0, Math.min(diff, MAX_MINUTES));
+    },
+    [date],
+  );
+  const formatTime = useCallback(
+    (iso: string) => {
+      const diff = minutesFromIso(iso);
+      const h = String(Math.floor(diff / 60)).padStart(2, '0');
+      const m = String(diff % 60).padStart(2, '0');
+      return `${h}:${m}`;
+    },
+    [minutesFromIso],
+  );
   function isoFromMinutes(min: number) {
     const base = new Date(`${date}T00:00:00`);
     return new Date(base.getTime() + min * 60000).toISOString();
@@ -77,7 +89,7 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
       );
     }
     let placed = false;
-    while (candidate + duration <= 24 * 60) {
+    while (candidate + duration <= MAX_MINUTES) {
       if (isFree(candidate, candidate + duration)) {
         placed = true;
         break;
@@ -86,7 +98,7 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     }
     if (!placed) {
       candidate = 0;
-      while (candidate + duration <= 24 * 60) {
+      while (candidate + duration <= MAX_MINUTES) {
         if (isFree(candidate, candidate + duration)) {
           placed = true;
           break;
@@ -132,16 +144,20 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
   function handleTimeChange(id: string, field: 'start' | 'end', value: string) {
     const [h, m] = value.split(':').map((n) => parseInt(n, 10));
     const minutes = h * 60 + m;
-    const iso = isoFromMinutes(minutes);
     if (field === 'start') {
-      const dur = minutesFromIso(selected!.end) - minutesFromIso(selected!.start);
-      const newStart = Math.min(Math.max(minutes, 0), 24 * 60 - 15);
+      const dur =
+        minutesFromIso(selected!.end) - minutesFromIso(selected!.start);
+      const maxStart = Math.max(0, MAX_MINUTES - dur);
+      const newStart = Math.min(Math.max(minutes, 0), maxStart);
       updateBlock(id, {
         start: isoFromMinutes(newStart),
         end: isoFromMinutes(newStart + dur),
       });
     } else {
-      const newEnd = Math.min(Math.max(minutes, minutesFromIso(selected!.start) + 15), 24 * 60);
+      const newEnd = Math.min(
+        Math.max(minutes, minutesFromIso(selected!.start) + 15),
+        MAX_MINUTES,
+      );
       updateBlock(id, { end: isoFromMinutes(newEnd) });
     }
   }
@@ -158,23 +174,40 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     const startY = e.clientY;
     const initStart = minutesFromIso(b.start);
     const initEnd = minutesFromIso(b.end);
+    const bounds = (document
+      .getElementById(`p1an-timecol-${userId}`)
+      ?.getBoundingClientRect() ?? { top: 0, bottom: 0 });
+    const marginPx = 10; // drop a little early to avoid glitches at edges
     function onMove(ev: PointerEvent) {
       dragRef.current = true;
-      const delta = Math.round((ev.clientY - startY) / PIXELS_PER_MINUTE / 15) * 15;
+      if (
+        ev.clientY < bounds.top + marginPx ||
+        ev.clientY > bounds.bottom - marginPx
+      ) {
+        onUp();
+        return;
+      }
+      const delta =
+        Math.round((ev.clientY - startY) / PIXELS_PER_MINUTE / 15) * 15;
+      const rawStart = initStart + delta;
+      const rawEnd = initEnd + delta;
       if (mode === 'move') {
-        let newStart = initStart + delta;
-        newStart = Math.max(0, Math.min(newStart, 24 * 60 - (initEnd - initStart)));
+        let newStart = rawStart;
+        newStart = Math.max(
+          0,
+          Math.min(newStart, MAX_MINUTES - (initEnd - initStart)),
+        );
         updateBlock(b.id, {
           start: isoFromMinutes(newStart),
           end: isoFromMinutes(newStart + (initEnd - initStart)),
         });
       } else if (mode === 'start') {
-        let newStart = initStart + delta;
+        let newStart = rawStart;
         newStart = Math.max(0, Math.min(newStart, initEnd - 15));
         updateBlock(b.id, { start: isoFromMinutes(newStart) });
       } else {
-        let newEnd = initEnd + delta;
-        newEnd = Math.max(initStart + 15, Math.min(newEnd, 24 * 60));
+        let newEnd = rawEnd;
+        newEnd = Math.max(initStart + 15, Math.min(newEnd, MAX_MINUTES));
         updateBlock(b.id, { end: isoFromMinutes(newEnd) });
       }
     }
@@ -191,7 +224,7 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
       [...blocks].sort(
         (a, b) => minutesFromIso(a.start) - minutesFromIso(b.start),
       ),
-    [blocks],
+    [blocks, minutesFromIso],
   );
 
   return (
@@ -280,7 +313,9 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
                   }}
                   onPointerMove={(e) => {
                     if (!editable) return;
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const rect = (
+                      e.currentTarget as HTMLElement
+                    ).getBoundingClientRect();
                     const offset = e.clientY - rect.top;
                     (e.currentTarget as HTMLElement).style.cursor =
                       offset < 8 || rect.height - offset < 8
@@ -294,14 +329,16 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
                   onPointerDown={(e) => {
                     if (!editable) return;
                     e.stopPropagation();
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const rect = (
+                      e.currentTarget as HTMLElement
+                    ).getBoundingClientRect();
                     const offset = e.clientY - rect.top;
                     const mode =
                       offset < 8
                         ? 'start'
                         : rect.height - offset < 8
-                        ? 'end'
-                        : 'move';
+                          ? 'end'
+                          : 'move';
                     onDragStart(e, b, mode, draggingRef);
                   }}
                   onClick={(e) => {
@@ -349,7 +386,10 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
           <div className="mb-2 text-sm text-gray-500">
             {editable ? null : 'Read-only (viewing mode)'}
           </div>
-          <label className="block text-sm font-medium" htmlFor={`p1an-meta-ttl-${selected.id}-${userId}`}>
+          <label
+            className="block text-sm font-medium"
+            htmlFor={`p1an-meta-ttl-${selected.id}-${userId}`}
+          >
             Activity
           </label>
           <input
@@ -358,9 +398,14 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
             value={selected.title}
             maxLength={60}
             disabled={!editable}
-            onChange={(e) => updateBlock(selected.id, { title: e.target.value })}
+            onChange={(e) =>
+              updateBlock(selected.id, { title: e.target.value })
+            }
           />
-          <label className="block text-sm font-medium" htmlFor={`p1an-meta-dsc-${selected.id}-${userId}`}>
+          <label
+            className="block text-sm font-medium"
+            htmlFor={`p1an-meta-dsc-${selected.id}-${userId}`}
+          >
             Description
           </label>
           <textarea
@@ -384,34 +429,46 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
                 key={c}
                 className="h-6 w-6 rounded"
                 style={{ background: c }}
-                onClick={() => editable && updateBlock(selected.id, { color: c })}
+                onClick={() =>
+                  editable && updateBlock(selected.id, { color: c })
+                }
                 disabled={!editable}
               />
             ))}
           </div>
           <div className="mb-2 flex gap-2">
             <div>
-              <label className="block text-sm font-medium" htmlFor={`p1an-meta-tms-${selected.id}-${userId}`}>
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`p1an-meta-tms-${selected.id}-${userId}`}
+              >
                 Start
               </label>
               <input
                 type="time"
                 id={`p1an-meta-tms-${selected.id}-${userId}`}
-                value={selected.start.substring(11, 16)}
+                value={formatTime(selected.start)}
                 disabled={!editable}
-                onChange={(e) => handleTimeChange(selected.id, 'start', e.target.value)}
+                onChange={(e) =>
+                  handleTimeChange(selected.id, 'start', e.target.value)
+                }
               />
             </div>
             <div>
-              <label className="block text-sm font-medium" htmlFor={`p1an-meta-tme-${selected.id}-${userId}`}>
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`p1an-meta-tme-${selected.id}-${userId}`}
+              >
                 End
               </label>
               <input
                 type="time"
                 id={`p1an-meta-tme-${selected.id}-${userId}`}
-                value={selected.end.substring(11, 16)}
+                value={formatTime(selected.end)}
                 disabled={!editable}
-                onChange={(e) => handleTimeChange(selected.id, 'end', e.target.value)}
+                onChange={(e) =>
+                  handleTimeChange(selected.id, 'end', e.target.value)
+                }
               />
             </div>
           </div>
@@ -427,6 +484,31 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
                 title="Read-only in viewing mode"
               >
                 Save
+              </Button>
+            )}
+            {editable ? (
+              <Button
+                variant="outline"
+                className="border-red-600 text-red-600"
+                id={`p1an-meta-del-${userId}`}
+                onClick={() => {
+                  setBlocks((prev) =>
+                    prev.filter((blk) => blk.id !== selected.id),
+                  );
+                  setSelectedId(null);
+                }}
+              >
+                Delete
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="border-red-600 text-red-600"
+                id={`p1an-meta-del-${userId}`}
+                disabled
+                title="Read-only in viewing mode"
+              >
+                Delete
               </Button>
             )}
             <Button

@@ -4,15 +4,23 @@ import { notFound } from 'next/navigation';
 import { getPlan } from '@/lib/plans-store';
 import EditorClient from './client';
 
-export default async function PlanningNextPage() {
+export default async function PlanningNextPage({
+  searchParams,
+}: {
+  // Next.js dynamic APIs like `searchParams` are async and must be awaited
+  searchParams: Promise<{ date?: string }>;
+}) {
   const session = await auth();
   if (!session) notFound();
   const me = await ensureUser(session);
   const now = new Date();
-  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  const date = tomorrow.toISOString().slice(0, 10);
-  const plan = await getPlan(String(me.id), date);
-  return (
-    <EditorClient userId={String(me.id)} date={date} initialPlan={plan} />
+  const tomorrow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
   );
+  const { date: raw } = await searchParams;
+  const date = raw ?? tomorrow.toISOString().slice(0, 10);
+  const plan = await getPlan(String(me.id), date);
+  return <EditorClient userId={String(me.id)} date={date} initialPlan={plan} />;
 }
