@@ -4,6 +4,7 @@ import { ensureUser } from '@/lib/users';
 import { buildViewContext } from '@/lib/profile';
 import { ViewContextProvider } from '@/lib/view-context';
 import { AppNav } from '@/components/app-nav';
+import { SnapshotScheduler } from '@/components/snapshot/scheduler';
 
 export default async function AppLayout({
   children,
@@ -30,6 +31,7 @@ export default async function AppLayout({
     <html lang="en">
       <body>
         <ViewContextProvider value={ctx}>
+          <SnapshotScheduler />
           <AppNav />
           <main className="p-4">
             <div id={`v13wctx-${ctx.ownerId}-${ctx.viewerId}`}>{children}</div>

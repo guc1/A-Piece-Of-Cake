@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   uniqueIndex,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 
 export const accountVisibilityEnum = pgEnum('account_visibility', [
@@ -139,3 +140,20 @@ export const planBlocks = pgTable('plan_blocks', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+export const profileSnapshots = pgTable(
+  'profile_snapshots',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').references(() => users.id).notNull(),
+    snapshotDate: date('snapshot_date').notNull(),
+    data: jsonb('data').$type<any>().notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserDate: uniqueIndex('profile_snapshots_user_date_unique').on(
+      table.userId,
+      table.snapshotDate,
+    ),
+  }),
+);

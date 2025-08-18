@@ -1,11 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useViewContext } from '@/lib/view-context';
 
-export function SideCalendar() {
+export function SideCalendar({
+  snapshotDates = [],
+}: {
+  snapshotDates?: string[];
+}) {
   const [open, setOpen] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
+  const ctx = useViewContext();
+  const snapshotSet = useMemo(() => new Set(snapshotDates), [snapshotDates]);
 
   const today = new Date();
   const base = new Date(today);
@@ -71,16 +79,29 @@ export function SideCalendar() {
             ))}
             {days.map((date) => {
               const isToday = date.toDateString() === today.toDateString();
-              return (
+              const iso = date.toISOString().slice(0, 10);
+              const hasSnapshot = snapshotSet.has(iso);
+              const day = (
                 <div
-                  key={date.toISOString()}
                   className={cn(
                     'p-1 rounded',
                     isToday && 'bg-orange-500 text-white font-bold',
+                    hasSnapshot && 'underline cursor-pointer',
                   )}
                 >
                   {date.getDate()}
                 </div>
+              );
+              return hasSnapshot ? (
+                <Link
+                  key={iso}
+                  href={`/view/${ctx.viewId}/history/${iso}`}
+                  aria-label={`View snapshot for ${iso}`}
+                >
+                  {day}
+                </Link>
+              ) : (
+                <div key={iso}>{day}</div>
               );
             })}
           </div>

@@ -8,6 +8,7 @@ const Ctx = createContext<ViewContext>({
   viewId: undefined,
   mode: 'owner',
   editable: true,
+  historyDate: undefined,
 });
 
 export function ViewContextProvider({
