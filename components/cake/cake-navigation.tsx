@@ -6,14 +6,17 @@ import { slices } from './slices';
 import { Cake3D } from './cake-3d';
 import { SettingsButton } from './settings-button';
 
-export function CakeNavigation() {
+export function CakeNavigation({
+  userId = '42',
+}: {
+  userId?: string | number;
+}) {
   const router = useRouter();
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const [offsetVh, setOffsetVh] = useState(-8);
   const [boxesOffsetVh, setBoxesOffsetVh] = useState(-6);
   const [reduced, setReduced] = useState(false);
-  const userId = '42';
   const clearTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
