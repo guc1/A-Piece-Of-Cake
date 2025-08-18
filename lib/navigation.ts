@@ -21,12 +21,25 @@ export function hrefFor(
 ): string {
   if (sectionOrPath.startsWith('/')) {
     // raw path case
-    return ctx.mode === 'viewer'
-      ? `/view/${ctx.viewId}${sectionOrPath === '/' ? '' : sectionOrPath}`
-      : sectionOrPath;
+    if (ctx.mode === 'viewer') {
+      return `/view/${ctx.viewId}${sectionOrPath === '/' ? '' : sectionOrPath}`;
+    }
+    if (ctx.mode === 'historical') {
+      const base =
+        ctx.viewerId === ctx.ownerId
+          ? `/history/self/${ctx.snapshotDate}`
+          : `/history/${ctx.viewId}/${ctx.snapshotDate}`;
+      return `${base}${sectionOrPath === '/' ? '' : sectionOrPath}`;
+    }
+    return sectionOrPath;
   }
-  if (ctx.mode === 'viewer') {
-    const base = `/view/${ctx.viewId}`;
+  if (ctx.mode === 'viewer' || ctx.mode === 'historical') {
+    const base =
+      ctx.mode === 'viewer'
+        ? `/view/${ctx.viewId}`
+        : ctx.viewerId === ctx.ownerId
+          ? `/history/self/${ctx.snapshotDate}`
+          : `/history/${ctx.viewId}/${ctx.snapshotDate}`;
     switch (sectionOrPath) {
       case 'cake':
       default:
@@ -42,7 +55,7 @@ export function hrefFor(
       case 'people':
         return `${base}/people`;
       case 'visibility':
-        return base; // no visibility route for viewers
+        return base; // no visibility route for viewers/historical
     }
   }
   switch (sectionOrPath) {

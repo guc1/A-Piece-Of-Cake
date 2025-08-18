@@ -12,7 +12,7 @@ export default async function ViewCakePage({
   if (!user) notFound();
   return (
     <section id={`v13w-cake-${user.id}`}>
-      <CakeHome />
+      <CakeHome ownerId={user.id} />
     </section>
   );
 }
