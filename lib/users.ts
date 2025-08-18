@@ -1,7 +1,7 @@
 import { db } from './db';
 import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
-import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+import { randomBytes, scryptSync, timingSafeEqual, randomUUID } from 'crypto';
 import type { Session } from 'next-auth';
 
 export interface NewUser {
@@ -37,6 +37,7 @@ export async function createUser(input: NewUser) {
       displayName: input.displayName ?? input.name,
       avatarUrl: input.avatarUrl,
       accountVisibility: input.accountVisibility ?? 'open',
+      viewId: randomUUID(),
       name: input.name,
       passwordHash,
     })
@@ -59,7 +60,14 @@ export async function ensureUser(session: Session | null) {
   if (!email) throw new Error('Please sign in.');
 
   let user = await getUserByEmail(email);
-  if (user) return user;
+  if (user) {
+    // ensure legacy users have a viewId
+    if (!user.viewId) {
+      await db.update(users).set({ viewId: randomUUID() }).where(eq(users.id, user.id));
+      user = await getUserByEmail(email);
+    }
+    return user;
+  }
 
   let baseHandle = email.split('@')[0];
   let handle = baseHandle;

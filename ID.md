@@ -19,6 +19,16 @@ Examples:
 - `n4vbox-{slug}-{userId}` → navigation light box (e.g., `n4vbox-planning-42`).
 - `cak3titleText` → page heading text.
 
+View context & profile viewing:
+- `pr0ovr-{ownerId}-{viewerId}` → profile overview container.
+- `pr0ovr-view-{ownerId}-{viewerId}` → View Account button.
+- `pr0ovr-fol-{ownerId}-{viewerId}` → Follow button.
+- `pr0ovr-req-{ownerId}-{viewerId}` → Request to follow button.
+- `pr0ovr-unf-{ownerId}-{viewerId}` → Unfollow button.
+- `pr0ovr-ccl-{ownerId}-{viewerId}` → Cancel follow request button.
+- `v13wctx-{ownerId}-{viewerId}` → root container when viewing another account.
+- `v13wctx-bnr-{ownerId}-{viewerId}` → read-only banner in view mode.
+
 Modal form IDs:
 - `f7avourmdl-{mode}-{userId}` → flavor modal root (`mode`: new|edit).
 - `f7avourn4me-frm-{userId}` → flavor form name input.
