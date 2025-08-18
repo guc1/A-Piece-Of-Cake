@@ -1,6 +1,7 @@
 'use server';
 
 import { auth } from '@/lib/auth';
+import { ensureUser } from '@/lib/users';
 import {
   createSubflavor as createSubflavorStore,
   updateSubflavor as updateSubflavorStore,
@@ -61,13 +62,10 @@ export async function createSubflavor(
   form: any,
 ): Promise<Subflavor> {
   const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    throw new Error('Please sign in.');
-  }
-  assertOwner(Number(userId), Number(userId));
+  const user = await ensureUser(session);
+  await assertOwner(user.id);
   const subflavor = await createSubflavorStore(
-    userId,
+    String(user.id),
     flavorId,
     sanitize({ ...form, flavorId }),
   );
@@ -81,12 +79,13 @@ export async function updateSubflavor(
   form: any,
 ): Promise<Subflavor> {
   const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
-    throw new Error('Please sign in.');
-  }
-  assertOwner(Number(userId), Number(userId));
-  const updated = await updateSubflavorStore(userId, id, sanitize(form));
+  const user = await ensureUser(session);
+  await assertOwner(user.id);
+  const updated = await updateSubflavorStore(
+    String(user.id),
+    id,
+    sanitize(form),
+  );
   if (!updated) {
     throw new Error('Not found');
   }

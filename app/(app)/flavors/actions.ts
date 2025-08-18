@@ -59,9 +59,8 @@ function clamp(n: number) {
 export async function createFlavor(form: any): Promise<Flavor> {
   const session = await auth();
   const self = await ensureUser(session);
-  const userId = String(self.id);
-  assertOwner(self.id, self.id);
-  const flavor = await createFlavorStore(userId, sanitize(form));
+  await assertOwner(self.id);
+  const flavor = await createFlavorStore(String(self.id), sanitize(form));
   revalidatePath('/flavors');
   return flavor;
 }
@@ -69,9 +68,12 @@ export async function createFlavor(form: any): Promise<Flavor> {
 export async function updateFlavor(id: string, form: any): Promise<Flavor> {
   const session = await auth();
   const self = await ensureUser(session);
-  const userId = String(self.id);
-  assertOwner(self.id, self.id);
-  const updated = await updateFlavorStore(userId, id, sanitize(form));
+  await assertOwner(self.id);
+  const updated = await updateFlavorStore(
+    String(self.id),
+    id,
+    sanitize(form),
+  );
   if (!updated) {
     throw new Error('Not found');
   }
