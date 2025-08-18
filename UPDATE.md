@@ -64,3 +64,4 @@
 - 2025-09-27: Removed planning metadata save button and enabled automatic persistence on edit with updated tests.
 - 2025-09-27: Added adjustable planner range with default 05:00–22:00 view, earlier/later loading, and custom time inputs to resize the timeline.
 - 2025-09-27: Placed new timeslots within custom range, falling back to 30-minute or random 1-hour blocks when space is limited.
+- 2025-09-28: Introduced live planning view with real-time indicator, automatic block metadata selection, and viewer support.
