@@ -35,6 +35,8 @@ export const users = pgTable('users', {
   accountVisibility: accountVisibilityEnum('account_visibility')
     .notNull()
     .default('open'),
+  // Stable public identifier for read-only profile routing
+  viewId: text('view_id').notNull().unique(),
   email: text('email').notNull().unique(),
   name: text('name'),
   passwordHash: text('password_hash').notNull(),

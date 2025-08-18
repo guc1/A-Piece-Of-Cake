@@ -133,9 +133,7 @@ function UserAction({
       if (user.status === 'pending') {
         return (
           <form action={cancelFollowRequest.bind(null, user.id)}>
-            <Button variant="outline" size="sm">
-              Cancel request
-            </Button>
+            <Button variant="outline" size="sm">Requested</Button>
           </form>
         );
       }
@@ -147,17 +145,12 @@ function UserAction({
         </form>
       );
     case 'discover':
-      if (user.status === 'accepted') {
-        return (
-          <form action={followRequest.bind(null, user.id)}>
-            <Button size="sm">Follow back</Button>
-          </form>
-        );
-      }
       return (
         <form action={followRequest.bind(null, user.id)}>
           <Button size="sm">
-            {user.accountVisibility === 'open' ? 'Follow' : 'Request to follow'}
+            {user.accountVisibility === 'open'
+              ? 'Follow'
+              : 'Request to follow'}
           </Button>
         </form>
       );
