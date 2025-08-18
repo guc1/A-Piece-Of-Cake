@@ -63,7 +63,6 @@ export const EyeIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export interface Slice {
   slug: string;
-  href: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   color: string;
   label: string;
@@ -72,42 +71,36 @@ export interface Slice {
 export const slices: Slice[] = [
   {
     slug: 'planning',
-    href: '/planning',
     Icon: CalendarIcon,
     color: 'var(--planning)',
     label: 'Planning',
   },
   {
     slug: 'flavors',
-    href: '/flavors',
     Icon: SwirlIcon,
     color: 'var(--flavors)',
     label: 'Flavors',
   },
   {
     slug: 'ingredients',
-    href: '/ingredients',
     Icon: FlaskIcon,
     color: 'var(--ingredients)',
     label: 'Ingredients',
   },
   {
     slug: 'review',
-    href: '/review',
     Icon: StarIcon,
     color: 'var(--review)',
     label: 'Review',
   },
   {
     slug: 'people',
-    href: '/people',
     Icon: UsersIcon,
     color: 'var(--people)',
     label: 'People',
   },
   {
     slug: 'visibility',
-    href: '/visibility',
     Icon: EyeIcon,
     color: 'var(--visibility)',
     label: 'Visibility',
