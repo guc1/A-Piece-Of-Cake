@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Flavor, Visibility } from '@/types/flavor';
 import { createFlavor, updateFlavor } from './actions';
+import { useViewContext } from '@/lib/view-context';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
 const VISIBILITIES: Visibility[] = [
@@ -48,6 +49,7 @@ export default function FlavorsClient({
   initialFlavors: Flavor[];
 }) {
   const router = useRouter();
+  const { editable } = useViewContext();
   const [flavors, setFlavors] = useState<Flavor[]>(sortFlavors(initialFlavors));
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Flavor | null>(null);
@@ -80,6 +82,7 @@ export default function FlavorsClient({
   const mode = editing ? 'edit' : 'new';
 
   function openCreate(e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     setEditing(null);
     const blank = {
@@ -98,6 +101,7 @@ export default function FlavorsClient({
   }
 
   function openEdit(f: Flavor, e: HTMLElement) {
+    if (!editable) return;
     triggerRef.current = e;
     const current = {
       name: f.name,
@@ -116,6 +120,7 @@ export default function FlavorsClient({
   }
 
   async function remove(f: Flavor) {
+    if (!editable) return;
     if (!confirm(`Delete '${f.name}'? This can't be undone.`)) return;
     await fetch(`/api/flavors/${f.id}`, { method: 'DELETE' });
     setFlavors((prev) => prev.filter((p) => p.id !== f.id));
@@ -204,9 +209,10 @@ export default function FlavorsClient({
     <section>
       <div className="mb-4 flex justify-end">
         <button
-          onClick={(e) => openCreate(e.currentTarget)}
-          className="rounded bg-orange-500 px-3 py-2 text-white"
+          onClick={editable ? (e) => openCreate(e.currentTarget) : undefined}
+          className="rounded bg-orange-500 px-3 py-2 text-white disabled:opacity-50"
           id={`f7avoured1tnew-${userId}`}
+          disabled={!editable}
         >
           New Flavor
         </button>
@@ -218,8 +224,9 @@ export default function FlavorsClient({
             id={`f7avourrow${f.id}-${userId}`}
             role="button"
             tabIndex={0}
-            onClick={(e) => openEdit(f, e.currentTarget)}
+            onClick={editable ? (e) => openEdit(f, e.currentTarget) : undefined}
             onKeyDown={(e) => {
+              if (!editable) return;
               if (e.key === 'Enter')
                 openEdit(f, e.currentTarget as HTMLElement);
               if (e.key === 'Delete') remove(f);
@@ -285,15 +292,17 @@ export default function FlavorsClient({
             >
               <button
                 id={`f7avoured1t${f.id}-${userId}`}
-                className="text-sm text-blue-600 underline"
-                onClick={(e) => openEdit(f, e.currentTarget)}
+                className="text-sm text-blue-600 underline disabled:opacity-50"
+                onClick={editable ? (e) => openEdit(f, e.currentTarget) : undefined}
+                disabled={!editable}
               >
                 Edit ▸
               </button>
               <button
                 id={`f7avourd3l${f.id}-${userId}`}
-                className="text-sm text-red-600 underline"
-                onClick={() => remove(f)}
+                className="text-sm text-red-600 underline disabled:opacity-50"
+                onClick={editable ? () => remove(f) : undefined}
+                disabled={!editable}
               >
                 Delete
               </button>
@@ -498,7 +507,7 @@ export default function FlavorsClient({
                 <button
                   id={`f7avoursav-frm-${userId}`}
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || !editable}
                   className="rounded bg-orange-500 px-3 py-1 text-white disabled:opacity-50"
                 >
                   Save
