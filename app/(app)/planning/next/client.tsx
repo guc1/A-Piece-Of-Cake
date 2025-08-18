@@ -31,9 +31,15 @@ interface Props {
   userId: string;
   date: string; // YYYY-MM-DD
   initialPlan: Plan | null;
+  live?: boolean;
 }
 
-export default function EditorClient({ userId, date, initialPlan }: Props) {
+export default function EditorClient({
+  userId,
+  date,
+  initialPlan,
+  live = false,
+}: Props) {
   const { editable } = useViewContext();
   const [blocks, setBlocks] = useState<PlanBlock[]>(initialPlan?.blocks ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -51,6 +57,29 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
   const PIXELS_PER_MINUTE = TIMELINE_HEIGHT / visibleMinutes;
   const startHour = Math.floor(startMinute / 60);
   const endHour = Math.ceil(endMinute / 60);
+
+  const [nowMinute, setNowMinute] = useState(() => {
+    if (!live) return 0;
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  });
+
+  useEffect(() => {
+    if (!live) return;
+    const tick = () => {
+      const d = new Date();
+      setNowMinute(d.getHours() * 60 + d.getMinutes());
+    };
+    tick();
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, [live]);
+
+  useEffect(() => {
+    if (!live) return;
+    if (nowMinute < startMinute) setStartMinute(0);
+    if (nowMinute > endMinute) setEndMinute(MAX_MINUTES);
+  }, [live, nowMinute, startMinute, endMinute]);
 
   const minutesFromIso = useCallback(
     (iso: string) => {
@@ -350,6 +379,40 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
     return depthMap;
   }, [sortedBlocks, minutesFromIso]);
 
+  const liveBlocks = useMemo(() => {
+    if (!live) return [] as PlanBlock[];
+    return blocks.filter((b) => {
+      const s = minutesFromIso(b.start);
+      const e = minutesFromIso(b.end);
+      return s <= nowMinute && nowMinute < e;
+    });
+  }, [blocks, minutesFromIso, nowMinute, live]);
+
+  const currentBlock = useMemo(() => {
+    if (!liveBlocks.length) return null;
+    return liveBlocks.reduce(
+      (latest, b) =>
+        minutesFromIso(b.start) > minutesFromIso(latest.start) ? b : latest,
+      liveBlocks[0],
+    );
+  }, [liveBlocks, minutesFromIso]);
+
+  useEffect(() => {
+    if (!live) return;
+    if (currentBlock) setSelectedId(currentBlock.id);
+    else setSelectedId(null);
+  }, [live, currentBlock]);
+
+  const lineColor = useMemo(() => {
+    if (!live) return '#FF0000';
+    const overRed = blocks.some((b) => {
+      const s = minutesFromIso(b.start);
+      const e = minutesFromIso(b.end);
+      return s <= nowMinute && nowMinute < e && b.color === '#F87171';
+    });
+    return overRed ? '#0000FF' : '#FF0000';
+  }, [blocks, minutesFromIso, nowMinute, live]);
+
   return (
     <div className="flex h-full">
       <div
@@ -554,6 +617,22 @@ export default function EditorClient({ userId, date, initialPlan }: Props) {
                 </div>
               );
             })}
+            {live && nowMinute >= startMinute && nowMinute <= endMinute && (
+              <div
+                id={`p1an-now-${userId}`}
+                className="pointer-events-none absolute left-0 right-0 border-t-2 border-dotted"
+                style={{
+                  top: (nowMinute - startMinute) * PIXELS_PER_MINUTE,
+                  borderColor: lineColor,
+                  zIndex: 999999,
+                }}
+              >
+                <div
+                  className="absolute -left-2 -top-1 h-2 w-2 rounded-full"
+                  style={{ background: lineColor }}
+                />
+              </div>
+            )}
           </div>
         </div>
         {editable ? (
