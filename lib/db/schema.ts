@@ -5,6 +5,7 @@ import {
   varchar,
   timestamp,
   integer,
+  date,
   pgEnum,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
@@ -108,4 +109,29 @@ export const notifications = pgTable('notifications', {
   type: notificationTypeEnum('type').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   readAt: timestamp('read_at'),
+});
+export const plans = pgTable(
+  'plans',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').references(() => users.id).notNull(),
+    date: date('date').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => ({
+    userDateIdx: uniqueIndex('plans_user_date_idx').on(table.userId, table.date),
+  }),
+);
+
+export const planBlocks = pgTable('plan_blocks', {
+  id: serial('id').primaryKey(),
+  planId: integer('plan_id').references(() => plans.id).notNull(),
+  start: timestamp('start').notNull(),
+  end: timestamp('end').notNull(),
+  title: varchar('title', { length: 60 }),
+  description: text('description'),
+  color: varchar('color', { length: 10 }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
