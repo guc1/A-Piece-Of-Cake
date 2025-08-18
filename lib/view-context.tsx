@@ -7,6 +7,7 @@ const Ctx = createContext<ViewContext>({
   viewerId: null,
   viewId: undefined,
   mode: 'owner',
+  snapshotDate: undefined,
   editable: true,
 });
 
