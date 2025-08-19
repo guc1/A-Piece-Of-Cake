@@ -68,5 +68,11 @@ Modal form IDs:
 - `1ngred-tips-{ingredientId?}-{ownerId}` → tips textarea.
 - `1ngred-imgup-{ingredientId?}-{ownerId}` → image upload field.
 - `1ngred-vis-{ingredientId?}-{ownerId}` → visibility select.
+- `1ngred-add-own-{ownerId}` → create own ingredient option.
+- `1ngred-add-import-{ownerId}` → import ingredient option.
+- `1ngred-imp-pre-{ownerId}` → choose preset import option.
+- `1ngred-imp-srch-{ownerId}` → search others import option.
+- `1ngred-pr3-{index}-{ownerId}` → preset selection button.
+- `1ngred-ppl-{userId}-{ownerId}` → person entry in import search.
 - `v13w-ingr-ribbon-{ownerId}-{viewerId}` → viewer read-only ribbon.
 - `hist-ingr-ribbon-{ownerId}-{date}` → historical snapshot ribbon.

@@ -96,3 +96,4 @@
 - 2025-10-11: Fixed profile snapshot date offset by respecting user timezone and displaying correct days in calendar.
 - 2025-10-11: Corrected ingredient owner validation, awaited search params to silence warnings, and swapped image URL input for preset choices.
 - 2025-10-11: Simplified ingredient image selector to highlight the chosen preset without large preview.
+- 2025-10-12: Added ingredient import flow with preset choices and social search.
