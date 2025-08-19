@@ -29,15 +29,11 @@ export default async function AppLayout({
   }
 
   return (
-    <html lang="en">
-      <body>
-        <ViewContextProvider value={ctx}>
-          <AppNav />
-          <main className="p-4">
-            <div id={`v13wctx-${ctx.ownerId}-${ctx.viewerId}`}>{children}</div>
-          </main>
-        </ViewContextProvider>
-      </body>
-    </html>
+    <ViewContextProvider value={ctx}>
+      <AppNav />
+      <main className="p-4">
+        <div id={`v13wctx-${ctx.ownerId}-${ctx.viewerId}`}>{children}</div>
+      </main>
+    </ViewContextProvider>
   );
 }
