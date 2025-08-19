@@ -2,7 +2,9 @@ import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
 import { getProfileSnapshot } from '@/lib/profile-snapshots';
 import { notFound, redirect } from 'next/navigation';
-import SubflavorsClient from '@/app/(app)/flavors/[flavorId]/subflavors/client';
+import { listFlavors } from '@/lib/flavors-store';
+import AllSubflavorsClient from '@/app/(view)/view/[viewId]/subflavors/client';
+import type { Flavor } from '@/types/flavor';
 
 export default async function HistorySubflavorsPage({
   params,
@@ -18,11 +20,18 @@ export default async function HistorySubflavorsPage({
   const subflavors = (snapshot.subflavors as any[]).filter(
     (s) => s.flavorId === flavorId,
   );
+  const flavor = (snapshot.flavors as any[]).find((f) => f.id === flavorId) as
+    | Flavor
+    | undefined;
+  if (!flavor) notFound();
+  const myFlavors = await listFlavors(String(me.id));
   return (
-    <SubflavorsClient
+    <AllSubflavorsClient
       userId={String(me.id)}
-      flavorId={flavorId}
-      initialSubflavors={subflavors as any}
+      selfId={String(me.id)}
+      groups={[{ flavor: flavor as any, subflavors: subflavors as any }]}
+      targetFlavorId={flavorId}
+      selfFlavors={myFlavors}
     />
   );
 }

@@ -1,7 +1,8 @@
 import { getUserByViewId, ensureUser } from '@/lib/users';
 import { notFound } from 'next/navigation';
 import { listSubflavors } from '@/lib/subflavors-store';
-import SubflavorsClient from '@/app/(app)/flavors/[flavorId]/subflavors/client';
+import { getFlavor, listFlavors } from '@/lib/flavors-store';
+import AllSubflavorsClient from '@/app/(view)/view/[viewId]/subflavors/client';
 import { auth } from '@/lib/auth';
 
 export default async function ViewSubflavorsPage({
@@ -18,14 +19,17 @@ export default async function ViewSubflavorsPage({
   const session = await auth();
   const viewer = session ? await ensureUser(session) : null;
   const subflavors = await listSubflavors(String(user.id), flavorId);
+  const flavor = await getFlavor(String(user.id), flavorId);
+  if (!flavor) notFound();
+  const viewerFlavors = viewer ? await listFlavors(String(viewer.id)) : [];
   return (
     <section id={`v13w-subflav-${user.id}-${flavorId}`}>
-      <SubflavorsClient
+      <AllSubflavorsClient
         userId={String(user.id)}
         selfId={viewer ? String(viewer.id) : undefined}
-        flavorId={flavorId}
-        initialSubflavors={subflavors}
+        groups={[{ flavor, subflavors }]}
         targetFlavorId={sp?.to}
+        selfFlavors={viewerFlavors}
       />
     </section>
   );
