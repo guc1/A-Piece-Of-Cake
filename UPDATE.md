@@ -100,3 +100,4 @@
 - 2025-10-12: Fixed preset import tags and ensured viewers have user records when copying ingredients.
 - 2025-10-13: Added search filtering for flavors and subflavors.
 - 2025-10-14: Added flavor and subflavor import flows with presets, social search, and copy options.
+- 2025-10-15: Added consolidated subflavor viewing page for importing from others grouped by parent flavor importance.

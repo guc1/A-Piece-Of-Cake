@@ -33,7 +33,7 @@ const PRESET_SUBFLAVORS: SubflavorInput[] = [
     targetMix: 40,
     visibility: 'private',
     orderIndex: 0,
-    slug: undefined,
+    slug: '',
   },
   {
     flavorId: '',
@@ -45,7 +45,7 @@ const PRESET_SUBFLAVORS: SubflavorInput[] = [
     targetMix: 30,
     visibility: 'private',
     orderIndex: 0,
-    slug: undefined,
+    slug: '',
   },
 ];
 
@@ -91,7 +91,9 @@ export default function SubflavorsClient({
   const [modalOpen, setModalOpen] = useState(false);
   const [choiceOpen, setChoiceOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [importMode, setImportMode] = useState<'choice' | 'preset' | 'search'>('choice');
+  const [importMode, setImportMode] = useState<'choice' | 'preset' | 'search'>(
+    'choice',
+  );
   const [peopleSearch, setPeopleSearch] = useState('');
   const [editing, setEditing] = useState<Subflavor | null>(null);
   const [form, setForm] = useState<FormState>({
@@ -305,7 +307,8 @@ export default function SubflavorsClient({
             tabIndex={0}
             onClick={(e) => openEdit(f, e.currentTarget)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') openEdit(f, e.currentTarget as HTMLElement);
+              if (e.key === 'Enter')
+                openEdit(f, e.currentTarget as HTMLElement);
               if (editable && e.key === 'Delete') remove(f);
             }}
             className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
@@ -459,7 +462,9 @@ export default function SubflavorsClient({
                       onClick={() => importPreset({ ...p, flavorId })}
                     >
                       <div className="font-semibold">{p.name}</div>
-                      <div className="text-sm text-gray-600">{p.description}</div>
+                      <div className="text-sm text-gray-600">
+                        {p.description}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -504,11 +509,13 @@ export default function SubflavorsClient({
                             <li key={u.id} className="py-2">
                               <a
                                 id={`s7ubflav-ppl-${u.id}-${userId}`}
-                                href={`/view/${u.viewId}/flavors?to=${targetFlavorId ?? flavorId}`}
+                                href={`/view/${u.viewId}/subflavors?to=${targetFlavorId ?? flavorId}`}
                                 className="block"
                               >
                                 {u.displayName ?? u.handle}{' '}
-                                <span className="text-sm text-gray-600">@{u.handle}</span>
+                                <span className="text-sm text-gray-600">
+                                  @{u.handle}
+                                </span>
                               </a>
                             </li>
                           ))}
