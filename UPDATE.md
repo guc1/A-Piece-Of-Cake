@@ -98,3 +98,4 @@
 - 2025-10-11: Simplified ingredient image selector to highlight the chosen preset without large preview.
 - 2025-10-12: Added ingredient import flow with preset choices and social search.
 - 2025-10-12: Fixed preset import tags and ensured viewers have user records when copying ingredients.
+- 2025-10-13: Added search filtering for flavors and subflavors.
