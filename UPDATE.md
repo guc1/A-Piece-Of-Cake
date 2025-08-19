@@ -92,3 +92,4 @@
 - 2025-10-09: Added self historical planning route so owners can review their past plans.
 - 2025-10-10: Expanded historical planning with landing screen and live/next/review pages for full time-capsule viewing.
 - 2025-10-10: Removed live indicator from historical planning and allowed all past reviews to open without time gating.
+- 2025-08-19: Corrected profile snapshot creation to store entries on the actual day they are taken.

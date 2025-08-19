@@ -1,14 +1,12 @@
 import { db } from './db';
-import {
-  profileSnapshots,
-  users,
-  flavors,
-  subflavors,
-} from './db/schema';
+import { profileSnapshots, users, flavors, subflavors } from './db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 
 function toISODate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  // Convert to local ISO date (YYYY-MM-DD) ignoring timezone shifts
+  const tzOffset = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - tzOffset * 60 * 1000);
+  return local.toISOString().slice(0, 10);
 }
 
 export async function createProfileSnapshot(
@@ -48,20 +46,18 @@ export async function createProfileSnapshot(
 export async function ensureDailyProfileSnapshot(userId: number) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yIso = toISODate(yesterday);
+  const iso = toISODate(today);
   const existing = await db
     .select({ id: profileSnapshots.id })
     .from(profileSnapshots)
     .where(
       and(
         eq(profileSnapshots.userId, userId),
-        eq(profileSnapshots.snapshotDate, yIso),
+        eq(profileSnapshots.snapshotDate, iso),
       ),
     );
   if (existing.length === 0) {
-    await createProfileSnapshot(userId, yIso);
+    await createProfileSnapshot(userId, iso);
   }
 }
 
@@ -76,10 +72,7 @@ export async function listProfileSnapshotDates(
   return rows.map((r) => r.snapshotDate);
 }
 
-export async function getProfileSnapshot(
-  userId: number,
-  snapshotDate: string,
-) {
+export async function getProfileSnapshot(userId: number, snapshotDate: string) {
   const [row] = await db
     .select()
     .from(profileSnapshots)
