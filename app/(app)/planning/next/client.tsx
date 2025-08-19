@@ -32,6 +32,7 @@ interface Props {
   date: string; // YYYY-MM-DD
   initialPlan: Plan | null;
   live?: boolean;
+  review?: boolean;
 }
 
 export default function EditorClient({
@@ -39,11 +40,14 @@ export default function EditorClient({
   date,
   initialPlan,
   live = false,
+  review = false,
 }: Props) {
   const { editable } = useViewContext();
   const storageKey = `live-plan-${userId}-${date}`;
+  const reviewKey = `review-${userId}-${date}`;
+  const vibeKey = `review-vibe-${userId}-${date}`;
   const [blocks, setBlocks] = useState<PlanBlock[]>(() => {
-    if (live && editable && typeof window !== 'undefined') {
+    if ((live || review) && editable && typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem(storageKey);
         if (raw) return JSON.parse(raw) as PlanBlock[];
@@ -53,6 +57,35 @@ export default function EditorClient({
     }
     return initialPlan?.blocks ?? [];
   });
+  const [reviews, setReviews] = useState<
+    Record<string, { good: string; bad: string }>
+  >(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(reviewKey);
+        if (raw)
+          return JSON.parse(raw) as Record<
+            string,
+            { good: string; bad: string }
+          >;
+      } catch {
+        // ignore malformed data
+      }
+    }
+    return {};
+  });
+  const [vibe, setVibe] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(vibeKey);
+        if (raw) return raw;
+      } catch {
+        // ignore
+      }
+    }
+    return '';
+  });
+  const [showVibe, setShowVibe] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(
     () => blocks.find((b) => b.id === selectedId) || null,
@@ -92,6 +125,37 @@ export default function EditorClient({
     if (nowMinute > endMinute) setEndMinute(MAX_MINUTES);
   }, [live, nowMinute, startMinute, endMinute]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(reviewKey, JSON.stringify(reviews));
+    } catch {
+      // ignore
+    }
+  }, [reviews, reviewKey]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(vibeKey, vibe);
+    } catch {
+      // ignore
+    }
+  }, [vibe, vibeKey]);
+
+  useEffect(() => {
+    if (!review) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === storageKey && e.newValue) {
+        try {
+          setBlocks(JSON.parse(e.newValue) as PlanBlock[]);
+        } catch {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [review, storageKey]);
+
   const minutesFromIso = useCallback(
     (iso: string) => {
       const base = new Date(`${date}T00:00:00`);
@@ -121,14 +185,41 @@ export default function EditorClient({
     return new Date(base.getTime() + min * 60000).toISOString();
   }
 
+  useEffect(() => {
+    if (!review) return;
+    setReviews((prev) => {
+      const ids = new Set(blocks.map((b) => b.id));
+      const next: Record<string, { good: string; bad: string }> = { ...prev };
+      for (const id of Object.keys(next)) {
+        if (!ids.has(id)) delete next[id];
+      }
+      return next;
+    });
+  }, [blocks, review]);
+
+  useEffect(() => {
+    if (!review) return;
+    const now = nowMinute;
+    setReviews((prev) => {
+      const next: Record<string, { good: string; bad: string }> = { ...prev };
+      for (const b of blocks) {
+        if (minutesFromIso(b.end) > now && next[b.id]) {
+          delete next[b.id];
+        }
+      }
+      return next;
+    });
+  }, [nowMinute, blocks, review, minutesFromIso]);
+
   function updateBlock(id: string, updates: Partial<PlanBlock>) {
+    if (review) return;
     setBlocks((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...updates } : b)),
     );
   }
 
   function addBlock() {
-    if (!editable) return;
+    if (!editable || review) return;
     const sorted = [...blocks].sort(
       (a, b) => minutesFromIso(a.start) - minutesFromIso(b.start),
     );
@@ -233,7 +324,7 @@ export default function EditorClient({
   }, [blocks]);
 
   useEffect(() => {
-    if (!editable) return;
+    if (!editable || review) return;
     const serialized = JSON.stringify(blocks);
     if (serialized === lastSaved.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -257,9 +348,10 @@ export default function EditorClient({
       }
       saveTimer.current = null;
     }, 500);
-  }, [blocks, date, editable, live, storageKey]);
+  }, [blocks, date, editable, live, storageKey, review]);
 
   useEffect(() => {
+    if (!editable || review) return;
     return () => {
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
@@ -282,9 +374,10 @@ export default function EditorClient({
         }
       }
     };
-  }, [date, live, storageKey]);
+  }, [date, editable, live, storageKey, review]);
 
   function handleTimeChange(id: string, field: 'start' | 'end', value: string) {
+    if (review) return;
     const [h, m] = value.split(':').map((n) => parseInt(n, 10));
     const minutes = h * 60 + m;
     if (field === 'start') {
@@ -325,7 +418,7 @@ export default function EditorClient({
     mode: 'move' | 'start' | 'end',
     dragRef: React.MutableRefObject<boolean>,
   ) {
-    if (!editable) return;
+    if (!editable || review) return;
     e.preventDefault();
     dragRef.current = false;
     const startY = e.clientY;
@@ -436,380 +529,503 @@ export default function EditorClient({
   }, [blocks, minutesFromIso, nowMinute, live]);
 
   return (
-    <div className="flex h-full">
-      <div
-        className={`relative overflow-y-hidden ${selected ? 'w-1/2' : 'w-full'}`}
-        id={`p1an-timecol-${userId}`}
-        onPointerDown={() => setSelectedId(null)}
-      >
+    <>
+      <div className="flex h-full">
         <div
-          className="sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-gray-100 p-2 text-sm"
-          onClick={(e) => e.stopPropagation()}
+          className={`relative overflow-y-hidden ${selected ? 'w-1/2' : 'w-full'}`}
+          id={`p1an-timecol-${userId}`}
+          onPointerDown={() => setSelectedId(null)}
         >
-          {editable ? (
-            <button
-              id={`p1an-add-top-${userId}`}
-              onClick={() => addBlock()}
-              disabled={!editable}
-              className="rounded border px-2 py-1"
-            >
-              + Add timeslot
-            </button>
-          ) : (
-            <button
-              id={`p1an-add-top-${userId}`}
-              className="rounded border px-2 py-1"
-              disabled
-              title="Read-only in viewing mode"
-            >
-              + Add timeslot
-            </button>
-          )}
-          <button
-            id={`p1an-range-btn-${userId}`}
-            className="rounded border px-2 py-1"
-            onClick={() => setShowCustom((s) => !s)}
-          >
-            Add custom time
-          </button>
-          {startMinute > 0 && (
-            <button
-              id={`p1an-load-early-${userId}`}
-              className="rounded border px-2 py-1"
-              onClick={() => setStartMinute(0)}
-            >
-              Load earlier
-            </button>
-          )}
-          {endMinute < MAX_MINUTES && (
-            <button
-              id={`p1an-load-late-${userId}`}
-              className="rounded border px-2 py-1"
-              onClick={() => setEndMinute(MAX_MINUTES)}
-            >
-              Load later
-            </button>
-          )}
-          {(startMinute !== DEFAULT_START || endMinute !== DEFAULT_END) && (
-            <button
-              id={`p1an-close-range-${userId}`}
-              className="rounded border px-2 py-1"
-              onClick={() => {
-                setStartMinute(DEFAULT_START);
-                setEndMinute(DEFAULT_END);
-              }}
-            >
-              Close
-            </button>
-          )}
-        </div>
-        {showCustom && (
           <div
-            className="sticky top-[48px] z-10 flex items-center gap-2 bg-gray-50 p-2 text-xs"
+            className="sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-gray-100 p-2 text-sm"
             onClick={(e) => e.stopPropagation()}
           >
-            <span>Start:</span>
-            <input
-              type="time"
-              value={customStart}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="border p-1"
-            />
-            <span>End:</span>
-            <input
-              type="time"
-              value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              className="border p-1"
-            />
-            <button
-              className="rounded border px-2 py-1"
-              onClick={applyCustomRange}
-            >
-              Apply
-            </button>
-          </div>
-        )}
-        <div style={{ height: TIMELINE_HEIGHT }} className="relative">
-          <div className="absolute left-0 top-0 w-12">
-            {Array.from({ length: endHour - startHour + 1 }).map((_, i) => {
-              const h = startHour + i;
-              return (
-                <span
-                  key={h}
-                  className="absolute right-1 -translate-y-1/2 text-[10px] text-gray-500"
-                  style={{
-                    top: (h * 60 - startMinute) * PIXELS_PER_MINUTE,
-                  }}
+            {review ? (
+              editable ? (
+                <Button
+                  id={`p1an-vibe-open-${userId}`}
+                  onClick={() => setShowVibe(true)}
+                  size="sm"
+                  className="shadow"
                 >
-                  {String(h).padStart(2, '0')}:00
-                </span>
-              );
-            })}
-          </div>
-          <div className="absolute left-12 right-0 top-0">
-            {Array.from({ length: endHour - startHour + 1 }).map((_, i) => {
-              const h = startHour + i;
-              return (
-                <div key={h}>
-                  <div
-                    id={`p1an-hour-${h}-${userId}`}
-                    className="absolute left-0 right-0 border-t border-gray-300"
-                    style={{ top: (h * 60 - startMinute) * PIXELS_PER_MINUTE }}
-                  />
-                  {h < endHour &&
-                    [15, 30, 45].map((m) => (
-                      <div
-                        key={m}
-                        className="absolute left-0 right-0 border-t border-gray-100"
-                        style={{
-                          top: (h * 60 + m - startMinute) * PIXELS_PER_MINUTE,
-                        }}
-                      />
-                    ))}
-                </div>
-              );
-            })}
-            {sortedBlocks.map((b) => {
-              const bStart = minutesFromIso(b.start);
-              const bEnd = minutesFromIso(b.end);
-              if (bEnd <= startMinute || bStart >= endMinute) return null;
-              const top =
-                (Math.max(bStart, startMinute) - startMinute) *
-                PIXELS_PER_MINUTE;
-              const height =
-                (Math.min(bEnd, endMinute) - Math.max(bStart, startMinute)) *
-                PIXELS_PER_MINUTE;
-              const z = (blockDepth[b.id] || 0) * Z_BASE + (Z_BASE - bStart);
-              const textColor = '#000000';
-              return (
-                <div
-                  key={b.id}
-                  id={`p1an-blk-${b.id}-${userId}`}
-                  data-selected={selectedId === b.id ? 'true' : 'false'}
-                  aria-label={`${b.title}, ${b.start} to ${b.end}`}
-                  className="absolute left-1 right-1 rounded p-1 text-xs"
-                  style={{
-                    top,
-                    height,
-                    background: b.color,
-                    zIndex: z,
-                    color: textColor,
-                    cursor: editable ? 'move' : 'default',
-                  }}
-                  onPointerMove={(e) => {
-                    if (!editable) return;
-                    const rect = (
-                      e.currentTarget as HTMLElement
-                    ).getBoundingClientRect();
-                    const offset = e.clientY - rect.top;
-                    (e.currentTarget as HTMLElement).style.cursor =
-                      offset < 8 || rect.height - offset < 8
-                        ? 'ns-resize'
-                        : 'move';
-                  }}
-                  onPointerLeave={(e) => {
-                    if (!editable) return;
-                    (e.currentTarget as HTMLElement).style.cursor = 'move';
-                  }}
-                  onPointerDown={(e) => {
-                    if (!editable) return;
-                    e.stopPropagation();
-                    const rect = (
-                      e.currentTarget as HTMLElement
-                    ).getBoundingClientRect();
-                    const offset = e.clientY - rect.top;
-                    const mode =
-                      offset < 8
-                        ? 'start'
-                        : rect.height - offset < 8
-                          ? 'end'
-                          : 'move';
-                    onDragStart(e, b, mode, draggingRef);
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (draggingRef.current) return;
-                    setSelectedId(b.id);
-                  }}
+                  Write general day vibe
+                </Button>
+              ) : (
+                <Button
+                  id={`p1an-vibe-open-${userId}`}
+                  size="sm"
+                  className="shadow"
+                  disabled
+                  title="Read-only in viewing mode"
                 >
-                  <span className="pointer-events-none block truncate">
-                    {b.title}
-                  </span>
-                </div>
-              );
-            })}
-            {live && nowMinute >= startMinute && nowMinute <= endMinute && (
-              <div
-                id={`p1an-now-${userId}`}
-                className="pointer-events-none absolute left-0 right-0 border-t-2 border-dotted"
-                style={{
-                  top: (nowMinute - startMinute) * PIXELS_PER_MINUTE,
-                  borderColor: lineColor,
-                  zIndex: 999999,
-                }}
-              >
-                <div
-                  className="absolute -left-2 -top-1 h-2 w-2 rounded-full"
-                  style={{ background: lineColor }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-        {editable ? (
-          <button
-            id={`p1an-add-fab-${userId}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              addBlock();
-            }}
-            className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-orange-500 text-white"
-            disabled={!editable}
-          >
-            +
-          </button>
-        ) : (
-          <button
-            id={`p1an-add-fab-${userId}`}
-            className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-orange-500 text-white"
-            disabled
-            title="Read-only in viewing mode"
-          >
-            +
-          </button>
-        )}
-      </div>
-      {selected ? (
-        <div
-          className="w-1/2 border-l p-4"
-          id={`p1an-meta-${selected.id}-${userId}`}
-        >
-          <div className="mb-2 text-sm text-gray-500">
-            {editable ? null : 'Read-only (viewing mode)'}
-          </div>
-          <label
-            className="block text-sm font-medium"
-            htmlFor={`p1an-meta-ttl-${selected.id}-${userId}`}
-          >
-            Activity
-          </label>
-          <input
-            id={`p1an-meta-ttl-${selected.id}-${userId}`}
-            className="mb-2 w-full border p-1"
-            value={selected.title}
-            maxLength={60}
-            disabled={!editable}
-            onChange={(e) =>
-              updateBlock(selected.id, { title: e.target.value })
-            }
-          />
-          <label
-            className="block text-sm font-medium"
-            htmlFor={`p1an-meta-dsc-${selected.id}-${userId}`}
-          >
-            Description
-          </label>
-          <textarea
-            id={`p1an-meta-dsc-${selected.id}-${userId}`}
-            className="mb-2 w-full border p-1"
-            value={selected.description}
-            disabled={!editable}
-            maxLength={500}
-            rows={6}
-            onChange={(e) =>
-              updateBlock(selected.id, { description: e.target.value })
-            }
-          />
-          <label className="block text-sm font-medium">Color</label>
-          <div
-            id={`p1an-meta-col-${selected.id}-${userId}`}
-            className="mb-2 flex flex-wrap gap-1"
-          >
-            {COLORS.map((c) => (
+                  Write general day vibe
+                </Button>
+              )
+            ) : editable ? (
               <button
-                key={c}
-                className="h-6 w-6 rounded"
-                style={{ background: c }}
-                onClick={() =>
-                  editable && updateBlock(selected.id, { color: c })
-                }
+                id={`p1an-add-top-${userId}`}
+                onClick={() => addBlock()}
                 disabled={!editable}
-              />
-            ))}
-          </div>
-          <div className="mb-2 flex gap-2">
-            <div>
-              <label
-                className="block text-sm font-medium"
-                htmlFor={`p1an-meta-tms-${selected.id}-${userId}`}
+                className="rounded border px-2 py-1"
               >
-                Start
-              </label>
-              <input
-                type="time"
-                id={`p1an-meta-tms-${selected.id}-${userId}`}
-                value={formatTime(selected.start)}
-                disabled={!editable}
-                onChange={(e) =>
-                  handleTimeChange(selected.id, 'start', e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <label
-                className="block text-sm font-medium"
-                htmlFor={`p1an-meta-tme-${selected.id}-${userId}`}
-              >
-                End
-              </label>
-              <input
-                type="time"
-                id={`p1an-meta-tme-${selected.id}-${userId}`}
-                value={formatTime(selected.end)}
-                disabled={!editable}
-                onChange={(e) =>
-                  handleTimeChange(selected.id, 'end', e.target.value)
-                }
-              />
-            </div>
-          </div>
-          <div className="mt-4 flex gap-2">
-            {editable ? (
-              <Button
-                variant="outline"
-                className="border-red-600 text-red-600"
-                id={`p1an-meta-del-${userId}`}
-                onClick={() => {
-                  setBlocks((prev) =>
-                    prev.filter((blk) => blk.id !== selected.id),
-                  );
-                  setSelectedId(null);
-                }}
-              >
-                Delete
-              </Button>
+                + Add timeslot
+              </button>
             ) : (
-              <Button
-                variant="outline"
-                className="border-red-600 text-red-600"
-                id={`p1an-meta-del-${userId}`}
+              <button
+                id={`p1an-add-top-${userId}`}
+                className="rounded border px-2 py-1"
                 disabled
                 title="Read-only in viewing mode"
               >
-                Delete
-              </Button>
+                + Add timeslot
+              </button>
             )}
-            <Button
-              variant="outline"
-              id={`p1an-meta-close-${userId}`}
-              onClick={() => setSelectedId(null)}
+            <button
+              id={`p1an-range-btn-${userId}`}
+              className="rounded border px-2 py-1"
+              onClick={() => setShowCustom((s) => !s)}
             >
-              X
-            </Button>
+              Add custom time
+            </button>
+            {startMinute > 0 && (
+              <button
+                id={`p1an-load-early-${userId}`}
+                className="rounded border px-2 py-1"
+                onClick={() => setStartMinute(0)}
+              >
+                Load earlier
+              </button>
+            )}
+            {endMinute < MAX_MINUTES && (
+              <button
+                id={`p1an-load-late-${userId}`}
+                className="rounded border px-2 py-1"
+                onClick={() => setEndMinute(MAX_MINUTES)}
+              >
+                Load later
+              </button>
+            )}
+            {(startMinute !== DEFAULT_START || endMinute !== DEFAULT_END) && (
+              <button
+                id={`p1an-close-range-${userId}`}
+                className="rounded border px-2 py-1"
+                onClick={() => {
+                  setStartMinute(DEFAULT_START);
+                  setEndMinute(DEFAULT_END);
+                }}
+              >
+                Close
+              </button>
+            )}
+          </div>
+          {showCustom && (
+            <div
+              className="sticky top-[48px] z-10 flex items-center gap-2 bg-gray-50 p-2 text-xs"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span>Start:</span>
+              <input
+                type="time"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="border p-1"
+              />
+              <span>End:</span>
+              <input
+                type="time"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="border p-1"
+              />
+              <button
+                className="rounded border px-2 py-1"
+                onClick={applyCustomRange}
+              >
+                Apply
+              </button>
+            </div>
+          )}
+          <div style={{ height: TIMELINE_HEIGHT }} className="relative">
+            <div className="absolute left-0 top-0 w-12">
+              {Array.from({ length: endHour - startHour + 1 }).map((_, i) => {
+                const h = startHour + i;
+                return (
+                  <span
+                    key={h}
+                    className="absolute right-1 -translate-y-1/2 text-[10px] text-gray-500"
+                    style={{
+                      top: (h * 60 - startMinute) * PIXELS_PER_MINUTE,
+                    }}
+                  >
+                    {String(h).padStart(2, '0')}:00
+                  </span>
+                );
+              })}
+            </div>
+            <div className="absolute left-12 right-0 top-0">
+              {Array.from({ length: endHour - startHour + 1 }).map((_, i) => {
+                const h = startHour + i;
+                return (
+                  <div key={h}>
+                    <div
+                      id={`p1an-hour-${h}-${userId}`}
+                      className="absolute left-0 right-0 border-t border-gray-300"
+                      style={{
+                        top: (h * 60 - startMinute) * PIXELS_PER_MINUTE,
+                      }}
+                    />
+                    {h < endHour &&
+                      [15, 30, 45].map((m) => (
+                        <div
+                          key={m}
+                          className="absolute left-0 right-0 border-t border-gray-100"
+                          style={{
+                            top: (h * 60 + m - startMinute) * PIXELS_PER_MINUTE,
+                          }}
+                        />
+                      ))}
+                  </div>
+                );
+              })}
+              {sortedBlocks.map((b) => {
+                const bStart = minutesFromIso(b.start);
+                const bEnd = minutesFromIso(b.end);
+                if (bEnd <= startMinute || bStart >= endMinute) return null;
+                const top =
+                  (Math.max(bStart, startMinute) - startMinute) *
+                  PIXELS_PER_MINUTE;
+                const height =
+                  (Math.min(bEnd, endMinute) - Math.max(bStart, startMinute)) *
+                  PIXELS_PER_MINUTE;
+                const z = (blockDepth[b.id] || 0) * Z_BASE + (Z_BASE - bStart);
+                const textColor = '#000000';
+                return (
+                  <div
+                    key={b.id}
+                    id={`p1an-blk-${b.id}-${userId}`}
+                    data-selected={selectedId === b.id ? 'true' : 'false'}
+                    aria-label={`${b.title}, ${b.start} to ${b.end}`}
+                    className="absolute left-1 right-1 rounded p-1 text-xs"
+                    style={{
+                      top,
+                      height,
+                      background: b.color,
+                      zIndex: z,
+                      color: textColor,
+                      cursor: review
+                        ? nowMinute >= minutesFromIso(b.end)
+                          ? 'pointer'
+                          : 'not-allowed'
+                        : editable
+                          ? 'move'
+                          : 'default',
+                    }}
+                    onPointerMove={(e) => {
+                      if (!editable || review) return;
+                      const rect = (
+                        e.currentTarget as HTMLElement
+                      ).getBoundingClientRect();
+                      const offset = e.clientY - rect.top;
+                      (e.currentTarget as HTMLElement).style.cursor =
+                        offset < 8 || rect.height - offset < 8
+                          ? 'ns-resize'
+                          : 'move';
+                    }}
+                    onPointerLeave={(e) => {
+                      if (!editable || review) return;
+                      (e.currentTarget as HTMLElement).style.cursor = 'move';
+                    }}
+                    onPointerDown={(e) => {
+                      if (!editable || review) return;
+                      e.stopPropagation();
+                      const rect = (
+                        e.currentTarget as HTMLElement
+                      ).getBoundingClientRect();
+                      const offset = e.clientY - rect.top;
+                      const mode =
+                        offset < 8
+                          ? 'start'
+                          : rect.height - offset < 8
+                            ? 'end'
+                            : 'move';
+                      onDragStart(e, b, mode, draggingRef);
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (draggingRef.current) return;
+                      if (review && nowMinute < minutesFromIso(b.end)) return;
+                      setSelectedId(b.id);
+                    }}
+                  >
+                    <span className="pointer-events-none block truncate">
+                      {b.title}
+                    </span>
+                  </div>
+                );
+              })}
+              {live && nowMinute >= startMinute && nowMinute <= endMinute && (
+                <div
+                  id={`p1an-now-${userId}`}
+                  className="pointer-events-none absolute left-0 right-0 border-t-2 border-dotted"
+                  style={{
+                    top: (nowMinute - startMinute) * PIXELS_PER_MINUTE,
+                    borderColor: lineColor,
+                    zIndex: 999999,
+                  }}
+                >
+                  <div
+                    className="absolute -left-2 -top-1 h-2 w-2 rounded-full"
+                    style={{ background: lineColor }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          {!review &&
+            (editable ? (
+              <button
+                id={`p1an-add-fab-${userId}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addBlock();
+                }}
+                className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-orange-500 text-white"
+                disabled={!editable}
+              >
+                +
+              </button>
+            ) : (
+              <button
+                id={`p1an-add-fab-${userId}`}
+                className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-orange-500 text-white"
+                disabled
+                title="Read-only in viewing mode"
+              >
+                +
+              </button>
+            ))}
+        </div>
+        {selected ? (
+          <div
+            className="w-1/2 border-l p-4"
+            id={`p1an-meta-${selected.id}-${userId}`}
+          >
+            {review ? (
+              <>
+                <div className="mb-2 text-sm text-gray-500">
+                  {editable ? null : 'Read-only (viewing mode)'}
+                </div>
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`p1an-meta-good-${selected.id}-${userId}`}
+                >
+                  What went good?
+                </label>
+                <textarea
+                  id={`p1an-meta-good-${selected.id}-${userId}`}
+                  className="mb-2 w-full border p-1"
+                  value={reviews[selected.id]?.good ?? ''}
+                  disabled={!editable}
+                  maxLength={1000}
+                  rows={6}
+                  onChange={(e) =>
+                    setReviews((prev) => ({
+                      ...prev,
+                      [selected.id]: {
+                        ...(prev[selected.id] || { good: '', bad: '' }),
+                        good: e.target.value,
+                      },
+                    }))
+                  }
+                />
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`p1an-meta-bad-${selected.id}-${userId}`}
+                >
+                  What went bad?
+                </label>
+                <textarea
+                  id={`p1an-meta-bad-${selected.id}-${userId}`}
+                  className="mb-2 w-full border p-1"
+                  value={reviews[selected.id]?.bad ?? ''}
+                  disabled={!editable}
+                  maxLength={1000}
+                  rows={6}
+                  onChange={(e) =>
+                    setReviews((prev) => ({
+                      ...prev,
+                      [selected.id]: {
+                        ...(prev[selected.id] || { good: '', bad: '' }),
+                        bad: e.target.value,
+                      },
+                    }))
+                  }
+                />
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="outline"
+                    id={`p1an-meta-close-${userId}`}
+                    onClick={() => setSelectedId(null)}
+                  >
+                    X
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-2 text-sm text-gray-500">
+                  {editable ? null : 'Read-only (viewing mode)'}
+                </div>
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`p1an-meta-ttl-${selected.id}-${userId}`}
+                >
+                  Activity
+                </label>
+                <input
+                  id={`p1an-meta-ttl-${selected.id}-${userId}`}
+                  className="mb-2 w-full border p-1"
+                  value={selected.title}
+                  maxLength={60}
+                  disabled={!editable}
+                  onChange={(e) =>
+                    updateBlock(selected.id, { title: e.target.value })
+                  }
+                />
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`p1an-meta-dsc-${selected.id}-${userId}`}
+                >
+                  Description
+                </label>
+                <textarea
+                  id={`p1an-meta-dsc-${selected.id}-${userId}`}
+                  className="mb-2 w-full border p-1"
+                  value={selected.description}
+                  disabled={!editable}
+                  maxLength={500}
+                  rows={6}
+                  onChange={(e) =>
+                    updateBlock(selected.id, { description: e.target.value })
+                  }
+                />
+                <label className="block text-sm font-medium">Color</label>
+                <div
+                  id={`p1an-meta-col-${selected.id}-${userId}`}
+                  className="mb-2 flex flex-wrap gap-1"
+                >
+                  {COLORS.map((c) => (
+                    <button
+                      key={c}
+                      className="h-6 w-6 rounded"
+                      style={{ background: c }}
+                      onClick={() =>
+                        editable && updateBlock(selected.id, { color: c })
+                      }
+                      disabled={!editable}
+                    />
+                  ))}
+                </div>
+                <div className="mb-2 flex gap-2">
+                  <div>
+                    <label
+                      className="block text-sm font-medium"
+                      htmlFor={`p1an-meta-tms-${selected.id}-${userId}`}
+                    >
+                      Start
+                    </label>
+                    <input
+                      type="time"
+                      id={`p1an-meta-tms-${selected.id}-${userId}`}
+                      value={formatTime(selected.start)}
+                      disabled={!editable}
+                      onChange={(e) =>
+                        handleTimeChange(selected.id, 'start', e.target.value)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label
+                      className="block text-sm font-medium"
+                      htmlFor={`p1an-meta-tme-${selected.id}-${userId}`}
+                    >
+                      End
+                    </label>
+                    <input
+                      type="time"
+                      id={`p1an-meta-tme-${selected.id}-${userId}`}
+                      value={formatTime(selected.end)}
+                      disabled={!editable}
+                      onChange={(e) =>
+                        handleTimeChange(selected.id, 'end', e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  {editable ? (
+                    <Button
+                      variant="outline"
+                      className="border-red-600 text-red-600"
+                      id={`p1an-meta-del-${userId}`}
+                      onClick={() => {
+                        setBlocks((prev) =>
+                          prev.filter((blk) => blk.id !== selected.id),
+                        );
+                        setSelectedId(null);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="border-red-600 text-red-600"
+                      id={`p1an-meta-del-${userId}`}
+                      disabled
+                      title="Read-only in viewing mode"
+                    >
+                      Delete
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    id={`p1an-meta-close-${userId}`}
+                    onClick={() => setSelectedId(null)}
+                  >
+                    X
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
+      {showVibe && (
+        <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50 backdrop-blur">
+          <div className="w-96 rounded bg-white p-4 shadow-lg">
+            <h2 className="mb-2 text-lg font-semibold">Write general vibe</h2>
+            <textarea
+              id={`p1an-vibe-${userId}`}
+              className="w-full border p-1"
+              value={vibe}
+              maxLength={1000}
+              rows={8}
+              disabled={!editable}
+              onChange={(e) => setVibe(e.target.value)}
+            />
+            <div className="mt-2 text-right">
+              <Button
+                variant="outline"
+                id={`p1an-vibe-close-${userId}`}
+                onClick={() => setShowVibe(false)}
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
-      ) : null}
-    </div>
+      )}
+    </>
   );
 }
