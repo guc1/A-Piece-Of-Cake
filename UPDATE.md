@@ -77,3 +77,5 @@
 - 2025-10-02: Relocated general day vibe action to planner toolbar, removed add timeslot in review, and ensured modal blurs background.
 - 2025-10-02: Highlighted general day vibe button and raised vibe modal above planner blocks.
 - 2025-10-03: Restricted new planning blocks to selected time range and ensured timeline hour labels are fully visible.
+- 2025-10-05: Separated next-day and live planning dates so next-day always targets tomorrow while live and review load today's plan.
+- 2025-10-05: Auto-reload planning pages when system date changes to keep next-day and live planning in sync.
