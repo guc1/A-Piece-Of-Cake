@@ -683,6 +683,7 @@ export default function SubflavorsClient({
                 <IconPicker
                   value={form.icon}
                   onChange={(icon) => setForm({ ...form, icon })}
+                  people={people}
                 />
               </div>
               <div>
