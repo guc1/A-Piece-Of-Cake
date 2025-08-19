@@ -699,6 +699,7 @@ export default function FlavorsClient({
                 <IconPicker
                   value={form.icon}
                   onChange={(icon) => setForm({ ...form, icon })}
+                  people={people}
                 />
               </div>
               <div>
