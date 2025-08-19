@@ -26,6 +26,7 @@ test('flavor CRUD and ordering', async ({ page }) => {
   await page.fill('input[id^="f7avourn4me-frm"]', 'First');
   await page.fill('textarea[id^="f7avourde5cr-frm"]', 'desc1');
   await page.fill('input[name="color"]', '#ff0000');
+  await page.click('button[id^="f7avouricon-frm"]');
   await page.click('button:has-text("⭐")');
   await page.fill('input[id^="f7avour1mp-frm"]', '60');
   await page.fill('input[id^="f7avourt4rg-frm"]', '20');
@@ -38,6 +39,7 @@ test('flavor CRUD and ordering', async ({ page }) => {
   await page.fill('input[id^="f7avourn4me-frm"]', 'Second');
   await page.fill('textarea[id^="f7avourde5cr-frm"]', 'desc2');
   await page.fill('input[name="color"]', '#00ff00');
+  await page.click('button[id^="f7avouricon-frm"]');
   await page.click('button:has-text("📚")');
   await page.fill('input[id^="f7avour1mp-frm"]', '80');
   await page.fill('input[id^="f7avourt4rg-frm"]', '30');
@@ -74,6 +76,7 @@ test('flavor CRUD and ordering', async ({ page }) => {
   await rows.first().click();
   await page.fill('input[id^="f7avourn4me-frm"]', 'First Updated');
   await page.fill('input[name="color"]', '#0000ff');
+  await page.click('button[id^="f7avouricon-frm"]');
   await page.click('button:has-text("❤️")');
   await page.click('button[id^="f7avoursav-frm"]');
   await page.reload();
