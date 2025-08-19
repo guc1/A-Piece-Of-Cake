@@ -34,7 +34,7 @@ const PRESET_FLAVORS: FlavorInput[] = [
     targetMix: 50,
     visibility: 'private',
     orderIndex: 0,
-    slug: undefined,
+    slug: '',
   },
   {
     name: 'Learning',
@@ -45,7 +45,7 @@ const PRESET_FLAVORS: FlavorInput[] = [
     targetMix: 40,
     visibility: 'private',
     orderIndex: 0,
-    slug: undefined,
+    slug: '',
   },
 ];
 
@@ -88,7 +88,9 @@ export default function FlavorsClient({
   const [modalOpen, setModalOpen] = useState(false);
   const [choiceOpen, setChoiceOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const [importMode, setImportMode] = useState<'choice' | 'preset' | 'search'>('choice');
+  const [importMode, setImportMode] = useState<'choice' | 'preset' | 'search'>(
+    'choice',
+  );
   const [peopleSearch, setPeopleSearch] = useState('');
   const [editing, setEditing] = useState<Flavor | null>(null);
   const [form, setForm] = useState<FormState>({
@@ -302,7 +304,8 @@ export default function FlavorsClient({
             tabIndex={0}
             onClick={(e) => openEdit(f, e.currentTarget)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') openEdit(f, e.currentTarget as HTMLElement);
+              if (e.key === 'Enter')
+                openEdit(f, e.currentTarget as HTMLElement);
               if (editable && e.key === 'Delete') remove(f);
             }}
             className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
@@ -475,7 +478,9 @@ export default function FlavorsClient({
                       onClick={() => importPreset(p)}
                     >
                       <div className="font-semibold">{p.name}</div>
-                      <div className="text-sm text-gray-600">{p.description}</div>
+                      <div className="text-sm text-gray-600">
+                        {p.description}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -524,7 +529,9 @@ export default function FlavorsClient({
                                 className="block"
                               >
                                 {u.displayName ?? u.handle}{' '}
-                                <span className="text-sm text-gray-600">@{u.handle}</span>
+                                <span className="text-sm text-gray-600">
+                                  @{u.handle}
+                                </span>
                               </a>
                             </li>
                           ))}
@@ -763,7 +770,9 @@ export default function FlavorsClient({
                     onClick={async () => {
                       let withSubs = false;
                       try {
-                        const res = await fetch(`/api/public-subflavors?userId=${userId}&flavorId=${editing.id}`);
+                        const res = await fetch(
+                          `/api/public-subflavors?userId=${userId}&flavorId=${editing.id}`,
+                        );
                         const subs = await res.json();
                         if (Array.isArray(subs) && subs.length > 0) {
                           withSubs = confirm('Also copy the subflavors?');
