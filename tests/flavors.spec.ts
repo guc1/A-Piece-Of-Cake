@@ -21,7 +21,8 @@ test('flavor CRUD and ordering', async ({ page }) => {
   await page.goto('/flavors');
 
   // create first flavor
-  await page.click('text=New Flavor');
+  await page.click('button[id^="f7av-add"]');
+  await page.click('button[id^="f7av-add-own"]');
   await page.fill('input[id^="f7avourn4me-frm"]', 'First');
   await page.fill('textarea[id^="f7avourde5cr-frm"]', 'desc1');
   await page.fill('input[name="color"]', '#ff0000');
@@ -32,7 +33,8 @@ test('flavor CRUD and ordering', async ({ page }) => {
   await expect(page.locator('li:has-text("First")')).toBeVisible();
 
   // create second flavor with higher importance
-  await page.click('text=New Flavor');
+  await page.click('button[id^="f7av-add"]');
+  await page.click('button[id^="f7av-add-own"]');
   await page.fill('input[id^="f7avourn4me-frm"]', 'Second');
   await page.fill('textarea[id^="f7avourde5cr-frm"]', 'desc2');
   await page.fill('input[name="color"]', '#00ff00');

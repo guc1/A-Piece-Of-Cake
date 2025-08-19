@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import type { Subflavor, Visibility } from '@/types/subflavor';
-import { createSubflavor, updateSubflavor } from './actions';
+import type { Subflavor, Visibility, SubflavorInput } from '@/types/subflavor';
+import { createSubflavor, updateSubflavor, copySubflavor } from './actions';
+import type { PeopleLists, Person } from '@/lib/people-store';
 import { useViewContext } from '@/lib/view-context';
 
 const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
@@ -19,6 +20,33 @@ const COLOR_SWATCHES = [
   '#60a5fa',
   '#a78bfa',
   '#f472b6',
+];
+
+const PRESET_SUBFLAVORS: SubflavorInput[] = [
+  {
+    flavorId: '',
+    name: 'Cardio',
+    description: 'Improve endurance',
+    color: '#4ade80',
+    icon: '🌞',
+    importance: 60,
+    targetMix: 40,
+    visibility: 'private',
+    orderIndex: 0,
+    slug: undefined,
+  },
+  {
+    flavorId: '',
+    name: 'Mindfulness',
+    description: 'Daily meditation practice',
+    color: '#a78bfa',
+    icon: '🌙',
+    importance: 50,
+    targetMix: 30,
+    visibility: 'private',
+    orderIndex: 0,
+    slug: undefined,
+  },
 ];
 
 function sortSubflavors(list: Subflavor[]) {
@@ -42,12 +70,18 @@ type FormState = {
 
 export default function SubflavorsClient({
   userId,
+  selfId,
   flavorId,
   initialSubflavors,
+  people,
+  targetFlavorId,
 }: {
   userId: string;
+  selfId?: string;
   flavorId: string;
   initialSubflavors: Subflavor[];
+  people?: PeopleLists;
+  targetFlavorId?: string;
 }) {
   const { editable } = useViewContext();
   const [subflavors, setSubflavors] = useState<Subflavor[]>(
@@ -55,6 +89,10 @@ export default function SubflavorsClient({
   );
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [choiceOpen, setChoiceOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importMode, setImportMode] = useState<'choice' | 'preset' | 'search'>('choice');
+  const [peopleSearch, setPeopleSearch] = useState('');
   const [editing, setEditing] = useState<Subflavor | null>(null);
   const [form, setForm] = useState<FormState>({
     name: '',
@@ -93,9 +131,32 @@ export default function SubflavorsClient({
 
   const mode = editing ? 'edit' : 'new';
 
-  function openCreate(e: HTMLElement) {
+  async function importPreset(p: SubflavorInput) {
+    const created = await createSubflavor(flavorId, p);
+    setSubflavors((prev) => sortSubflavors([...prev, created]));
+    setImportOpen(false);
+    setImportMode('choice');
+  }
+
+  function filterPeople(list: Person[] | undefined) {
+    if (!list) return [];
+    const q = peopleSearch.toLowerCase();
+    return list.filter(
+      (p) =>
+        p.handle.toLowerCase().includes(q) ||
+        (p.displayName ? p.displayName.toLowerCase().includes(q) : false),
+    );
+  }
+
+  const categories = [
+    { label: 'Friends', list: filterPeople(people?.friends) },
+    { label: 'Following', list: filterPeople(people?.following) },
+    { label: 'Others', list: filterPeople(people?.others) },
+  ];
+
+  function openNew() {
     if (!editable) return;
-    triggerRef.current = e;
+    triggerRef.current = null;
     setEditing(null);
     const blank = {
       name: '',
@@ -113,7 +174,6 @@ export default function SubflavorsClient({
   }
 
   function openEdit(f: Subflavor, e: HTMLElement) {
-    if (!editable) return;
     triggerRef.current = e;
     const current = {
       name: f.name,
@@ -221,12 +281,12 @@ export default function SubflavorsClient({
     <section>
       <div className="mb-4 flex items-center gap-4">
         <button
-          onClick={editable ? (e) => openCreate(e.currentTarget) : undefined}
-          className="rounded bg-orange-500 px-3 py-2 text-white disabled:opacity-50"
-          id={`s7ubflavoured1tnew-${userId}`}
+          id={`s7ubflav-add-${userId}`}
+          onClick={() => editable && setChoiceOpen(true)}
           disabled={!editable}
+          className="rounded bg-orange-500 px-3 py-2 text-white disabled:opacity-50"
         >
-          New Subflavor
+          + Add subflavor
         </button>
         <input
           type="text"
@@ -243,12 +303,10 @@ export default function SubflavorsClient({
             id={`s7ubflavourrow${f.id}-${userId}`}
             role="button"
             tabIndex={0}
-            onClick={editable ? (e) => openEdit(f, e.currentTarget) : undefined}
+            onClick={(e) => openEdit(f, e.currentTarget)}
             onKeyDown={(e) => {
-              if (!editable) return;
-              if (e.key === 'Enter')
-                openEdit(f, e.currentTarget as HTMLElement);
-              if (e.key === 'Delete') remove(f);
+              if (e.key === 'Enter') openEdit(f, e.currentTarget as HTMLElement);
+              if (editable && e.key === 'Delete') remove(f);
             }}
             className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
           >
@@ -300,9 +358,7 @@ export default function SubflavorsClient({
               <button
                 id={`s7ubflavoured1t${f.id}-${userId}`}
                 className="text-sm text-blue-600 underline disabled:opacity-50"
-                onClick={
-                  editable ? (e) => openEdit(f, e.currentTarget) : undefined
-                }
+                onClick={(e) => openEdit(f, e.currentTarget)}
                 disabled={!editable}
               >
                 Edit ▸
@@ -319,6 +375,169 @@ export default function SubflavorsClient({
           </li>
         ))}
       </ul>
+      {choiceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded bg-white p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-semibold">Add subflavor</h2>
+            <div className="flex flex-col gap-2">
+              <button
+                id={`s7ubflav-add-own-${userId}`}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+                onClick={() => {
+                  setChoiceOpen(false);
+                  openNew();
+                }}
+              >
+                Create own subflavor
+              </button>
+              <button
+                id={`s7ubflav-add-import-${userId}`}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+                onClick={() => {
+                  setChoiceOpen(false);
+                  setImportMode('choice');
+                  setImportOpen(true);
+                }}
+              >
+                Import subflavor
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={() => setChoiceOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded bg-white p-6 shadow-lg">
+            {importMode === 'choice' && (
+              <>
+                <h2 className="mb-4 text-xl font-semibold">Import subflavor</h2>
+                <div className="flex flex-col gap-2">
+                  <button
+                    id={`s7ubflav-imp-pre-${userId}`}
+                    className="rounded bg-orange-500 px-3 py-1 text-white"
+                    onClick={() => setImportMode('preset')}
+                  >
+                    Choose a preset
+                  </button>
+                  <button
+                    id={`s7ubflav-imp-srch-${userId}`}
+                    className="rounded bg-orange-500 px-3 py-1 text-white"
+                    onClick={() => setImportMode('search')}
+                  >
+                    Search what others have
+                  </button>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+            {importMode === 'preset' && (
+              <>
+                <h2 className="mb-4 text-xl font-semibold">Choose a preset</h2>
+                <div className="flex flex-col gap-2">
+                  {PRESET_SUBFLAVORS.map((p, idx) => (
+                    <button
+                      key={idx}
+                      id={`s7ubflav-pr3-${idx}-${userId}`}
+                      className="rounded border p-2 text-left hover:bg-gray-50"
+                      onClick={() => importPreset({ ...p, flavorId })}
+                    >
+                      <div className="font-semibold">{p.name}</div>
+                      <div className="text-sm text-gray-600">{p.description}</div>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportMode('choice')}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+            {importMode === 'search' && (
+              <>
+                <h2 className="mb-4 text-xl font-semibold">Search people</h2>
+                <input
+                  type="text"
+                  id={`s7ubflav-ppl-srch-${userId}`}
+                  placeholder="Search users…"
+                  value={peopleSearch}
+                  onChange={(e) => setPeopleSearch(e.target.value)}
+                  className="mb-4 w-full rounded border px-2 py-1"
+                />
+                <div className="max-h-64 overflow-y-auto space-y-4">
+                  {categories.map((c) => (
+                    <div key={c.label}>
+                      <h3 className="font-semibold">{c.label}</h3>
+                      {c.list.length === 0 ? (
+                        <p className="text-sm text-gray-500">No users.</p>
+                      ) : (
+                        <ul className="divide-y">
+                          {c.list.map((u) => (
+                            <li key={u.id} className="py-2">
+                              <a
+                                id={`s7ubflav-ppl-${u.id}-${userId}`}
+                                href={`/view/${u.viewId}/flavors?to=${targetFlavorId ?? flavorId}`}
+                                className="block"
+                              >
+                                {u.displayName ?? u.handle}{' '}
+                                <span className="text-sm text-gray-600">@{u.handle}</span>
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportMode('choice')}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {modalOpen && (
         <div
           id={`s7ubflavourmdl-${mode}-${userId}`}
@@ -521,6 +740,18 @@ export default function SubflavorsClient({
                 >
                   Save
                 </button>
+                {!editable && selfId && editing && targetFlavorId && (
+                  <button
+                    type="button"
+                    className="rounded bg-orange-500 px-3 py-1 text-white"
+                    onClick={async () => {
+                      await copySubflavor(userId, editing.id, targetFlavorId);
+                      alert('Copied');
+                    }}
+                  >
+                    Copy subflavor
+                  </button>
+                )}
               </div>
             </form>
           </div>

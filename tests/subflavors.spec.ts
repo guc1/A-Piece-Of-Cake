@@ -13,7 +13,8 @@ test('subflavor CRUD', async ({ page }) => {
   await page.goto('/flavors');
 
   // create a flavor to attach subflavors
-  await page.click('text=New Flavor');
+  await page.click('button[id^="f7av-add"]');
+  await page.click('button[id^="f7av-add-own"]');
   await page.fill('input[id^="f7avourn4me-frm"]', 'Main');
   await page.fill('textarea[id^="f7avourde5cr-frm"]', 'maindesc');
   await page.fill('input[name="color"]', '#ff0000');
@@ -26,7 +27,8 @@ test('subflavor CRUD', async ({ page }) => {
   await page.click('button[id^="f7avsubfbtn"]');
 
   // create subflavor
-  await page.click('text=New Subflavor');
+  await page.click('button[id^="s7ubflav-add"]');
+  await page.click('button[id^="s7ubflav-add-own"]');
   await page.fill('input[id^="s7ubflavourn4me-frm"]', 'Sub1');
   await page.fill('textarea[id^="s7ubflavourde5cr-frm"]', 'sdesc');
   await page.fill('input[name="color"]', '#00ff00');

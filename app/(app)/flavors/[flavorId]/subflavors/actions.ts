@@ -5,6 +5,7 @@ import { ensureUser } from '@/lib/users';
 import {
   createSubflavor as createSubflavorStore,
   updateSubflavor as updateSubflavorStore,
+  getSubflavor,
 } from '@/lib/subflavors-store';
 import { revalidatePath } from 'next/cache';
 import type { Subflavor, SubflavorInput } from '@/types/subflavor';
@@ -91,4 +92,30 @@ export async function updateSubflavor(
   }
   revalidatePath(`/flavors/${flavorId}/subflavors`);
   return updated;
+}
+
+export async function copySubflavor(
+  fromUserId: string,
+  subflavorId: string,
+  targetFlavorId: string,
+) {
+  const session = await auth();
+  const user = await ensureUser(session);
+  await assertOwner(user.id, user.id);
+  const sub = await getSubflavor(fromUserId, subflavorId);
+  if (!sub) throw new Error('Not found');
+  const created = await createSubflavorStore(String(user.id), targetFlavorId, {
+    flavorId: targetFlavorId,
+    name: sub.name,
+    description: sub.description,
+    color: sub.color,
+    icon: sub.icon,
+    importance: sub.importance,
+    targetMix: sub.targetMix,
+    visibility: sub.visibility,
+    orderIndex: sub.orderIndex,
+    slug: sub.slug,
+  });
+  revalidatePath(`/flavors/${targetFlavorId}/subflavors`);
+  return created;
 }
