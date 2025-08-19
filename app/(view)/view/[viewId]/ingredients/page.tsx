@@ -11,21 +11,22 @@ export default async function ViewIngredientsPage({
   searchParams,
 }: {
   params: Promise<{ viewId: string }>;
-  searchParams?: { at?: string };
+  searchParams?: Promise<{ at?: string }>;
 }) {
   const { viewId } = await params;
+  const sp = await searchParams;
   const user = await getUserByViewId(viewId);
   if (!user) notFound();
   const session = await auth();
   const viewerId = session ? Number((session.user as any)?.id) : null;
-  const at = searchParams?.at ? new Date(searchParams.at) : undefined;
+  const at = sp?.at ? new Date(sp.at) : undefined;
   const ingredients = await listIngredients(String(user.id), viewerId, at);
   const ctx = buildViewContext({
     ownerId: user.id,
     viewerId: viewerId ?? null,
     mode: at ? 'historical' : 'viewer',
     viewId: user.viewId,
-    snapshotDate: searchParams?.at,
+    snapshotDate: sp?.at,
   });
   return (
     <ViewContextProvider value={ctx}>

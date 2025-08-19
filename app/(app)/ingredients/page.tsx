@@ -9,19 +9,20 @@ import { ViewContextProvider } from '@/lib/view-context';
 export default async function IngredientsPage({
   searchParams,
 }: {
-  searchParams?: { at?: string };
+  searchParams?: Promise<{ at?: string }>;
 }) {
+  const params = await searchParams;
   const session = await auth();
   if (!session) notFound();
   const me = await ensureUser(session);
-  const at = searchParams?.at ? new Date(searchParams.at) : undefined;
+  const at = params?.at ? new Date(params.at) : undefined;
   const ingredients = await listIngredients(String(me.id), me.id, at);
   const ctx = buildViewContext({
     ownerId: me.id,
     viewerId: me.id,
     mode: at ? 'historical' : 'owner',
     viewId: me.viewId,
-    snapshotDate: searchParams?.at,
+    snapshotDate: params?.at,
   });
   return (
     <ViewContextProvider value={ctx}>

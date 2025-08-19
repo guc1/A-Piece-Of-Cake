@@ -27,7 +27,9 @@ export async function createIngredient(
   ownerId: number,
   formData: FormData,
 ): Promise<Ingredient> {
-  await assertOwner(ownerId);
+  // pass ownerId as viewerId to avoid relying on auth() inside assertOwner,
+  // which may not be available during server action invocation
+  await assertOwner(ownerId, ownerId);
   const data = sanitize(formData);
   const ing = await createStore(String(ownerId), data);
   revalidatePath('/ingredients');
@@ -39,7 +41,8 @@ export async function updateIngredient(
   id: number,
   formData: FormData,
 ): Promise<Ingredient | null> {
-  await assertOwner(ownerId);
+  // assert that the caller owns this account; use ownerId as viewerId
+  await assertOwner(ownerId, ownerId);
   const data = sanitize(formData);
   const ing = await updateStore(String(ownerId), id, data);
   revalidatePath('/ingredients');
@@ -50,7 +53,8 @@ export async function deleteIngredient(
   ownerId: number,
   id: number,
 ): Promise<boolean> {
-  await assertOwner(ownerId);
+  // ensure only the owner can delete
+  await assertOwner(ownerId, ownerId);
   const ok = await deleteStore(String(ownerId), id);
   revalidatePath('/ingredients');
   return ok;

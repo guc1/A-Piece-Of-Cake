@@ -10,6 +10,13 @@ import {
 } from './actions';
 
 const VISIBILITIES: Visibility[] = ['private', 'followers', 'friends', 'public'];
+const PRESET_IMAGES = [
+  'https://placehold.co/100x100/FF5733/FFFFFF?text=1',
+  'https://placehold.co/100x100/33C3FF/FFFFFF?text=2',
+  'https://placehold.co/100x100/FFC300/FFFFFF?text=3',
+  'https://placehold.co/100x100/DAF7A6/000000?text=4',
+  'https://placehold.co/100x100/C70039/FFFFFF?text=5',
+];
 
 function sortIngredients(list: Ingredient[]) {
   return [...list].sort((a, b) => {
@@ -204,7 +211,10 @@ export default function IngredientsClient({
               </h2>
               <button onClick={() => setOpen(false)}>✕</button>
             </div>
-            <div className="mb-4 flex flex-col items-center gap-2">
+            <div
+              id={`1ngred-imgup-${editing ? editing.id : 'new'}-${userId}`}
+              className="mb-4 flex flex-col items-center gap-2"
+            >
               {form.imageUrl ? (
                 <img
                   src={form.imageUrl}
@@ -214,15 +224,19 @@ export default function IngredientsClient({
               ) : (
                 <div className="h-24 w-24 rounded-full bg-gray-200" />
               )}
-              <input
-                id={`1ngred-imgup-${editing ? editing.id : 'new'}-${userId}`}
-                type="text"
-                placeholder="Image URL"
-                value={form.imageUrl}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                disabled={!editable}
-                className="w-full rounded border px-2 py-1"
-              />
+              <div className="flex flex-wrap justify-center gap-2">
+                {PRESET_IMAGES.map((url) => (
+                  <button
+                    type="button"
+                    key={url}
+                    onClick={() => editable && setForm({ ...form, imageUrl: url })}
+                    disabled={!editable}
+                    className={`h-12 w-12 overflow-hidden rounded-full border-2 ${form.imageUrl === url ? 'border-blue-500' : 'border-transparent'}`}
+                  >
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
             </div>
             <label className="block text-sm font-medium" htmlFor={`1ngred-t1tle-${editing ? editing.id : 'new'}-${userId}`}>
               Title
