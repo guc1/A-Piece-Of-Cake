@@ -77,3 +77,9 @@
 - 2025-10-02: Relocated general day vibe action to planner toolbar, removed add timeslot in review, and ensured modal blurs background.
 - 2025-10-02: Highlighted general day vibe button and raised vibe modal above planner blocks.
 - 2025-10-03: Restricted new planning blocks to selected time range and ensured timeline hour labels are fully visible.
+- 2025-10-05: Separated next-day and live planning dates so next-day always targets tomorrow while live and review load today's plan.
+- 2025-10-05: Auto-reload planning pages when system date changes to keep next-day and live planning in sync.
+- 2025-10-06: Persisted TimeMachine overrides across navigation and displayed current date/time in header for debugging.
+- 2025-10-06: Synced TimeMachine offset with server via cookie, removed nested HTML wrappers to fix hydration loops.
+- 2025-10-07: Normalized server time via cookie-aware helper and forced consistent clock formatting to stop planner reload flicker.
+- 2025-10-07: Prevented header clock hydration errors and ensured next-day plans save under tomorrow's date so live planning only reflects the prior day's schedule.
