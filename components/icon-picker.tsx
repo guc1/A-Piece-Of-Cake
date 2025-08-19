@@ -21,10 +21,25 @@ const PRESET_ICONS = [
   '🎵',
 ];
 
-const OTHER_USERS = {
-  friends: ['😀', '😎'],
-  following: ['🐱', '🐶'],
-  others: ['🚀', '🍰'],
+interface Person {
+  handle: string;
+  icons: string[];
+}
+
+const OTHER_PEOPLE: {
+  friends: Person[];
+  following: Person[];
+  others: Person[];
+} = {
+  friends: [
+    { handle: 'alice', icons: ['😀', '😎'] },
+    { handle: 'bob', icons: ['🤖', '👾'] },
+  ],
+  following: [
+    { handle: 'catlover', icons: ['🐱'] },
+    { handle: 'dogfan', icons: ['🐶'] },
+  ],
+  others: [{ handle: 'rocketman', icons: ['🚀', '🍰'] }],
 };
 
 export default function IconPicker({
@@ -33,7 +48,9 @@ export default function IconPicker({
   editable = true,
 }: IconPickerProps) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<'mine' | 'preset' | 'others'>('mine');
+  const [tab, setTab] = useState<'mine' | 'preset' | 'people'>('mine');
+  const [search, setSearch] = useState('');
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [myIcons, setMyIcons] = useState<string[]>([]);
 
   useEffect(() => {
@@ -131,148 +148,151 @@ export default function IconPicker({
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="max-h-[80vh] w-[90vw] max-w-[700px] overflow-y-auto rounded bg-white p-4">
-          <div className="mb-2 flex gap-2 text-sm">
-            <button
-              type="button"
-              onClick={() => setTab('mine')}
-              className={tab === 'mine' ? 'font-bold' : ''}
-            >
-              My Icons
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('preset')}
-              className={tab === 'preset' ? 'font-bold' : ''}
-            >
-              Preset Icons
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('others')}
-              className={tab === 'others' ? 'font-bold' : ''}
-            >
-              Other Icons
-            </button>
-          </div>
-          {tab === 'mine' && (
-            <div>
-              <input type="file" accept="image/*" onChange={handleUpload} />
-              <div className="mt-2 grid grid-cols-8 gap-2 md:grid-cols-10">
-                {myIcons.map((ic) => (
-                  <div key={ic} className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onChange(ic);
-                        setOpen(false);
-                      }}
-                      className="flex h-10 w-10 items-center justify-center overflow-hidden rounded border"
-                      data-testid="icon-option"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={resolveSrc(ic)}
-                        alt="icon"
-                        className="h-full w-full object-cover"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteIcon(ic)}
-                      className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-white text-xs"
-                    >
-                      ×
-                    </button>
-                  </div>
+            <div className="mb-2 flex gap-2 text-sm">
+              <button
+                type="button"
+                onClick={() => setTab('mine')}
+                className={tab === 'mine' ? 'font-bold' : ''}
+              >
+                My Icons
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('preset')}
+                className={tab === 'preset' ? 'font-bold' : ''}
+              >
+                Preset Icons
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('people')}
+                className={tab === 'people' ? 'font-bold' : ''}
+              >
+                Other People Icons
+              </button>
+            </div>
+            {tab === 'mine' && (
+              <div>
+                <input type="file" accept="image/*" onChange={handleUpload} />
+                <div className="mt-2 grid grid-cols-8 gap-2 md:grid-cols-10">
+                  {myIcons.map((ic) => (
+                    <div key={ic} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onChange(ic);
+                          setOpen(false);
+                        }}
+                        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded border"
+                        data-testid="icon-option"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={resolveSrc(ic)}
+                          alt="icon"
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteIcon(ic)}
+                        className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-white text-xs"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {tab === 'preset' && (
+              <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
+                {PRESET_ICONS.map((ic) => (
+                  <button
+                    key={ic}
+                    type="button"
+                    onClick={() => {
+                      onChange(ic);
+                      setOpen(false);
+                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded border"
+                    data-testid="icon-option"
+                  >
+                    {ic}
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
-          {tab === 'preset' && (
-            <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
-              {PRESET_ICONS.map((ic) => (
-                <button
-                  key={ic}
-                  type="button"
-                  onClick={() => {
-                    onChange(ic);
-                    setOpen(false);
-                  }}
-                  className="flex h-10 w-10 items-center justify-center rounded border"
-                  data-testid="icon-option"
-                >
-                  {ic}
-                </button>
-              ))}
-            </div>
-          )}
-          {tab === 'others' && (
-            <div className="text-sm">
-              <input
-                type="text"
-                placeholder="Search"
-                className="mb-2 w-full rounded border p-1"
-              />
-              <div className="mb-2">
-                <div className="font-medium">Friends</div>
-                <div className="mt-1 grid grid-cols-8 gap-2 md:grid-cols-10">
-                  {OTHER_USERS.friends.map((ic) => (
+            )}
+            {tab === 'people' && (
+              <div className="text-sm">
+                {selectedPerson ? (
+                  <div>
                     <button
-                      key={ic}
                       type="button"
-                      onClick={() => {
-                        onChange(ic);
-                        setOpen(false);
-                      }}
-                      className="flex h-10 w-10 items-center justify-center rounded border"
-                      data-testid="icon-option"
+                      onClick={() => setSelectedPerson(null)}
+                      className="mb-2 text-sm underline"
                     >
-                      {ic}
+                      ← Back
                     </button>
-                  ))}
-                </div>
+                    <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
+                      {selectedPerson.icons.map((ic) => (
+                        <button
+                          key={ic}
+                          type="button"
+                          onClick={() => {
+                            saveMyIcons(Array.from(new Set([...myIcons, ic])));
+                            onChange(ic);
+                            setOpen(false);
+                          }}
+                          className="flex h-10 w-10 items-center justify-center rounded border"
+                          data-testid="icon-option"
+                        >
+                          {ic}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Search users"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="mb-2 w-full rounded border p-1"
+                    />
+                    {(['friends', 'following', 'others'] as const).map(
+                      (group) => {
+                        const people = OTHER_PEOPLE[group].filter((p) =>
+                          p.handle.toLowerCase().includes(search.toLowerCase()),
+                        );
+                        if (people.length === 0) return null;
+                        return (
+                          <div key={group} className="mb-2">
+                            <div className="font-medium capitalize">
+                              {group}
+                            </div>
+                            <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                              {people.map((p) => (
+                                <button
+                                  key={p.handle}
+                                  type="button"
+                                  onClick={() => setSelectedPerson(p)}
+                                  className="truncate rounded border px-2 py-1 text-left"
+                                >
+                                  {p.handle}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      },
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="mb-2">
-                <div className="font-medium">Following</div>
-                <div className="mt-1 grid grid-cols-8 gap-2 md:grid-cols-10">
-                  {OTHER_USERS.following.map((ic) => (
-                    <button
-                      key={ic}
-                      type="button"
-                      onClick={() => {
-                        onChange(ic);
-                        setOpen(false);
-                      }}
-                      className="flex h-10 w-10 items-center justify-center rounded border"
-                      data-testid="icon-option"
-                    >
-                      {ic}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="font-medium">Other</div>
-                <div className="mt-1 grid grid-cols-8 gap-2 md:grid-cols-10">
-                  {OTHER_USERS.others.map((ic) => (
-                    <button
-                      key={ic}
-                      type="button"
-                      onClick={() => {
-                        onChange(ic);
-                        setOpen(false);
-                      }}
-                      className="flex h-10 w-10 items-center justify-center rounded border"
-                      data-testid="icon-option"
-                    >
-                      {ic}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
         </div>
       )}
     </div>
