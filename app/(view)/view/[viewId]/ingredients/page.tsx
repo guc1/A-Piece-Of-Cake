@@ -1,4 +1,4 @@
-import { getUserByViewId } from '@/lib/users';
+import { getUserByViewId, ensureUser } from '@/lib/users';
 import { notFound } from 'next/navigation';
 import { IngredientsHome } from '@/app/(app)/ingredients/page';
 import { auth } from '@/lib/auth';
@@ -18,7 +18,8 @@ export default async function ViewIngredientsPage({
   const user = await getUserByViewId(viewId);
   if (!user) notFound();
   const session = await auth();
-  const viewerId = session ? Number((session.user as any)?.id) : null;
+  const viewer = session ? await ensureUser(session) : null;
+  const viewerId = viewer ? viewer.id : null;
   const at = sp?.at ? new Date(sp.at) : undefined;
   const ingredients = await listIngredients(String(user.id), viewerId, at);
   const ctx = buildViewContext({
