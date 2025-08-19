@@ -88,3 +88,5 @@
 - 2025-10-08: Implemented timezone-safe planning with canonical clock, manual override, and date-resolved plan loading.
 - 2025-10-09: Fixed day arithmetic to keep "next" and "live" planning dates stable across timezones.
 - 2025-10-09: Awaited planning search params to satisfy Next.js dynamic API requirements.
+- 2025-10-09: Added historical planning route to view past plans in read-only mode with Playwright test.
+- 2025-10-09: Added self historical planning route so owners can review their past plans.
