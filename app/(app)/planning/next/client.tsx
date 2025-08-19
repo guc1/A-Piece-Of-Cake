@@ -706,7 +706,7 @@ export default function EditorClient({
                       zIndex: z,
                       color: textColor,
                       cursor: review
-                        ? nowMinute >= minutesFromIso(b.end)
+                        ? !live || nowMinute >= minutesFromIso(b.end)
                           ? 'pointer'
                           : 'not-allowed'
                         : editable
@@ -746,7 +746,7 @@ export default function EditorClient({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (draggingRef.current) return;
-                      if (review && nowMinute < minutesFromIso(b.end)) return;
+                      if (review && live && nowMinute < minutesFromIso(b.end)) return;
                       setSelectedId(b.id);
                     }}
                   >
