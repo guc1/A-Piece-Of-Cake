@@ -16,6 +16,10 @@ function sanitize(form: FormData) {
   obj.visibility = ['private', 'followers', 'friends', 'public'].includes(obj.visibility)
     ? obj.visibility
     : 'private';
+  obj.tags =
+    typeof obj.tags === 'string' && obj.tags
+      ? (obj.tags as string).split(',').map((t: string) => t.trim())
+      : null;
   return obj;
 }
 
