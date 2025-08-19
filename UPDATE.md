@@ -102,3 +102,5 @@
 - 2025-10-14: Added flavor and subflavor import flows with presets, social search, and copy options.
 - 2025-10-15: Added aggregated subflavors viewer listing all subflavors by flavor importance and linked search to it.
 - 2025-10-16: Prompted flavor selection when copying subflavors and allowed promoting subflavor to main flavor.
+- 2025-10-17: Enabled copying flavors from historical snapshots for owners and viewers and added tests.
+- 2025-10-17: Enabled copying subflavors from historical snapshots for owners and viewers and added tests.
