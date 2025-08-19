@@ -61,7 +61,9 @@ export async function savePlan(
     .from(planBlocks)
     .where(eq(planBlocks.planId, planRow.id));
   const existingIds = new Set(existing.map((b) => b.id));
-  const incomingIds = new Set(blocks.filter((b) => b.id).map((b) => b.id as string));
+  const incomingIds = new Set(
+    blocks.filter((b) => b.id).map((b) => b.id as string),
+  );
   // delete removed
   const toDelete = [...existingIds].filter((id) => !incomingIds.has(id));
   if (toDelete.length) {
@@ -109,4 +111,28 @@ export async function savePlan(
     date: planRow.date,
     blocks: results,
   };
+}
+
+/**
+ * When a new day starts, move any "plan for tomorrow" into today's plan
+ * and clear the next-day plan so users can schedule afresh.
+ */
+export async function rolloverPlans(userId: string, now: Date): Promise<void> {
+  const today = now.toISOString().slice(0, 10);
+  const tomorrow = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+  )
+    .toISOString()
+    .slice(0, 10);
+
+  const todayPlan = await getPlan(userId, today);
+  if (todayPlan) return; // already have today's plan
+
+  const nextPlan = await getPlan(userId, tomorrow);
+  if (!nextPlan) return;
+
+  await savePlan(userId, today, nextPlan.blocks);
+  await savePlan(userId, tomorrow, []);
 }
