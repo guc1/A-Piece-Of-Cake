@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor, type Section } from '@/lib/navigation';
 import { Button } from '@/components/ui/button';
+import { Clock } from '@/components/clock';
 
 const labels: Record<Section, string> = {
   cake: 'Cake',
@@ -21,7 +22,15 @@ export function AppNav() {
   const sections: Section[] =
     ctx.mode === 'viewer'
       ? ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people']
-      : ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people', 'visibility'];
+      : [
+          'cake',
+          'planning',
+          'flavors',
+          'ingredients',
+          'review',
+          'people',
+          'visibility',
+        ];
 
   return (
     <nav className="flex items-center justify-between border-b p-4">
@@ -38,9 +47,12 @@ export function AppNav() {
           );
         })}
       </ul>
-      <form action="/api/auth/signout" method="post">
-        <Button type="submit">Sign out</Button>
-      </form>
+      <div className="flex items-center gap-4">
+        <Clock />
+        <form action="/api/auth/signout" method="post">
+          <Button type="submit">Sign out</Button>
+        </form>
+      </div>
     </nav>
   );
 }
