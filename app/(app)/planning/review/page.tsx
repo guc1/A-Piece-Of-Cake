@@ -4,17 +4,12 @@ import { notFound } from 'next/navigation';
 import { getPlan } from '@/lib/plans-store';
 import EditorClient from '../next/client';
 
-export default async function PlanningReviewPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ date?: string }>;
-}) {
+export default async function PlanningReviewPage() {
   const session = await auth();
   if (!session) notFound();
   const me = await ensureUser(session);
   const now = new Date();
-  const { date: raw } = await searchParams;
-  const date = raw ?? now.toISOString().slice(0, 10);
+  const date = now.toISOString().slice(0, 10);
   const plan = await getPlan(String(me.id), date);
   return (
     <EditorClient
