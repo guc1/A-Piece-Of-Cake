@@ -85,3 +85,4 @@
 - 2025-10-07: Fixed clock hydration mismatch and corrected server time helper so next-day plans no longer leak into today's live view.
 - 2025-10-07: On day rollover, automatically promote yesterday's "next-day" plan to today's live plan and clear the next-day slate.
 - 2025-10-07: Removed rollover logic so next-day plans remain separate from today's live plan until the date actually changes.
+- 2025-10-08: Introduced timezone-safe clock utilities with manual override, resolved planning dates for next/live/review modes, ensured plans are keyed by (user, date), added viewer routes, and added Playwright test for date overrides.

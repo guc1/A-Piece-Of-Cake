@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useViewContext } from '@/lib/view-context';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 import { savePlanAction } from './actions';
+import { getNow, toYMD, startOfDay, addDays, getOverride } from '@/lib/clock';
 
 const COLORS = [
   '#F87171',
@@ -33,6 +34,7 @@ interface Props {
   initialPlan: Plan | null;
   live?: boolean;
   review?: boolean;
+  tz: string;
 }
 
 export default function EditorClient({
@@ -41,8 +43,13 @@ export default function EditorClient({
   initialPlan,
   live = false,
   review = false,
+  tz,
 }: Props) {
   const { editable } = useViewContext();
+  const override = getOverride(tz);
+  const overrideLabel = override
+    ? override.toLocaleString('en-US', { timeZone: tz })
+    : null;
   const storageKey = `live-plan-${userId}-${date}`;
   const reviewKey = `review-${userId}-${date}`;
   const vibeKey = `review-vibe-${userId}-${date}`;
@@ -130,18 +137,17 @@ export default function EditorClient({
   // and have live/next-day logic adjust automatically.
   useEffect(() => {
     const checkRollover = () => {
-      const now = new Date();
-      const expected = live
-        ? now.toISOString().slice(0, 10)
-        : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-            .toISOString()
-            .slice(0, 10);
-      if (expected !== date) window.location.reload();
+      const now = getNow(tz);
+      const today = toYMD(startOfDay(now, tz), tz);
+      const target = live
+        ? today
+        : toYMD(startOfDay(addDays(now, 1, tz), tz), tz);
+      if (target !== date) window.location.reload();
     };
     const id = setInterval(checkRollover, 60_000);
     checkRollover();
     return () => clearInterval(id);
-  }, [date, live]);
+  }, [date, live, tz]);
 
   useEffect(() => {
     try {
@@ -517,6 +523,11 @@ export default function EditorClient({
 
   return (
     <>
+      {overrideLabel && (
+        <div className="fixed right-2 top-2 z-[20000] rounded bg-red-500 px-2 py-1 text-xs text-white">
+          Time override: {overrideLabel} (tz: {tz})
+        </div>
+      )}
       <div className="flex h-full">
         <div
           className={`relative overflow-y-hidden ${selected ? 'w-1/2' : 'w-full'}`}

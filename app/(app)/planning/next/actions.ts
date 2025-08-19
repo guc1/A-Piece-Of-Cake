@@ -14,7 +14,7 @@ export async function savePlanAction(
   const session = await auth();
   const self = await ensureUser(session);
   await assertOwner(self.id, self.id);
-  const plan = await savePlan(String(self.id), date, blocks);
+  const plan = await savePlan(self.id, date, blocks);
   revalidatePath('/planning');
   return plan;
 }

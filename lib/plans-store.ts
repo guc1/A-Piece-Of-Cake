@@ -17,42 +17,69 @@ function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
   };
 }
 
-export async function getPlan(
-  userId: string,
-  dateStr: string,
-): Promise<Plan | null> {
-  const dateKey = new Date(dateStr).toISOString().slice(0, 10);
-  const [planRow] = await db
+export async function getOrCreatePlan(
+  userId: number,
+  date: string,
+): Promise<Plan> {
+  let [planRow] = await db
     .select()
     .from(plans)
-    .where(and(eq(plans.userId, Number(userId)), eq(plans.date, dateKey)));
-  if (!planRow) return null;
+    .where(and(eq(plans.userId, userId), eq(plans.date, date)));
+  if (!planRow) {
+    const inserted = await db
+      .insert(plans)
+      .values({ userId, date })
+      .returning();
+    planRow = inserted[0];
+  }
   const blockRows = await db
     .select()
     .from(planBlocks)
     .where(eq(planBlocks.planId, planRow.id));
   return {
     id: planRow.id.toString(),
-    userId: userId,
+    userId: String(userId),
+    date: planRow.date,
+    blocks: blockRows.map(toPlanBlock),
+  };
+}
+
+export async function getPlanStrict(
+  userId: number,
+  date: string,
+): Promise<Plan> {
+  const [planRow] = await db
+    .select()
+    .from(plans)
+    .where(and(eq(plans.userId, userId), eq(plans.date, date)));
+  if (!planRow) {
+    return { id: '', userId: String(userId), date, blocks: [] };
+  }
+  const blockRows = await db
+    .select()
+    .from(planBlocks)
+    .where(eq(planBlocks.planId, planRow.id));
+  return {
+    id: planRow.id.toString(),
+    userId: String(userId),
     date: planRow.date,
     blocks: blockRows.map(toPlanBlock),
   };
 }
 
 export async function savePlan(
-  userId: string,
-  dateStr: string,
+  userId: number,
+  date: string,
   blocks: PlanBlockInput[],
 ): Promise<Plan> {
-  const dateKey = new Date(dateStr).toISOString().slice(0, 10);
   let [planRow] = await db
     .select()
     .from(plans)
-    .where(and(eq(plans.userId, Number(userId)), eq(plans.date, dateKey)));
+    .where(and(eq(plans.userId, userId), eq(plans.date, date)));
   if (!planRow) {
     const inserted = await db
       .insert(plans)
-      .values({ userId: Number(userId), date: dateKey })
+      .values({ userId, date })
       .returning();
     planRow = inserted[0];
   }
@@ -107,7 +134,7 @@ export async function savePlan(
   }
   return {
     id: planRow.id.toString(),
-    userId,
+    userId: String(userId),
     date: planRow.date,
     blocks: results,
   };

@@ -4,7 +4,13 @@ import { useRouter } from 'next/navigation';
 import { useViewContext } from '@/lib/view-context';
 import { Button } from '@/components/ui/button';
 
-export default function PlanningLanding({ userId }: { userId: string }) {
+export default function PlanningLanding({
+  userId,
+  labels,
+}: {
+  userId: string;
+  labels: { next: string; live: string; review: string };
+}) {
   const router = useRouter();
   const { editable, viewId } = useViewContext();
   const tooltip = editable ? undefined : 'Read-only in viewing mode.';
@@ -34,7 +40,7 @@ export default function PlanningLanding({ userId }: { userId: string }) {
         title={tooltip}
         onClick={handleNext}
       >
-        Planning for Next Day
+        {labels.next}
       </Button>
       <div className="flex items-center">
         <span className="relative mr-2">
@@ -45,7 +51,7 @@ export default function PlanningLanding({ userId }: { userId: string }) {
           title={tooltip}
           onClick={handleLive}
         >
-          Live Planning
+          {labels.live}
         </Button>
       </div>
       <Button
@@ -54,7 +60,7 @@ export default function PlanningLanding({ userId }: { userId: string }) {
         title={tooltip}
         onClick={handleReview}
       >
-        Review Today’s Planning
+        {labels.review}
       </Button>
     </section>
   );

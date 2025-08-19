@@ -7,7 +7,7 @@ import EditorClient from '@/app/(app)/planning/next/client';
 
 export const revalidate = 0;
 
-export default async function ViewPlanningNextPage({
+export default async function ViewPlanningReviewPage({
   params,
   searchParams,
 }: {
@@ -17,7 +17,7 @@ export default async function ViewPlanningNextPage({
   const { viewId } = await params;
   const user = await getUserByViewId(viewId);
   if (!user) notFound();
-  const { tz, date } = resolvePlanDate('next', user, {
+  const { tz, date } = resolvePlanDate('review', user, {
     searchParams: new URLSearchParams(searchParams as any),
   });
   const dateStr = toYMD(date, tz);
@@ -29,6 +29,8 @@ export default async function ViewPlanningNextPage({
         date={dateStr}
         tz={tz}
         initialPlan={plan}
+        live
+        review
       />
     </section>
   );

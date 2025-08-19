@@ -1,23 +1,32 @@
 import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
 import { notFound } from 'next/navigation';
-import { getPlan } from '@/lib/plans-store';
-import { getServerNow } from '@/lib/time';
+import { getPlanStrict } from '@/lib/plans-store';
+import { resolvePlanDate } from '@/lib/plan-date';
+import { toYMD } from '@/lib/clock';
 import EditorClient from '../next/client';
 
 export const revalidate = 0;
 
-export default async function PlanningReviewPage() {
+export default async function PlanningReviewPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
+  const params = searchParams;
   const session = await auth();
   if (!session) notFound();
   const me = await ensureUser(session);
-  const now = await getServerNow();
-  const date = now.toISOString().slice(0, 10);
-  const plan = await getPlan(String(me.id), date);
+  const { tz, date } = resolvePlanDate('review', me, {
+    searchParams: new URLSearchParams(params as any),
+  });
+  const dateStr = toYMD(date, tz);
+  const plan = await getPlanStrict(me.id, dateStr);
   return (
     <EditorClient
       userId={String(me.id)}
-      date={date}
+      date={dateStr}
+      tz={tz}
       initialPlan={plan}
       live
       review
