@@ -233,69 +233,38 @@ export default function EditorClient({
 
     let candidate: number | null = null;
     let duration = 60;
-    const customRange =
-      startMinute !== DEFAULT_START || endMinute !== DEFAULT_END;
 
-    if (customRange) {
-      const findSlot = (dur: number) => {
-        let c = startMinute;
-        while (c + dur <= endMinute) {
-          if (isFree(c, c + dur)) return c;
-          c += 15;
-        }
-        return null;
-      };
+    const findSlot = (dur: number) => {
+      let c = startMinute;
+      while (c + dur <= endMinute) {
+        if (isFree(c, c + dur)) return c;
+        c += 15;
+      }
+      return null;
+    };
 
-      candidate = findSlot(60);
-      if (candidate === null) {
-        const small = findSlot(30);
-        if (small !== null) {
-          duration = 30;
-          candidate = small;
-        }
+    candidate = findSlot(60);
+    if (candidate === null) {
+      const small = findSlot(30);
+      if (small !== null) {
+        duration = 30;
+        candidate = small;
       }
+    }
 
-      if (candidate === null) {
-        const maxStart = endMinute - duration;
-        if (maxStart <= startMinute) {
-          candidate = startMinute;
-        } else {
-          const steps = Math.floor((maxStart - startMinute) / 15);
-          candidate =
-            startMinute + Math.floor(Math.random() * (steps + 1)) * 15;
-        }
+    if (candidate === null) {
+      const maxStart = endMinute - duration;
+      if (maxStart <= startMinute) {
+        candidate = startMinute;
+      } else {
+        const steps = Math.floor((maxStart - startMinute) / 15);
+        candidate = startMinute + Math.floor(Math.random() * (steps + 1)) * 15;
       }
-    } else {
-      let start = 0;
-      if (sorted.length) {
-        const last = sorted.reduce((p, c) =>
-          minutesFromIso(c.end) > minutesFromIso(p.end) ? c : p,
-        );
-        start = minutesFromIso(last.end);
-      }
-      candidate = start;
-      let placed = false;
-      while (candidate + duration <= MAX_MINUTES) {
-        if (isFree(candidate, candidate + duration)) {
-          placed = true;
-          break;
-        }
-        candidate += 15;
-      }
-      if (!placed) {
-        candidate = 0;
-        while (candidate + duration <= MAX_MINUTES) {
-          if (isFree(candidate, candidate + duration)) {
-            placed = true;
-            break;
-          }
-          candidate += 15;
-        }
-      }
-      if (!placed) {
-        alert('No 1-hour slot available.');
-        return;
-      }
+    }
+
+    if (candidate === null) {
+      alert('No 1-hour slot available.');
+      return;
     }
 
     // candidate is guaranteed to be set here
@@ -649,12 +618,15 @@ export default function EditorClient({
             <div className="absolute left-0 top-0 w-12">
               {Array.from({ length: endHour - startHour + 1 }).map((_, i) => {
                 const h = startHour + i;
+                const translate =
+                  h === startHour ? '0' : h === endHour ? '-100%' : '-50%';
                 return (
                   <span
                     key={h}
-                    className="absolute right-1 -translate-y-1/2 text-[10px] text-gray-500"
+                    className="absolute right-1 text-[10px] text-gray-500"
                     style={{
                       top: (h * 60 - startMinute) * PIXELS_PER_MINUTE,
+                      transform: `translateY(${translate})`,
                     }}
                   >
                     {String(h).padStart(2, '0')}:00
