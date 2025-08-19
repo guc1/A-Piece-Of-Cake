@@ -75,7 +75,7 @@ export function SideCalendar({ snapshotDates }: { snapshotDates: string[] }) {
             ))}
             {days.map((date) => {
               const isToday = date.toDateString() === today.toDateString();
-              const iso = date.toISOString().slice(0, 10);
+              const iso = date.toLocaleDateString('en-CA');
               const hasSnap = snapshotDates.includes(iso);
               return (
                 <button
@@ -85,7 +85,8 @@ export function SideCalendar({ snapshotDates }: { snapshotDates: string[] }) {
                     if (!hasSnap) return;
                     const path =
                       ctx.mode === 'owner' ||
-                      (ctx.mode === 'historical' && ctx.viewerId === ctx.ownerId)
+                      (ctx.mode === 'historical' &&
+                        ctx.viewerId === ctx.ownerId)
                         ? `/history/self/${iso}`
                         : `/history/${ctx.viewId}/${iso}`;
                     router.push(path);
