@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useViewContext } from '@/lib/view-context';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
-import { savePlanAction } from './actions';
+import { savePlanAction, rolloverPlanAction } from './actions';
 
 const COLORS = [
   '#F87171',
@@ -124,6 +124,32 @@ export default function EditorClient({
     if (nowMinute < startMinute) setStartMinute(0);
     if (nowMinute > endMinute) setEndMinute(MAX_MINUTES);
   }, [live, nowMinute, startMinute, endMinute]);
+
+  // Reload the planner when the system date rolls over so each mode
+  // always operates on the correct day. This lets testers advance time
+  // and have live/next-day logic adjust automatically.
+  useEffect(() => {
+    const checkRollover = () => {
+      const now = new Date();
+      const expected = live
+        ? now.toISOString().slice(0, 10)
+        : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+            .toISOString()
+            .slice(0, 10);
+      if (expected !== date) {
+        if (live && editable) {
+          rolloverPlanAction(date, expected).finally(() =>
+            window.location.reload(),
+          );
+        } else {
+          window.location.reload();
+        }
+      }
+    };
+    const id = setInterval(checkRollover, 60_000);
+    checkRollover();
+    return () => clearInterval(id);
+  }, [date, live, editable]);
 
   useEffect(() => {
     try {
