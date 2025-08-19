@@ -109,3 +109,4 @@
 - 2025-10-17: Enlarged IconPicker modal and fixed rendering of uploaded icons.
 - 2025-10-17: Enhanced uploaded icon quality and ensured icons fill circular frames edge-to-edge.
 - 2025-10-17: Widened flavor and subflavor icon columns to text so custom images migrate without length errors.
+- 2025-10-18: Renamed Other Icons tab to Other People Icons with user search and profile browsing to copy icons into My Icons and updated tests.
