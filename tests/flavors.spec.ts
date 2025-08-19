@@ -90,6 +90,24 @@ test('flavor CRUD and ordering', async ({ page }) => {
     '❤️',
   );
 
+  // pull icon from other people and store in My Icons
+  await rows.first().click();
+  await page.click('button:has-text("Choose Icon")');
+  await page.click('button:has-text("Other People Icons")');
+  await page.click('button:has-text("Alice")');
+  await page.click('button[data-testid="icon-option"]:has-text("😎")');
+  await page.click('button:has-text("Choose Icon")');
+  await page.click('button:has-text("My Icons")');
+  await expect(
+    page.locator('button[data-testid="icon-option"]:has-text("😎")'),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.click('button[id^="f7avoursav-frm"]');
+  await page.reload();
+  await expect(rows.first().locator('div[id^="f7avourava"] span')).toHaveText(
+    '😎',
+  );
+
   // search flavors
   const flavorSearch = page.locator('input[placeholder="Search flavors…"]');
   await flavorSearch.fill('Second');
