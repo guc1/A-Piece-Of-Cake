@@ -149,6 +149,21 @@ export const notifications = pgTable('notifications', {
   readAt: timestamp('read_at'),
 });
 
+export const userIcons = pgTable(
+  'user_icons',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').references(() => users.id).notNull(),
+    icon: text('icon').notNull(),
+  },
+  (table) => ({
+    uniqueUserIcon: uniqueIndex('user_icons_user_icon_unique').on(
+      table.userId,
+      table.icon,
+    ),
+  }),
+);
+
 export const plans = pgTable(
   'plans',
   {
