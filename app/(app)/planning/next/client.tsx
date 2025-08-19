@@ -32,6 +32,7 @@ interface Props {
   date: string; // YYYY-MM-DD
   initialPlan: Plan | null;
   live?: boolean;
+  review?: boolean;
 }
 
 export default function EditorClient({
@@ -39,8 +40,11 @@ export default function EditorClient({
   date,
   initialPlan,
   live = false,
+  review = false,
 }: Props) {
-  const { editable } = useViewContext();
+  const { editable: ctxEditable } = useViewContext();
+  const editable = review ? false : ctxEditable;
+  const reviewEditable = review && ctxEditable;
   const storageKey = `live-plan-${userId}-${date}`;
   const [blocks, setBlocks] = useState<PlanBlock[]>(() => {
     if (live && editable && typeof window !== 'undefined') {
@@ -53,6 +57,8 @@ export default function EditorClient({
     }
     return initialPlan?.blocks ?? [];
   });
+  const [vibe, setVibe] = useState(initialPlan?.vibe ?? '');
+  const [vibeOpen, setVibeOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(
     () => blocks.find((b) => b.id === selectedId) || null,
@@ -70,13 +76,13 @@ export default function EditorClient({
   const endHour = Math.ceil(endMinute / 60);
 
   const [nowMinute, setNowMinute] = useState(() => {
-    if (!live) return 0;
+    if (!(live || review)) return 0;
     const d = new Date();
     return d.getHours() * 60 + d.getMinutes();
   });
 
   useEffect(() => {
-    if (!live) return;
+    if (!(live || review)) return;
     const tick = () => {
       const d = new Date();
       setNowMinute(d.getHours() * 60 + d.getMinutes());
@@ -84,7 +90,7 @@ export default function EditorClient({
     tick();
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
-  }, [live]);
+  }, [live, review]);
 
   useEffect(() => {
     if (!live) return;
@@ -225,21 +231,25 @@ export default function EditorClient({
     setSelectedId(id);
   }
 
-  const lastSaved = useRef(JSON.stringify(blocks));
+  const lastSaved = useRef(JSON.stringify({ blocks, vibe }));
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blocksRef = useRef(blocks);
+  const vibeRef = useRef(vibe);
   useEffect(() => {
     blocksRef.current = blocks;
   }, [blocks]);
+  useEffect(() => {
+    vibeRef.current = vibe;
+  }, [vibe]);
 
   useEffect(() => {
-    if (!editable) return;
-    const serialized = JSON.stringify(blocks);
+    if (!(editable || reviewEditable)) return;
+    const serialized = JSON.stringify({ blocks, vibe });
     if (serialized === lastSaved.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      if (live) {
-        window.localStorage.setItem(storageKey, serialized);
+      if (live && editable) {
+        window.localStorage.setItem(storageKey, JSON.stringify(blocks));
         lastSaved.current = serialized;
       } else {
         const payload: PlanBlockInput[] = blocks.map((b) => ({
@@ -249,25 +259,34 @@ export default function EditorClient({
           title: b.title,
           description: b.description,
           color: b.color,
+          good: b.good,
+          bad: b.bad,
         }));
-        savePlanAction(date, payload).then((plan) => {
+        savePlanAction(date, payload, vibe).then((plan) => {
           setBlocks(plan.blocks);
-          lastSaved.current = JSON.stringify(plan.blocks);
+          setVibe(plan.vibe ?? '');
+          lastSaved.current = JSON.stringify({
+            blocks: plan.blocks,
+            vibe: plan.vibe ?? '',
+          });
         });
       }
       saveTimer.current = null;
     }, 500);
-  }, [blocks, date, editable, live, storageKey]);
+  }, [blocks, vibe, date, editable, reviewEditable, live, storageKey]);
 
   useEffect(() => {
     return () => {
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
-        if (live) {
+        if (live && editable) {
           const serialized = JSON.stringify(blocksRef.current);
           window.localStorage.setItem(storageKey, serialized);
-          lastSaved.current = serialized;
-        } else {
+          lastSaved.current = JSON.stringify({
+            blocks: blocksRef.current,
+            vibe: vibeRef.current,
+          });
+        } else if (editable || reviewEditable) {
           const payload: PlanBlockInput[] = blocksRef.current.map((b) => ({
             id: b.id,
             start: b.start,
@@ -275,14 +294,19 @@ export default function EditorClient({
             title: b.title,
             description: b.description,
             color: b.color,
+            good: b.good,
+            bad: b.bad,
           }));
-          void savePlanAction(date, payload).then((plan) => {
-            lastSaved.current = JSON.stringify(plan.blocks);
+          void savePlanAction(date, payload, vibeRef.current).then((plan) => {
+            lastSaved.current = JSON.stringify({
+              blocks: plan.blocks,
+              vibe: plan.vibe ?? '',
+            });
           });
         }
       }
     };
-  }, [date, live, storageKey]);
+  }, [date, live, storageKey, editable, reviewEditable]);
 
   function handleTimeChange(id: string, field: 'start' | 'end', value: string) {
     const [h, m] = value.split(':').map((n) => parseInt(n, 10));
@@ -630,6 +654,7 @@ export default function EditorClient({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (draggingRef.current) return;
+                    if (review && nowMinute < minutesFromIso(b.end)) return;
                     setSelectedId(b.id);
                   }}
                 >
@@ -657,7 +682,43 @@ export default function EditorClient({
             )}
           </div>
         </div>
-        {editable ? (
+        {review ? (
+          <>
+            <button
+              id={`p1an-add-fab-${userId}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!reviewEditable) return;
+                setVibeOpen(true);
+              }}
+              className="absolute bottom-4 right-4 rounded bg-orange-500 px-4 py-2 text-white"
+              disabled={!reviewEditable}
+            >
+              Write general day vibe
+            </button>
+            {vibeOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <div className="w-96 rounded bg-white p-4">
+                  <h2 className="mb-2 text-lg font-semibold">
+                    Write general vibe
+                  </h2>
+                  <textarea
+                    id={`p1an-vibe-${userId}`}
+                    className="mb-2 w-full border p-1"
+                    value={vibe}
+                    maxLength={1000}
+                    rows={6}
+                    onChange={(e) => setVibe(e.target.value)}
+                    disabled={!reviewEditable}
+                  />
+                  <div className="text-right">
+                    <Button onClick={() => setVibeOpen(false)}>Close</Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        ) : editable ? (
           <button
             id={`p1an-add-fab-${userId}`}
             onClick={(e) => {
@@ -685,129 +746,188 @@ export default function EditorClient({
           className="w-1/2 border-l p-4"
           id={`p1an-meta-${selected.id}-${userId}`}
         >
-          <div className="mb-2 text-sm text-gray-500">
-            {editable ? null : 'Read-only (viewing mode)'}
-          </div>
-          <label
-            className="block text-sm font-medium"
-            htmlFor={`p1an-meta-ttl-${selected.id}-${userId}`}
-          >
-            Activity
-          </label>
-          <input
-            id={`p1an-meta-ttl-${selected.id}-${userId}`}
-            className="mb-2 w-full border p-1"
-            value={selected.title}
-            maxLength={60}
-            disabled={!editable}
-            onChange={(e) =>
-              updateBlock(selected.id, { title: e.target.value })
-            }
-          />
-          <label
-            className="block text-sm font-medium"
-            htmlFor={`p1an-meta-dsc-${selected.id}-${userId}`}
-          >
-            Description
-          </label>
-          <textarea
-            id={`p1an-meta-dsc-${selected.id}-${userId}`}
-            className="mb-2 w-full border p-1"
-            value={selected.description}
-            disabled={!editable}
-            maxLength={500}
-            rows={6}
-            onChange={(e) =>
-              updateBlock(selected.id, { description: e.target.value })
-            }
-          />
-          <label className="block text-sm font-medium">Color</label>
-          <div
-            id={`p1an-meta-col-${selected.id}-${userId}`}
-            className="mb-2 flex flex-wrap gap-1"
-          >
-            {COLORS.map((c) => (
-              <button
-                key={c}
-                className="h-6 w-6 rounded"
-                style={{ background: c }}
-                onClick={() =>
-                  editable && updateBlock(selected.id, { color: c })
-                }
-                disabled={!editable}
-              />
-            ))}
-          </div>
-          <div className="mb-2 flex gap-2">
-            <div>
+          {review ? (
+            <>
+              <div className="mb-2">
+                <div className="text-sm font-medium">Activity</div>
+                <div className="mb-2">{selected.title}</div>
+              </div>
+              {selected.description ? (
+                <div className="mb-4 whitespace-pre-wrap text-sm">
+                  {selected.description}
+                </div>
+              ) : null}
               <label
                 className="block text-sm font-medium"
-                htmlFor={`p1an-meta-tms-${selected.id}-${userId}`}
+                htmlFor={`p1an-good-${selected.id}-${userId}`}
               >
-                Start
+                What went good?
               </label>
-              <input
-                type="time"
-                id={`p1an-meta-tms-${selected.id}-${userId}`}
-                value={formatTime(selected.start)}
-                disabled={!editable}
+              <textarea
+                id={`p1an-good-${selected.id}-${userId}`}
+                className="mb-2 w-full border p-1"
+                value={selected.good}
+                maxLength={1000}
+                rows={6}
+                disabled={!reviewEditable}
                 onChange={(e) =>
-                  handleTimeChange(selected.id, 'start', e.target.value)
+                  updateBlock(selected.id, { good: e.target.value })
                 }
               />
-            </div>
-            <div>
               <label
                 className="block text-sm font-medium"
-                htmlFor={`p1an-meta-tme-${selected.id}-${userId}`}
+                htmlFor={`p1an-bad-${selected.id}-${userId}`}
               >
-                End
+                What went bad?
               </label>
-              <input
-                type="time"
-                id={`p1an-meta-tme-${selected.id}-${userId}`}
-                value={formatTime(selected.end)}
-                disabled={!editable}
+              <textarea
+                id={`p1an-bad-${selected.id}-${userId}`}
+                className="mb-2 w-full border p-1"
+                value={selected.bad}
+                maxLength={1000}
+                rows={6}
+                disabled={!reviewEditable}
                 onChange={(e) =>
-                  handleTimeChange(selected.id, 'end', e.target.value)
+                  updateBlock(selected.id, { bad: e.target.value })
                 }
               />
-            </div>
-          </div>
-          <div className="mt-4 flex gap-2">
-            {editable ? (
-              <Button
-                variant="outline"
-                className="border-red-600 text-red-600"
-                id={`p1an-meta-del-${userId}`}
-                onClick={() => {
-                  setBlocks((prev) =>
-                    prev.filter((blk) => blk.id !== selected.id),
-                  );
-                  setSelectedId(null);
-                }}
+              <div className="mt-4 text-right">
+                <Button
+                  variant="outline"
+                  id={`p1an-meta-close-${userId}`}
+                  onClick={() => setSelectedId(null)}
+                >
+                  Close
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-2 text-sm text-gray-500">
+                {editable ? null : 'Read-only (viewing mode)'}
+              </div>
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`p1an-meta-ttl-${selected.id}-${userId}`}
               >
-                Delete
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                className="border-red-600 text-red-600"
-                id={`p1an-meta-del-${userId}`}
-                disabled
-                title="Read-only in viewing mode"
+                Activity
+              </label>
+              <input
+                id={`p1an-meta-ttl-${selected.id}-${userId}`}
+                className="mb-2 w-full border p-1"
+                value={selected.title}
+                maxLength={60}
+                disabled={!editable}
+                onChange={(e) =>
+                  updateBlock(selected.id, { title: e.target.value })
+                }
+              />
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`p1an-meta-dsc-${selected.id}-${userId}`}
               >
-                Delete
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              id={`p1an-meta-close-${userId}`}
-              onClick={() => setSelectedId(null)}
-            >
-              X
-            </Button>
-          </div>
+                Description
+              </label>
+              <textarea
+                id={`p1an-meta-dsc-${selected.id}-${userId}`}
+                className="mb-2 w-full border p-1"
+                value={selected.description}
+                disabled={!editable}
+                maxLength={500}
+                rows={6}
+                onChange={(e) =>
+                  updateBlock(selected.id, { description: e.target.value })
+                }
+              />
+              <label className="block text-sm font-medium">Color</label>
+              <div
+                id={`p1an-meta-col-${selected.id}-${userId}`}
+                className="mb-2 flex flex-wrap gap-1"
+              >
+                {COLORS.map((c) => (
+                  <button
+                    key={c}
+                    className="h-6 w-6 rounded"
+                    style={{ background: c }}
+                    onClick={() =>
+                      editable && updateBlock(selected.id, { color: c })
+                    }
+                    disabled={!editable}
+                  />
+                ))}
+              </div>
+              <div className="mb-2 flex gap-2">
+                <div>
+                  <label
+                    className="block text-sm font-medium"
+                    htmlFor={`p1an-meta-tms-${selected.id}-${userId}`}
+                  >
+                    Start
+                  </label>
+                  <input
+                    type="time"
+                    id={`p1an-meta-tms-${selected.id}-${userId}`}
+                    value={formatTime(selected.start)}
+                    disabled={!editable}
+                    onChange={(e) =>
+                      handleTimeChange(selected.id, 'start', e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <label
+                    className="block text-sm font-medium"
+                    htmlFor={`p1an-meta-tme-${selected.id}-${userId}`}
+                  >
+                    End
+                  </label>
+                  <input
+                    type="time"
+                    id={`p1an-meta-tme-${selected.id}-${userId}`}
+                    value={formatTime(selected.end)}
+                    disabled={!editable}
+                    onChange={(e) =>
+                      handleTimeChange(selected.id, 'end', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2">
+                {editable ? (
+                  <Button
+                    variant="outline"
+                    className="border-red-600 text-red-600"
+                    id={`p1an-meta-del-${userId}`}
+                    onClick={() => {
+                      setBlocks((prev) =>
+                        prev.filter((blk) => blk.id !== selected.id),
+                      );
+                      setSelectedId(null);
+                    }}
+                  >
+                    Delete
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="border-red-600 text-red-600"
+                    id={`p1an-meta-del-${userId}`}
+                    disabled
+                    title="Read-only in viewing mode"
+                  >
+                    Delete
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  id={`p1an-meta-close-${userId}`}
+                  onClick={() => setSelectedId(null)}
+                >
+                  X
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       ) : null}
     </div>
