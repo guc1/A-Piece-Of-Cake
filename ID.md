@@ -47,6 +47,26 @@ Modal form IDs:
   - `v13w-revw-{ownerId}`
   - `v13w-peep-{ownerId}`
 - Viewer bar:
-  - `v13wbar-{ownerId}-{viewerId}` → viewer bar root container.
-  - `v13wbar-live-{ownerId}-{viewerId}` → live indicator dot.
-  - `v13wbar-exit-{ownerId}-{viewerId}` → Exit button.
+- `v13wbar-{ownerId}-{viewerId}` → viewer bar root container.
+- `v13wbar-live-{ownerId}-{viewerId}` → live indicator dot.
+- `v13wbar-exit-{ownerId}-{viewerId}` → Exit button.
+
+## Ingredients
+
+- `1ngred-list-{ownerId}` → ingredients list container.
+- `1ngred-card-{ingredientId}-{ownerId}` → ingredient card.
+- `1ngred-card-img-{ingredientId}-{ownerId}` → card image or initials.
+- `1ngred-card-score-{ingredientId}-{ownerId}` → score pill.
+- `1ngred-add-{ownerId}` → add ingredient button.
+- `1ngred-modal-{ingredientId?}-{ownerId}` → ingredient modal root.
+- `1ngred-t1tle-{ingredientId?}-{ownerId}` → title input.
+- `1ngred-sh0rt-{ingredientId?}-{ownerId}` → short description input.
+- `1ngred-u53-{ingredientId?}-{ownerId}` → usefulness slider.
+- `1ngred-de5c-{ingredientId?}-{ownerId}` → description textarea.
+- `1ngred-why-{ingredientId?}-{ownerId}` → why used textarea.
+- `1ngred-when-{ingredientId?}-{ownerId}` → when used textarea.
+- `1ngred-tips-{ingredientId?}-{ownerId}` → tips textarea.
+- `1ngred-imgup-{ingredientId?}-{ownerId}` → image upload field.
+- `1ngred-vis-{ingredientId?}-{ownerId}` → visibility select.
+- `v13w-ingr-ribbon-{ownerId}-{viewerId}` → viewer read-only ribbon.
+- `hist-ingr-ribbon-{ownerId}-{date}` → historical snapshot ribbon.
