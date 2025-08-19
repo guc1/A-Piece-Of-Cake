@@ -87,6 +87,13 @@ test('flavor CRUD and ordering', async ({ page }) => {
     '❤️',
   );
 
+  // search flavors
+  const flavorSearch = page.locator('input[placeholder="Search flavors…"]');
+  await flavorSearch.fill('Second');
+  await expect(page.locator('li:has-text("Second")')).toBeVisible();
+  await expect(page.locator('li:has-text("First Updated")')).toHaveCount(0);
+  await flavorSearch.fill('');
+
   // keyboard interaction: focus row, open with Enter then close with Esc
   await rows.first().focus();
   await page.keyboard.press('Enter');

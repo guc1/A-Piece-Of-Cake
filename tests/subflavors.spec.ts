@@ -36,6 +36,12 @@ test('subflavor CRUD', async ({ page }) => {
   await page.click('button[id^="s7ubflavoursav-frm"]');
   await expect(page.locator('li:has-text("Sub1")')).toBeVisible();
 
+  // search subflavors
+  const subSearch = page.locator('input[placeholder="Search subflavors…"]');
+  await subSearch.fill('Nope');
+  await expect(page.locator('ul[id^="s7ubflavourli5t"] > li')).toHaveCount(0);
+  await subSearch.fill('');
+
   const rows = page.locator('ul[id^="s7ubflavourli5t"] > li');
   await rows.first().click();
   await page.fill('input[id^="s7ubflavour1mp-frm"]', '80');

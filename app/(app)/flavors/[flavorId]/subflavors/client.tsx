@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { Subflavor, Visibility } from '@/types/subflavor';
 import { createSubflavor, updateSubflavor } from './actions';
 import { useViewContext } from '@/lib/view-context';
@@ -53,6 +53,7 @@ export default function SubflavorsClient({
   const [subflavors, setSubflavors] = useState<Subflavor[]>(
     sortSubflavors(initialSubflavors),
   );
+  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Subflavor | null>(null);
   const [form, setForm] = useState<FormState>({
@@ -72,6 +73,15 @@ export default function SubflavorsClient({
   const modalRef = useRef<HTMLDivElement>(null);
   const formRef = useRef(form);
   const initialFormRef = useRef(initialForm);
+  const filtered = useMemo(
+    () =>
+      subflavors.filter(
+        (f) =>
+          f.name.toLowerCase().includes(search.toLowerCase()) ||
+          f.description.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [subflavors, search],
+  );
 
   useEffect(() => {
     formRef.current = form;
@@ -209,7 +219,7 @@ export default function SubflavorsClient({
 
   return (
     <section>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex items-center gap-4">
         <button
           onClick={editable ? (e) => openCreate(e.currentTarget) : undefined}
           className="rounded bg-orange-500 px-3 py-2 text-white disabled:opacity-50"
@@ -218,9 +228,16 @@ export default function SubflavorsClient({
         >
           New Subflavor
         </button>
+        <input
+          type="text"
+          placeholder="Search subflavors…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 rounded border px-2 py-1"
+        />
       </div>
       <ul className="flex flex-col gap-4" id={`s7ubflavourli5t-${userId}`}>
-        {subflavors.map((f) => (
+        {filtered.map((f) => (
           <li
             key={f.id}
             id={`s7ubflavourrow${f.id}-${userId}`}
@@ -283,7 +300,9 @@ export default function SubflavorsClient({
               <button
                 id={`s7ubflavoured1t${f.id}-${userId}`}
                 className="text-sm text-blue-600 underline disabled:opacity-50"
-                onClick={editable ? (e) => openEdit(f, e.currentTarget) : undefined}
+                onClick={
+                  editable ? (e) => openEdit(f, e.currentTarget) : undefined
+                }
                 disabled={!editable}
               >
                 Edit ▸
