@@ -31,16 +31,12 @@ export default async function HistoryViewLayout({
     snapshotDate: date,
   });
   return (
-    <html lang="en">
-      <body>
-        <ViewContextProvider value={ctx}>
-          <AppNav />
-          <main className="p-4">
-            <div id={`v13wctx-${ctx.ownerId}-${ctx.viewerId || 0}`}>{children}</div>
-          </main>
-          <ViewerBar />
-        </ViewContextProvider>
-      </body>
-    </html>
+    <ViewContextProvider value={ctx}>
+      <AppNav />
+      <main className="p-4">
+        <div id={`v13wctx-${ctx.ownerId}-${ctx.viewerId || 0}`}>{children}</div>
+      </main>
+      <ViewerBar />
+    </ViewContextProvider>
   );
 }
