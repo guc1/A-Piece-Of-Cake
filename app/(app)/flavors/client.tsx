@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Flavor, Visibility, FlavorInput } from '@/types/flavor';
+import type { Subflavor } from '@/types/subflavor';
 import { createFlavor, updateFlavor, copyFlavor } from './actions';
 import type { PeopleLists, Person } from '@/lib/people-store';
 import { useViewContext } from '@/lib/view-context';
@@ -73,11 +74,13 @@ export default function FlavorsClient({
   selfId,
   initialFlavors,
   people,
+  snapshotSubflavors,
 }: {
   userId: string;
   selfId?: string;
   initialFlavors: Flavor[];
   people?: PeopleLists;
+  snapshotSubflavors?: Subflavor[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -769,16 +772,33 @@ export default function FlavorsClient({
                     className="rounded bg-orange-500 px-3 py-1 text-white"
                     onClick={async () => {
                       let withSubs = false;
-                      try {
-                        const res = await fetch(
-                          `/api/public-subflavors?userId=${userId}&flavorId=${editing.id}`,
+                      let subs: Subflavor[] | undefined;
+                      if (snapshotSubflavors) {
+                        subs = snapshotSubflavors.filter(
+                          (s) => s.flavorId === editing.id,
                         );
-                        const subs = await res.json();
-                        if (Array.isArray(subs) && subs.length > 0) {
+                        if (subs.length > 0) {
                           withSubs = confirm('Also copy the subflavors?');
                         }
-                      } catch {}
-                      await copyFlavor(userId, editing.id, withSubs);
+                      } else {
+                        try {
+                          const res = await fetch(
+                            `/api/public-subflavors?userId=${userId}&flavorId=${editing.id}`,
+                          );
+                          const data = await res.json();
+                          if (Array.isArray(data) && data.length > 0) {
+                            withSubs = confirm('Also copy the subflavors?');
+                            if (withSubs) subs = data;
+                          }
+                        } catch {}
+                      }
+                      await copyFlavor(
+                        userId,
+                        editing.id,
+                        withSubs,
+                        editing,
+                        subs,
+                      );
                       alert('Copied');
                     }}
                   >

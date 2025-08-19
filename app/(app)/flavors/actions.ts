@@ -9,6 +9,7 @@ import {
 import { ensureUser } from '@/lib/users';
 import { revalidatePath } from 'next/cache';
 import type { Flavor, FlavorInput } from '@/types/flavor';
+import type { Subflavor } from '@/types/subflavor';
 import { assertOwner } from '@/lib/profile';
 import { listSubflavors, createSubflavor } from '@/lib/subflavors-store';
 
@@ -71,11 +72,7 @@ export async function updateFlavor(id: string, form: any): Promise<Flavor> {
   const session = await auth();
   const self = await ensureUser(session);
   await assertOwner(self.id, self.id);
-  const updated = await updateFlavorStore(
-    String(self.id),
-    id,
-    sanitize(form),
-  );
+  const updated = await updateFlavorStore(String(self.id), id, sanitize(form));
   if (!updated) {
     throw new Error('Not found');
   }
@@ -87,24 +84,29 @@ export async function copyFlavor(
   fromUserId: string,
   flavorId: string,
   withSubs: boolean,
+  source?: Flavor,
+  sourceSubs?: Subflavor[],
 ) {
   const session = await auth();
   const self = await ensureUser(session);
-  const source = await getFlavor(fromUserId, flavorId);
-  if (!source) throw new Error('Not found');
+  let src = source ?? (await getFlavor(fromUserId, flavorId));
+  if (!src) throw new Error('Not found');
   const created = await createFlavorStore(String(self.id), {
-    name: source.name,
-    description: source.description,
-    color: source.color,
-    icon: source.icon,
-    importance: source.importance,
-    targetMix: source.targetMix,
-    visibility: source.visibility,
-    orderIndex: source.orderIndex,
-    slug: source.slug,
+    name: src.name,
+    description: src.description,
+    color: src.color,
+    icon: src.icon,
+    importance: src.importance,
+    targetMix: src.targetMix,
+    visibility: src.visibility,
+    orderIndex: src.orderIndex,
+    slug: src.slug,
   });
   if (withSubs) {
-    const subs = await listSubflavors(fromUserId, flavorId);
+    let subs = sourceSubs;
+    if (!subs) {
+      subs = await listSubflavors(fromUserId, flavorId);
+    }
     for (const s of subs) {
       await createSubflavor(String(self.id), created.id, {
         flavorId: created.id,
