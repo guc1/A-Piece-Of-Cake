@@ -7,8 +7,7 @@ import { createFlavor, updateFlavor, copyFlavor } from './actions';
 import type { PeopleLists, Person } from '@/lib/people-store';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor } from '@/lib/navigation';
-
-const ICONS = ['⭐', '❤️', '🌞', '🌙', '📚'];
+import IconPicker from '@/components/icon-picker';
 const VISIBILITIES: Visibility[] = [
   'private',
   'friends',
@@ -97,7 +96,7 @@ export default function FlavorsClient({
     name: '',
     description: '',
     color: '#888888',
-    icon: ICONS[0],
+    icon: '⭐',
     importance: 50,
     targetMix: 50,
     visibility: 'private',
@@ -160,7 +159,7 @@ export default function FlavorsClient({
       name: '',
       description: '',
       color: '#888888',
-      icon: ICONS[0],
+      icon: '⭐',
       importance: 50,
       targetMix: 50,
       visibility: 'private' as Visibility,
@@ -330,7 +329,16 @@ export default function FlavorsClient({
                   className="text-white"
                   style={{ fontSize: 'min(44px, calc(var(--diam)*0.48))' }}
                 >
-                  {f.icon}
+                  {f.icon.startsWith('data:') ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={f.icon}
+                      alt="icon"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    f.icon
+                  )}
                 </span>
               </div>
               <button
@@ -673,18 +681,10 @@ export default function FlavorsClient({
               </div>
               <div>
                 <label className="block text-sm font-medium">Icon</label>
-                <div className="grid grid-cols-5 gap-2">
-                  {ICONS.map((ic) => (
-                    <button
-                      key={ic}
-                      type="button"
-                      onClick={() => setForm({ ...form, icon: ic })}
-                      className={`flex h-8 w-8 items-center justify-center rounded border ${form.icon === ic ? 'bg-gray-200' : ''}`}
-                    >
-                      {ic}
-                    </button>
-                  ))}
-                </div>
+                <IconPicker
+                  value={form.icon}
+                  onChange={(icon) => setForm({ ...form, icon })}
+                />
               </div>
               <div>
                 <label
