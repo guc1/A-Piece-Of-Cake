@@ -1,15 +1,7 @@
 import { db } from './db';
-import {
-  profileSnapshots,
-  users,
-  flavors,
-  subflavors,
-} from './db/schema';
+import { profileSnapshots, users, flavors, subflavors } from './db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-
-function toISODate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
+import { startOfDay, addDays, toYMD } from './clock';
 
 export async function createProfileSnapshot(
   userId: number,
@@ -45,12 +37,10 @@ export async function createProfileSnapshot(
     .onConflictDoNothing();
 }
 
-export async function ensureDailyProfileSnapshot(userId: number) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yIso = toISODate(yesterday);
+export async function ensureDailyProfileSnapshot(userId: number, tz: string) {
+  const today = startOfDay(new Date(), tz);
+  const yesterday = addDays(today, -1, tz);
+  const yIso = toYMD(yesterday, tz);
   const existing = await db
     .select({ id: profileSnapshots.id })
     .from(profileSnapshots)
@@ -76,10 +66,7 @@ export async function listProfileSnapshotDates(
   return rows.map((r) => r.snapshotDate);
 }
 
-export async function getProfileSnapshot(
-  userId: number,
-  snapshotDate: string,
-) {
+export async function getProfileSnapshot(userId: number, snapshotDate: string) {
   const [row] = await db
     .select()
     .from(profileSnapshots)

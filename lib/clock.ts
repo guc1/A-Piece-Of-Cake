@@ -33,12 +33,11 @@ function getOffset(date: Date, tz: string): number {
   return asUTC - date.getTime();
 }
 
-export function getUserTimeZone(user?: { timeZone?: string }): string {
-  return (
-    user?.timeZone ||
-    Intl.DateTimeFormat().resolvedOptions().timeZone ||
-    'UTC'
-  );
+export function getUserTimeZone(
+  user?: { timeZone?: string } | Record<string, unknown>,
+): string {
+  const tz = (user as any)?.timeZone as string | undefined;
+  return tz || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 }
 
 function first(val?: string | string[]): string | undefined {
@@ -46,7 +45,10 @@ function first(val?: string | string[]): string | undefined {
   return val;
 }
 
-export function getNow(tz: string, req?: ReqLike): { now: Date; override: boolean } {
+export function getNow(
+  tz: string,
+  req?: ReqLike,
+): { now: Date; override: boolean } {
   let override = false;
   let result: Date | undefined;
 
