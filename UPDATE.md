@@ -73,6 +73,7 @@
 - 2025-08-18: Implemented profile snapshot system with historical viewing mode and calendar access.
 - 2025-08-18: Implemented profile snapshot system with historical viewing mode and calendar access.
 - 2025-10-01: Added visual historical profile pages with snapshot-based flavors and subflavors navigation.
+- 2025-08-19: Added ingredients feature with CRUD UI, server actions, history revisions, and viewer copying.
 - 2025-10-02: Added review planning view with per-block good/bad feedback and general day vibe modal.
 - 2025-10-02: Relocated general day vibe action to planner toolbar, removed add timeslot in review, and ensured modal blurs background.
 - 2025-10-02: Highlighted general day vibe button and raised vibe modal above planner blocks.
