@@ -23,7 +23,8 @@ export default function PlanningLanding({
   reviewLabel,
 }: Props) {
   const router = useRouter();
-  const { editable, viewId } = useViewContext();
+  const { editable, viewId, mode, snapshotDate, ownerId, viewerId } =
+    useViewContext();
   const tooltip = editable ? undefined : 'Read-only in viewing mode.';
 
   useEffect(() => {
@@ -41,19 +42,30 @@ export default function PlanningLanding({
     return () => clearInterval(id);
   }, [tz, today]);
 
+  function navigate(target: string) {
+    if (mode === 'historical') {
+      if (viewerId === ownerId) {
+        router.push(`/history/self/${snapshotDate}/planning/${target}`);
+      } else if (viewId && snapshotDate) {
+        router.push(`/history/${viewId}/${snapshotDate}/planning/${target}`);
+      }
+    } else if (editable) {
+      router.push(`/planning/${target}`);
+    } else if (viewId) {
+      router.push(`/view/${viewId}/planning/${target}`);
+    }
+  }
+
   function handleNext() {
-    if (editable) router.push('/planning/next');
-    else if (viewId) router.push(`/view/${viewId}/planning/next`);
+    navigate('next');
   }
 
   function handleLive() {
-    if (editable) router.push('/planning/live');
-    else if (viewId) router.push(`/view/${viewId}/planning/live`);
+    navigate('live');
   }
 
   function handleReview() {
-    if (editable) router.push('/planning/review');
-    else if (viewId) router.push(`/view/${viewId}/planning/review`);
+    navigate('review');
   }
 
   return (
@@ -82,7 +94,7 @@ export default function PlanningLanding({
       </div>
       <Button
         id={`p1an-btn-review-${userId}`}
-        disabled={!editable}
+        disabled={!editable && viewerId !== ownerId}
         title={tooltip}
         onClick={handleReview}
       >
