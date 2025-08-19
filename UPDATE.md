@@ -71,5 +71,6 @@
 - 2025-09-30: Added slide-out calendar panel on home screen with past 30 days and upcoming week view.
 - 2025-09-30: Enabled month navigation in slide-out calendar to jump one month backward or forward.
 - 2025-08-18: Implemented profile snapshot system with historical viewing mode and calendar access.
- - 2025-08-18: Implemented profile snapshot system with historical viewing mode and calendar access.
- - 2025-10-01: Added visual historical profile pages with snapshot-based flavors and subflavors navigation.
+- 2025-08-18: Implemented profile snapshot system with historical viewing mode and calendar access.
+- 2025-10-01: Added visual historical profile pages with snapshot-based flavors and subflavors navigation.
+- 2025-10-02: Added review planning view with per-block good/bad feedback and general day vibe modal.
