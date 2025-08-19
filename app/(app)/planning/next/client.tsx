@@ -125,6 +125,24 @@ export default function EditorClient({
     if (nowMinute > endMinute) setEndMinute(MAX_MINUTES);
   }, [live, nowMinute, startMinute, endMinute]);
 
+  // Reload the planner when the system date rolls over so each mode
+  // always operates on the correct day. This lets testers advance time
+  // and have live/next-day logic adjust automatically.
+  useEffect(() => {
+    const checkRollover = () => {
+      const now = new Date();
+      const expected = live
+        ? now.toISOString().slice(0, 10)
+        : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+            .toISOString()
+            .slice(0, 10);
+      if (expected !== date) window.location.reload();
+    };
+    const id = setInterval(checkRollover, 60_000);
+    checkRollover();
+    return () => clearInterval(id);
+  }, [date, live]);
+
   useEffect(() => {
     try {
       window.localStorage.setItem(reviewKey, JSON.stringify(reviews));
