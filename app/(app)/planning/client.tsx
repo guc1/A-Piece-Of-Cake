@@ -1,13 +1,45 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useViewContext } from '@/lib/view-context';
 import { Button } from '@/components/ui/button';
 
-export default function PlanningLanding({ userId }: { userId: string }) {
+interface Props {
+  userId: string;
+  tz: string;
+  today: string;
+  nextLabel: string;
+  liveLabel: string;
+  reviewLabel: string;
+}
+
+export default function PlanningLanding({
+  userId,
+  tz,
+  today,
+  nextLabel,
+  liveLabel,
+  reviewLabel,
+}: Props) {
   const router = useRouter();
   const { editable, viewId } = useViewContext();
   const tooltip = editable ? undefined : 'Read-only in viewing mode.';
+
+  useEffect(() => {
+    const tick = () => {
+      fetch(`/api/clock?tz=${encodeURIComponent(tz)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.ymd !== today) {
+            window.location.reload();
+          }
+        })
+        .catch(() => {});
+    };
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
+  }, [tz, today]);
 
   function handleNext() {
     if (editable) router.push('/planning/next');
@@ -34,7 +66,7 @@ export default function PlanningLanding({ userId }: { userId: string }) {
         title={tooltip}
         onClick={handleNext}
       >
-        Planning for Next Day
+        Planning for Next Day — {nextLabel}
       </Button>
       <div className="flex items-center">
         <span className="relative mr-2">
@@ -45,7 +77,7 @@ export default function PlanningLanding({ userId }: { userId: string }) {
           title={tooltip}
           onClick={handleLive}
         >
-          Live Planning
+          Live Planning — {liveLabel}
         </Button>
       </div>
       <Button
@@ -54,7 +86,7 @@ export default function PlanningLanding({ userId }: { userId: string }) {
         title={tooltip}
         onClick={handleReview}
       >
-        Review Today’s Planning
+        Review Today’s Planning — {reviewLabel}
       </Button>
     </section>
   );

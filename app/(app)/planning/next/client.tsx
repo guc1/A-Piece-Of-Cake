@@ -29,7 +29,9 @@ const Z_BASE = 10000;
 
 interface Props {
   userId: string;
-  date: string; // YYYY-MM-DD
+  date: string; // plan date YYYY-MM-DD
+  today: string; // today's date YYYY-MM-DD
+  tz: string;
   initialPlan: Plan | null;
   live?: boolean;
   review?: boolean;
@@ -38,6 +40,8 @@ interface Props {
 export default function EditorClient({
   userId,
   date,
+  today,
+  tz,
   initialPlan,
   live = false,
   review = false,
@@ -125,23 +129,22 @@ export default function EditorClient({
     if (nowMinute > endMinute) setEndMinute(MAX_MINUTES);
   }, [live, nowMinute, startMinute, endMinute]);
 
-  // Reload the planner when the system date rolls over so each mode
-  // always operates on the correct day. This lets testers advance time
-  // and have live/next-day logic adjust automatically.
+  // Refresh when the calendar day changes in the user's timezone so the
+  // planner always targets the correct date (live vs. next day).
   useEffect(() => {
-    const checkRollover = () => {
-      const now = new Date();
-      const expected = live
-        ? now.toISOString().slice(0, 10)
-        : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-            .toISOString()
-            .slice(0, 10);
-      if (expected !== date) window.location.reload();
+    const check = () => {
+      fetch(`/api/clock?tz=${encodeURIComponent(tz)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.ymd !== today) {
+            window.location.reload();
+          }
+        })
+        .catch(() => {});
     };
-    const id = setInterval(checkRollover, 60_000);
-    checkRollover();
+    const id = setInterval(check, 60_000);
     return () => clearInterval(id);
-  }, [date, live]);
+  }, [tz, today]);
 
   useEffect(() => {
     try {

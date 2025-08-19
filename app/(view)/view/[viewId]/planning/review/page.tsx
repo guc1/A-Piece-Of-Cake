@@ -8,7 +8,7 @@ import EditorClient from '@/app/(app)/planning/next/client';
 
 export const revalidate = 0;
 
-export default async function ViewPlanningLivePage({
+export default async function ViewPlanningReviewPage({
   params,
   searchParams,
 }: {
@@ -19,7 +19,7 @@ export default async function ViewPlanningLivePage({
   const user = await getUserByViewId(viewId);
   if (!user) notFound();
   const cookieStore = await cookies();
-  const info = resolvePlanDate('live', user, { cookies: cookieStore, searchParams });
+  const info = resolvePlanDate('review', user, { cookies: cookieStore, searchParams });
   const dateStr = toYMD(info.date, info.tz);
   const todayStr = toYMD(info.today, info.tz);
   const plan = await getPlanStrict(user.id, dateStr);
@@ -36,6 +36,7 @@ export default async function ViewPlanningLivePage({
         tz={info.tz}
         initialPlan={plan}
         live
+        review
       />
     </section>
   );
