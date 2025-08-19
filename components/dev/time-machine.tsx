@@ -12,7 +12,9 @@ export function TimeMachine({ open, onClose }: Props) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [date, setDate] = useState('');
-  const realDateRef = useRef<DateConstructor | null>(null);
+  const realDateRef = useRef<DateConstructor | null>(
+    (globalThis as any).__realDate || null,
+  );
 
   if (!open) return null;
 
@@ -30,9 +32,10 @@ export function TimeMachine({ open, onClose }: Props) {
     if (!date) return;
     const t = new Date(date).getTime();
     if (!realDateRef.current) {
-      realDateRef.current = Date;
+      realDateRef.current = (globalThis as any).__realDate || Date;
     }
-    const RealDate = realDateRef.current;
+    (globalThis as any).__realDate = realDateRef.current;
+    const RealDate = realDateRef.current as DateConstructor;
     class MockDate extends RealDate {
       constructor(...args: any[]) {
         if (args.length === 0) {
@@ -47,14 +50,19 @@ export function TimeMachine({ open, onClose }: Props) {
       }
     }
     (globalThis as any).Date = MockDate as unknown as DateConstructor;
+    document.cookie = `site-date=${t}; path=/`;
     handleClose();
   }
 
   function resetOverride() {
-    if (realDateRef.current) {
-      (globalThis as any).Date = realDateRef.current;
-      realDateRef.current = null;
+    const g = globalThis as any;
+    const RealDate = realDateRef.current || g.__realDate;
+    if (RealDate) {
+      g.Date = RealDate;
     }
+    realDateRef.current = null;
+    delete g.__realDate;
+    document.cookie = 'site-date=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   }
 
   function resetToCurrentNl() {
@@ -66,9 +74,10 @@ export function TimeMachine({ open, onClose }: Props) {
     const offset = parseInt(tz, 10) * 60 * 60 * 1000;
     const t = new Date(base).getTime() - offset;
     if (!realDateRef.current) {
-      realDateRef.current = Date;
+      realDateRef.current = (globalThis as any).__realDate || Date;
     }
-    const RealDate = realDateRef.current;
+    (globalThis as any).__realDate = realDateRef.current;
+    const RealDate = realDateRef.current as DateConstructor;
     class MockDate extends RealDate {
       constructor(...args: any[]) {
         if (args.length === 0) {
@@ -83,6 +92,7 @@ export function TimeMachine({ open, onClose }: Props) {
       }
     }
     (globalThis as any).Date = MockDate as unknown as DateConstructor;
+    document.cookie = `site-date=${t}; path=/`;
     handleClose();
   }
 
