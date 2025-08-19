@@ -21,8 +21,10 @@ export default async function HistorySubflavorsPage({
   return (
     <SubflavorsClient
       userId={String(me.id)}
+      selfId={String(me.id)}
       flavorId={flavorId}
       initialSubflavors={subflavors as any}
+      targetFlavorId={flavorId}
     />
   );
 }
