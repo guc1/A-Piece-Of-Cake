@@ -52,7 +52,8 @@ export const flavors = pgTable('flavors', {
   name: varchar('name', { length: 40 }),
   description: text('description'),
   color: varchar('color', { length: 10 }),
-  icon: varchar('icon', { length: 10 }),
+  // Use text for icons to allow storage of data URLs or longer icon identifiers
+  icon: text('icon'),
   importance: integer('importance'),
   targetMix: integer('target_mix'),
   visibility: varchar('visibility', { length: 20 }),
@@ -69,7 +70,8 @@ export const subflavors = pgTable('subflavors', {
   name: varchar('name', { length: 40 }),
   description: text('description'),
   color: varchar('color', { length: 10 }),
-  icon: varchar('icon', { length: 10 }),
+  // Allow longer icon values for custom uploads
+  icon: text('icon'),
   importance: integer('importance'),
   targetMix: integer('target_mix'),
   visibility: varchar('visibility', { length: 20 }),
