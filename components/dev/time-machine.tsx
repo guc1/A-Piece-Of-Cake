@@ -12,7 +12,8 @@ export function TimeMachine({ open, onClose }: Props) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [date, setDate] = useState('');
-  const realDateRef = useRef<DateConstructor | null>(null);
+  (globalThis as any)._realDate = (globalThis as any)._realDate || Date;
+  const realDateRef = useRef<DateConstructor>((globalThis as any)._realDate);
 
   if (!open) return null;
 
@@ -26,63 +27,51 @@ export function TimeMachine({ open, onClose }: Props) {
     }
   }
 
-  function applyOverride() {
-    if (!date) return;
-    const t = new Date(date).getTime();
-    if (!realDateRef.current) {
-      realDateRef.current = Date;
-    }
+  function override(offset: number) {
     const RealDate = realDateRef.current;
     class MockDate extends RealDate {
       constructor(...args: any[]) {
         if (args.length === 0) {
-          super(t);
+          super(RealDate.now() + offset);
         } else {
           // @ts-ignore -- spread args for Date constructor
           super(...args);
         }
       }
       static now() {
-        return t;
+        return RealDate.now() + offset;
       }
     }
     (globalThis as any).Date = MockDate as unknown as DateConstructor;
+    localStorage.setItem('timeOffset', String(offset));
+  }
+
+  function applyOverride() {
+    if (!date) return;
+    const RealDate = realDateRef.current;
+    const target = new Date(date).getTime();
+    const offset = target - RealDate.now();
+    override(offset);
     handleClose();
   }
 
   function resetOverride() {
-    if (realDateRef.current) {
-      (globalThis as any).Date = realDateRef.current;
-      realDateRef.current = null;
-    }
+    const RealDate = realDateRef.current;
+    (globalThis as any).Date = RealDate;
+    localStorage.removeItem('timeOffset');
   }
 
   function resetToCurrentNl() {
-    const amsString = new Date().toLocaleString('en-US', {
+    const RealDate = realDateRef.current;
+    const amsString = new RealDate().toLocaleString('en-US', {
       timeZone: 'Europe/Amsterdam',
       timeZoneName: 'short',
     });
     const [base, tz] = amsString.split(' GMT');
-    const offset = parseInt(tz, 10) * 60 * 60 * 1000;
-    const t = new Date(base).getTime() - offset;
-    if (!realDateRef.current) {
-      realDateRef.current = Date;
-    }
-    const RealDate = realDateRef.current;
-    class MockDate extends RealDate {
-      constructor(...args: any[]) {
-        if (args.length === 0) {
-          super(t);
-        } else {
-          // @ts-ignore -- spread args for Date constructor
-          super(...args);
-        }
-      }
-      static now() {
-        return t;
-      }
-    }
-    (globalThis as any).Date = MockDate as unknown as DateConstructor;
+    const offsetMs = parseInt(tz, 10) * 60 * 60 * 1000;
+    const t = new RealDate(base).getTime() - offsetMs;
+    const offset = t - RealDate.now();
+    override(offset);
     handleClose();
   }
 
