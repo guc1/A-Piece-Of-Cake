@@ -110,3 +110,14 @@ export async function savePlan(
     blocks: results,
   };
 }
+
+export async function deletePlan(userId: string, dateStr: string) {
+  const dateKey = new Date(dateStr).toISOString().slice(0, 10);
+  const [planRow] = await db
+    .select({ id: plans.id })
+    .from(plans)
+    .where(and(eq(plans.userId, Number(userId)), eq(plans.date, dateKey)));
+  if (!planRow) return;
+  await db.delete(planBlocks).where(eq(planBlocks.planId, planRow.id));
+  await db.delete(plans).where(eq(plans.id, planRow.id));
+}
