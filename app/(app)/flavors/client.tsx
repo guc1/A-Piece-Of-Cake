@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import type { Flavor, Visibility } from '@/types/flavor';
-import { createFlavor, updateFlavor } from './actions';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { Flavor, Visibility, FlavorInput } from '@/types/flavor';
+import { createFlavor, updateFlavor, copyFlavor } from './actions';
+import type { PeopleLists, Person } from '@/lib/people-store';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor } from '@/lib/navigation';
 
@@ -21,6 +22,31 @@ const COLOR_SWATCHES = [
   '#60a5fa',
   '#a78bfa',
   '#f472b6',
+];
+
+const PRESET_FLAVORS: FlavorInput[] = [
+  {
+    name: 'Health',
+    description: 'Care for body and mind',
+    color: '#f97316',
+    icon: '❤️',
+    importance: 70,
+    targetMix: 50,
+    visibility: 'private',
+    orderIndex: 0,
+    slug: undefined,
+  },
+  {
+    name: 'Learning',
+    description: 'Continuous growth and study',
+    color: '#60a5fa',
+    icon: '📚',
+    importance: 60,
+    targetMix: 40,
+    visibility: 'private',
+    orderIndex: 0,
+    slug: undefined,
+  },
 ];
 
 function sortFlavors(list: Flavor[]) {
@@ -44,17 +70,26 @@ type FormState = {
 
 export default function FlavorsClient({
   userId,
+  selfId,
   initialFlavors,
+  people,
 }: {
   userId: string;
+  selfId?: string;
   initialFlavors: Flavor[];
+  people?: PeopleLists;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const ctx = useViewContext();
   const { editable } = ctx;
   const [flavors, setFlavors] = useState<Flavor[]>(sortFlavors(initialFlavors));
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [choiceOpen, setChoiceOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importMode, setImportMode] = useState<'choice' | 'preset' | 'search'>('choice');
+  const [peopleSearch, setPeopleSearch] = useState('');
   const [editing, setEditing] = useState<Flavor | null>(null);
   const [form, setForm] = useState<FormState>({
     name: '',
@@ -93,10 +128,32 @@ export default function FlavorsClient({
 
   const mode = editing ? 'edit' : 'new';
 
-  function openCreate(e: HTMLElement) {
+  async function importPreset(p: FlavorInput) {
+    const created = await createFlavor(p);
+    setFlavors((prev) => sortFlavors([...prev, created]));
+    setImportOpen(false);
+    setImportMode('choice');
+  }
+
+  function filterPeople(list: Person[] | undefined) {
+    if (!list) return [];
+    const q = peopleSearch.toLowerCase();
+    return list.filter(
+      (p) =>
+        p.handle.toLowerCase().includes(q) ||
+        (p.displayName ? p.displayName.toLowerCase().includes(q) : false),
+    );
+  }
+
+  const categories = [
+    { label: 'Friends', list: filterPeople(people?.friends) },
+    { label: 'Following', list: filterPeople(people?.following) },
+    { label: 'Others', list: filterPeople(people?.others) },
+  ];
+
+  function openNew() {
     if (!editable) return;
-    triggerRef.current = e;
-    setEditing(null);
+    triggerRef.current = null;
     const blank = {
       name: '',
       description: '',
@@ -109,11 +166,11 @@ export default function FlavorsClient({
     };
     setForm(blank);
     setInitialForm(blank);
+    setEditing(null);
     setModalOpen(true);
   }
 
   function openEdit(f: Flavor, e: HTMLElement) {
-    if (!editable) return;
     triggerRef.current = e;
     const current = {
       name: f.name,
@@ -221,12 +278,12 @@ export default function FlavorsClient({
     <section>
       <div className="mb-4 flex items-center gap-4">
         <button
-          onClick={editable ? (e) => openCreate(e.currentTarget) : undefined}
-          className="rounded bg-orange-500 px-3 py-2 text-white disabled:opacity-50"
-          id={`f7avoured1tnew-${userId}`}
+          id={`f7av-add-${userId}`}
+          onClick={() => editable && setChoiceOpen(true)}
           disabled={!editable}
+          className="rounded bg-orange-500 px-3 py-2 text-white disabled:opacity-50"
         >
-          New Flavor
+          + Add flavor
         </button>
         <input
           type="text"
@@ -243,12 +300,10 @@ export default function FlavorsClient({
             id={`f7avourrow${f.id}-${userId}`}
             role="button"
             tabIndex={0}
-            onClick={editable ? (e) => openEdit(f, e.currentTarget) : undefined}
+            onClick={(e) => openEdit(f, e.currentTarget)}
             onKeyDown={(e) => {
-              if (!editable) return;
-              if (e.key === 'Enter')
-                openEdit(f, e.currentTarget as HTMLElement);
-              if (e.key === 'Delete') remove(f);
+              if (e.key === 'Enter') openEdit(f, e.currentTarget as HTMLElement);
+              if (editable && e.key === 'Delete') remove(f);
             }}
             className="flex items-center gap-4 p-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
           >
@@ -280,9 +335,11 @@ export default function FlavorsClient({
                 className="mt-2 text-xs text-blue-600 underline"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const href = editable
+                  const base = editable
                     ? `/flavors/${f.id}/subflavors`
                     : hrefFor(`/flavors/${f.id}/subflavors`, ctx);
+                  const target = searchParams.get('to');
+                  const href = target ? `${base}?to=${target}` : base;
                   router.push(href);
                 }}
               >
@@ -334,6 +391,169 @@ export default function FlavorsClient({
           </li>
         ))}
       </ul>
+      {choiceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded bg-white p-6 shadow-lg">
+            <h2 className="mb-4 text-xl font-semibold">Add flavor</h2>
+            <div className="flex flex-col gap-2">
+              <button
+                id={`f7av-add-own-${userId}`}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+                onClick={() => {
+                  setChoiceOpen(false);
+                  openNew();
+                }}
+              >
+                Create own flavor
+              </button>
+              <button
+                id={`f7av-add-import-${userId}`}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+                onClick={() => {
+                  setChoiceOpen(false);
+                  setImportMode('choice');
+                  setImportOpen(true);
+                }}
+              >
+                Import flavor
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={() => setChoiceOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded bg-white p-6 shadow-lg">
+            {importMode === 'choice' && (
+              <>
+                <h2 className="mb-4 text-xl font-semibold">Import flavor</h2>
+                <div className="flex flex-col gap-2">
+                  <button
+                    id={`f7av-imp-pre-${userId}`}
+                    className="rounded bg-orange-500 px-3 py-1 text-white"
+                    onClick={() => setImportMode('preset')}
+                  >
+                    Choose a preset
+                  </button>
+                  <button
+                    id={`f7av-imp-srch-${userId}`}
+                    className="rounded bg-orange-500 px-3 py-1 text-white"
+                    onClick={() => setImportMode('search')}
+                  >
+                    Search what others have
+                  </button>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+            {importMode === 'preset' && (
+              <>
+                <h2 className="mb-4 text-xl font-semibold">Choose a preset</h2>
+                <div className="flex flex-col gap-2">
+                  {PRESET_FLAVORS.map((p, idx) => (
+                    <button
+                      key={idx}
+                      id={`f7av-pr3-${idx}-${userId}`}
+                      className="rounded border p-2 text-left hover:bg-gray-50"
+                      onClick={() => importPreset(p)}
+                    >
+                      <div className="font-semibold">{p.name}</div>
+                      <div className="text-sm text-gray-600">{p.description}</div>
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportMode('choice')}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+            {importMode === 'search' && (
+              <>
+                <h2 className="mb-4 text-xl font-semibold">Search people</h2>
+                <input
+                  type="text"
+                  id={`f7av-ppl-srch-${userId}`}
+                  placeholder="Search users…"
+                  value={peopleSearch}
+                  onChange={(e) => setPeopleSearch(e.target.value)}
+                  className="mb-4 w-full rounded border px-2 py-1"
+                />
+                <div className="max-h-64 overflow-y-auto space-y-4">
+                  {categories.map((c) => (
+                    <div key={c.label}>
+                      <h3 className="font-semibold">{c.label}</h3>
+                      {c.list.length === 0 ? (
+                        <p className="text-sm text-gray-500">No users.</p>
+                      ) : (
+                        <ul className="divide-y">
+                          {c.list.map((u) => (
+                            <li key={u.id} className="py-2">
+                              <a
+                                id={`f7av-ppl-${u.id}-${userId}`}
+                                href={`/view/${u.viewId}/flavors${searchParams.get('to') ? `?to=${searchParams.get('to')}` : ''}`}
+                                className="block"
+                              >
+                                {u.displayName ?? u.handle}{' '}
+                                <span className="text-sm text-gray-600">@{u.handle}</span>
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportMode('choice')}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border px-3 py-1"
+                    onClick={() => setImportOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {modalOpen && (
         <div
           id={`f7avourmdl-${mode}-${userId}`}
@@ -536,6 +756,26 @@ export default function FlavorsClient({
                 >
                   Save
                 </button>
+                {!editable && selfId && editing && (
+                  <button
+                    type="button"
+                    className="rounded bg-orange-500 px-3 py-1 text-white"
+                    onClick={async () => {
+                      let withSubs = false;
+                      try {
+                        const res = await fetch(`/api/public-subflavors?userId=${userId}&flavorId=${editing.id}`);
+                        const subs = await res.json();
+                        if (Array.isArray(subs) && subs.length > 0) {
+                          withSubs = confirm('Also copy the subflavors?');
+                        }
+                      } catch {}
+                      await copyFlavor(userId, editing.id, withSubs);
+                      alert('Copied');
+                    }}
+                  >
+                    Copy flavor
+                  </button>
+                )}
               </div>
             </form>
           </div>

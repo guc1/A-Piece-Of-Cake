@@ -4,11 +4,13 @@ import { auth } from '@/lib/auth';
 import {
   createFlavor as createFlavorStore,
   updateFlavor as updateFlavorStore,
+  getFlavor,
 } from '@/lib/flavors-store';
 import { ensureUser } from '@/lib/users';
 import { revalidatePath } from 'next/cache';
 import type { Flavor, FlavorInput } from '@/types/flavor';
 import { assertOwner } from '@/lib/profile';
+import { listSubflavors, createSubflavor } from '@/lib/subflavors-store';
 
 function sanitize(body: any): FlavorInput {
   if (
@@ -79,4 +81,46 @@ export async function updateFlavor(id: string, form: any): Promise<Flavor> {
   }
   revalidatePath('/flavors');
   return updated;
+}
+
+export async function copyFlavor(
+  fromUserId: string,
+  flavorId: string,
+  withSubs: boolean,
+) {
+  const session = await auth();
+  const self = await ensureUser(session);
+  const source = await getFlavor(fromUserId, flavorId);
+  if (!source) throw new Error('Not found');
+  const created = await createFlavorStore(String(self.id), {
+    name: source.name,
+    description: source.description,
+    color: source.color,
+    icon: source.icon,
+    importance: source.importance,
+    targetMix: source.targetMix,
+    visibility: source.visibility,
+    orderIndex: source.orderIndex,
+    slug: source.slug,
+  });
+  if (withSubs) {
+    const subs = await listSubflavors(fromUserId, flavorId);
+    for (const s of subs) {
+      await createSubflavor(String(self.id), created.id, {
+        flavorId: created.id,
+        name: s.name,
+        description: s.description,
+        color: s.color,
+        icon: s.icon,
+        importance: s.importance,
+        targetMix: s.targetMix,
+        visibility: s.visibility,
+        orderIndex: s.orderIndex,
+        slug: s.slug,
+      });
+    }
+    revalidatePath(`/flavors/${created.id}/subflavors`);
+  }
+  revalidatePath('/flavors');
+  return created;
 }
