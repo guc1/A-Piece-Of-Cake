@@ -19,6 +19,11 @@ export default function PlanningLanding({ userId }: { userId: string }) {
     else if (viewId) router.push(`/view/${viewId}/planning/live`);
   }
 
+  function handleReview() {
+    if (editable) router.push('/planning/review');
+    else if (viewId) router.push(`/view/${viewId}/planning/review`);
+  }
+
   return (
     <section
       id={`p1an-landing-${userId}`}
@@ -47,6 +52,7 @@ export default function PlanningLanding({ userId }: { userId: string }) {
         id={`p1an-btn-review-${userId}`}
         disabled={!editable}
         title={tooltip}
+        onClick={handleReview}
       >
         Review Today’s Planning
       </Button>
