@@ -12,6 +12,8 @@ function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
     title: row.title ?? '',
     description: row.description ?? '',
     color: row.color ?? '#888888',
+    good: row.good ?? '',
+    bad: row.bad ?? '',
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -36,6 +38,7 @@ export async function getPlan(
     userId: userId,
     date: planRow.date,
     blocks: blockRows.map(toPlanBlock),
+    vibe: (planRow as any).vibe ?? undefined,
   };
 }
 
@@ -43,6 +46,7 @@ export async function savePlan(
   userId: string,
   dateStr: string,
   blocks: PlanBlockInput[],
+  vibe?: string,
 ): Promise<Plan> {
   const dateKey = new Date(dateStr).toISOString().slice(0, 10);
   let [planRow] = await db
@@ -52,16 +56,25 @@ export async function savePlan(
   if (!planRow) {
     const inserted = await db
       .insert(plans)
-      .values({ userId: Number(userId), date: dateKey })
+      .values({ userId: Number(userId), date: dateKey, vibe })
       .returning();
     planRow = inserted[0];
+  } else if (vibe !== undefined) {
+    const [updated] = await db
+      .update(plans)
+      .set({ vibe })
+      .where(eq(plans.id, planRow.id))
+      .returning();
+    planRow = updated;
   }
   const existing = await db
     .select({ id: planBlocks.id })
     .from(planBlocks)
     .where(eq(planBlocks.planId, planRow.id));
   const existingIds = new Set(existing.map((b) => b.id));
-  const incomingIds = new Set(blocks.filter((b) => b.id).map((b) => b.id as string));
+  const incomingIds = new Set(
+    blocks.filter((b) => b.id).map((b) => b.id as string),
+  );
   // delete removed
   const toDelete = [...existingIds].filter((id) => !incomingIds.has(id));
   if (toDelete.length) {
@@ -79,6 +92,8 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          good: blk.good,
+          bad: blk.bad,
           updatedAt: now,
         })
         .where(eq(planBlocks.id, blk.id))
@@ -96,6 +111,8 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          good: blk.good,
+          bad: blk.bad,
           createdAt: now,
           updatedAt: now,
         })
@@ -108,5 +125,6 @@ export async function savePlan(
     userId,
     date: planRow.date,
     blocks: results,
+    vibe: (planRow as any).vibe ?? vibe,
   };
 }

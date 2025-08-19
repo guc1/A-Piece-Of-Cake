@@ -1,0 +1,3 @@
+ALTER TABLE plans ADD COLUMN IF NOT EXISTS vibe text;
+ALTER TABLE plan_blocks ADD COLUMN IF NOT EXISTS good text;
+ALTER TABLE plan_blocks ADD COLUMN IF NOT EXISTS bad text;

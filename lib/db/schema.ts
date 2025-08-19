@@ -116,8 +116,11 @@ export const plans = pgTable(
   'plans',
   {
     id: serial('id').primaryKey(),
-    userId: integer('user_id').references(() => users.id).notNull(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
     date: date('date').notNull(),
+    vibe: text('vibe'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },
@@ -131,12 +134,16 @@ export const plans = pgTable(
 
 export const planBlocks = pgTable('plan_blocks', {
   id: text('id').primaryKey(),
-  planId: integer('plan_id').references(() => plans.id).notNull(),
+  planId: integer('plan_id')
+    .references(() => plans.id)
+    .notNull(),
   start: timestamp('start').notNull(),
   end: timestamp('end').notNull(),
   title: varchar('title', { length: 60 }),
   description: text('description'),
   color: varchar('color', { length: 10 }),
+  good: text('good'),
+  bad: text('bad'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -145,7 +152,9 @@ export const profileSnapshots = pgTable(
   'profile_snapshots',
   {
     id: serial('id').primaryKey(),
-    userId: integer('user_id').references(() => users.id).notNull(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
     snapshotDate: date('snapshot_date').notNull(),
     data: jsonb('data').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
