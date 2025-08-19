@@ -105,3 +105,5 @@
 - 2025-10-17: Enabled copying flavors from historical snapshots for owners and viewers and added tests.
 - 2025-10-17: Enabled copying subflavors from historical snapshots for owners and viewers and added tests.
 - 2025-10-17: Added destination picker when copying subflavors from viewer and historical pages.
+- 2025-10-17: Introduced generic IconPicker with custom uploads, presets, and social options; integrated into flavor and subflavor forms.
+- 2025-10-17: Enlarged IconPicker modal, fixed custom icon preview, and expanded DB icon columns for image data.

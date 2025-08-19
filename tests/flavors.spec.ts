@@ -74,7 +74,8 @@ test('flavor CRUD and ordering', async ({ page }) => {
   await rows.first().click();
   await page.fill('input[id^="f7avourn4me-frm"]', 'First Updated');
   await page.fill('input[name="color"]', '#0000ff');
-  await page.click('button:has-text("❤️")');
+  await page.click('button:has-text("Choose Icon")');
+  await page.click('button[data-testid="icon-option"]:has-text("❤️")');
   await page.click('button[id^="f7avoursav-frm"]');
   await page.reload();
   await expect(rows.first().locator('div[id^="f7avourn4me"]')).toHaveText(
