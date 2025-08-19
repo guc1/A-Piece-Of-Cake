@@ -61,7 +61,9 @@ export async function savePlan(
     .from(planBlocks)
     .where(eq(planBlocks.planId, planRow.id));
   const existingIds = new Set(existing.map((b) => b.id));
-  const incomingIds = new Set(blocks.filter((b) => b.id).map((b) => b.id as string));
+  const incomingIds = new Set(
+    blocks.filter((b) => b.id).map((b) => b.id as string),
+  );
   // delete removed
   const toDelete = [...existingIds].filter((id) => !incomingIds.has(id));
   if (toDelete.length) {
