@@ -109,3 +109,6 @@
 - 2025-10-17: Enlarged IconPicker modal and fixed rendering of uploaded icons.
 - 2025-10-17: Enhanced uploaded icon quality and ensured icons fill circular frames edge-to-edge.
 - 2025-10-17: Widened flavor and subflavor icon columns to text so custom images migrate without length errors.
+- 2025-10-17: Added Other People Icons tab with user search and icon import into My Icons.
+- 2025-10-17: Fixed empty icon src errors, awaited user icon route params, and expanded Other People Icons view for larger user lists.
+- 2025-10-17: Synced My Icons with server storage and API so other profiles display their saved icons for import.
