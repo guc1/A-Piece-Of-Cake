@@ -78,6 +78,41 @@ export const subflavors = pgTable('subflavors', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+export const ingredients = pgTable(
+  'ingredients',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id').references(() => users.id).notNull(),
+    title: varchar('title', { length: 80 }).notNull(),
+    shortDescription: varchar('short_description', { length: 160 }),
+    description: text('description'),
+    whyUsed: text('why_used'),
+    whenUsed: text('when_used'),
+    tips: text('tips'),
+    usefulness: integer('usefulness').default(0),
+    imageUrl: text('image_url'),
+    tags: text('tags').array(),
+    visibility: varchar('visibility', { length: 20 }),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserTitle: uniqueIndex('ingredients_user_title_unique').on(
+      table.userId,
+      table.title,
+    ),
+  }),
+);
+
+export const ingredientRevisions = pgTable('ingredient_revisions', {
+  id: serial('id').primaryKey(),
+  ingredientId: integer('ingredient_id')
+    .references(() => ingredients.id)
+    .notNull(),
+  snapshotAt: timestamp('snapshot_at').defaultNow(),
+  payload: jsonb('payload').notNull(),
+});
+
 export const follows = pgTable(
   'follows',
   {
