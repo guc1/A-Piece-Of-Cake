@@ -131,3 +131,4 @@
 - 2025-08-20: Blocked selecting dates earlier than tomorrow in next-day planner and fixed single-day advance navigation.
 - 2025-08-20: Corrected next-day planner navigation to parse dates in the user's timezone, redirect past selections, and advance week jumps by seven days.
 - 2025-08-20: Added reverse and reset controls to future planning date navigation and prevented navigation before upcoming planning date.
+- 2025-10-19: Cached future planning edits in local storage and added cross-day persistence test.
