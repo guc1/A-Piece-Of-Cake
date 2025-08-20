@@ -95,6 +95,8 @@ export const ingredients = pgTable(
     tips: text('tips'),
     usefulness: integer('usefulness').default(0),
     imageUrl: text('image_url'),
+    // Icon for the ingredient, stored as emoji or data URL
+    icon: text('icon'),
     tags: text('tags').array(),
     visibility: varchar('visibility', { length: 20 }),
     createdAt: timestamp('created_at').defaultNow(),
