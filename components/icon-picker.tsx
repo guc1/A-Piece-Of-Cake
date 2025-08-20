@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { PeopleLists, Person } from '@/lib/people-store';
+import { useViewContext } from '@/lib/view-context';
 
 interface IconPickerProps {
   value: string;
@@ -29,9 +30,12 @@ export default function IconPicker({
   editable = true,
   people,
 }: IconPickerProps) {
+  const ctx = useViewContext();
+  const canEdit = editable && !ctx.snapshotDate;
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'mine' | 'preset' | 'people'>('mine');
   const [myIcons, setMyIcons] = useState<string[]>([]);
+  const [snapshotIcons, setSnapshotIcons] = useState<string[]>([]);
   const [peopleSearch, setPeopleSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<Person | null>(null);
   const [userIcons, setUserIcons] = useState<string[] | null>(null);
@@ -52,27 +56,50 @@ export default function IconPicker({
             if (typeof window !== 'undefined') {
               localStorage.setItem('my-icons', JSON.stringify(unique));
             }
-            return;
           }
         }
       } catch {
         /* ignore network errors */
       }
-      if (typeof window === 'undefined') return;
-      const stored = localStorage.getItem('my-icons');
-      if (stored) {
+      if (ctx.snapshotDate) {
         try {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            setMyIcons(Array.from(new Set(parsed.map(String))));
+          const res2 = await fetch(`/api/my-icons?snapshot=${ctx.snapshotDate}`);
+          if (res2.ok) {
+            const data2 = await res2.json();
+            if (Array.isArray(data2.icons)) {
+              const unique2 = Array.from(
+                new Set<string>(data2.icons.map((i: unknown) => String(i))),
+              );
+              setSnapshotIcons(unique2);
+            } else {
+              setSnapshotIcons([]);
+            }
+          } else {
+            setSnapshotIcons([]);
           }
         } catch {
-          /* ignore */
+          setSnapshotIcons([]);
+        }
+      } else {
+        setSnapshotIcons([]);
+      }
+      if (typeof window !== 'undefined' && myIcons.length === 0) {
+        const stored = localStorage.getItem('my-icons');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              setMyIcons(Array.from(new Set(parsed.map(String))));
+            }
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx.snapshotDate]);
 
   // Persist the user's icon library locally and to the server so others
   // can browse it. Errors from the network request are ignored; the
@@ -143,7 +170,8 @@ export default function IconPicker({
     setSelectedUser(u);
     setUserIcons(null);
     try {
-      const res = await fetch(`/api/users/${u.id}/icons`);
+      const query = ctx.snapshotDate ? `?snapshot=${ctx.snapshotDate}` : '';
+      const res = await fetch(`/api/users/${u.id}/icons${query}`);
       if (res.ok) {
         const data = await res.json();
         setUserIcons(Array.isArray(data.icons) ? data.icons : []);
@@ -161,17 +189,31 @@ export default function IconPicker({
     { label: 'Others', list: filterPeople(people?.others) },
   ];
 
-  if (!editable) {
-    return (
-      <div className="flex items-center gap-2">
-        {resolveSrc(value) ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={resolveSrc(value)} alt="icon" className="h-6 w-6" />
-        ) : (
-          <span>{value}</span>
-        )}
-      </div>
+  if (!canEdit) {
+    const content = resolveSrc(value) ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={resolveSrc(value)} alt="icon" className="h-6 w-6" />
+    ) : (
+      <span>{value}</span>
     );
+    if (ctx.snapshotDate) {
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm('Add to your My Icons?')) {
+              if (!myIcons.includes(value)) {
+                saveMyIcons([...myIcons, value]);
+              }
+            }
+          }}
+          className="flex items-center gap-2"
+        >
+          {content}
+        </button>
+      );
+    }
+    return <div className="flex items-center gap-2">{content}</div>;
   }
 
   return (
@@ -238,18 +280,29 @@ export default function IconPicker({
             </div>
             {tab === 'mine' && (
               <div className="flex h-full flex-col overflow-hidden">
-                <input type="file" accept="image/*" onChange={handleUpload} />
+                {canEdit && (
+                  <input type="file" accept="image/*" onChange={handleUpload} />
+                )}
                 <div className="mt-2 flex-1 overflow-y-auto">
                   <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
-                    {myIcons.map((ic) => {
+                    {(ctx.snapshotDate ? snapshotIcons : myIcons).map((ic) => {
                       const src = resolveSrc(ic);
                       return (
                         <div key={ic} className="relative">
                           <button
                             type="button"
                             onClick={() => {
-                              onChange(ic);
-                              setOpen(false);
+                              if (ctx.snapshotDate) {
+                                if (window.confirm('Add to your My Icons?')) {
+                                  if (!myIcons.includes(ic)) {
+                                    saveMyIcons([...myIcons, ic]);
+                                  }
+                                }
+                                setOpen(false);
+                              } else {
+                                onChange(ic);
+                                setOpen(false);
+                              }
                             }}
                             className="flex h-10 w-10 items-center justify-center overflow-hidden rounded border"
                             data-testid="icon-option"
@@ -265,13 +318,15 @@ export default function IconPicker({
                               <span className="text-lg">{ic}</span>
                             )}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteIcon(ic)}
-                            className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-white text-xs"
-                          >
-                            ×
-                          </button>
+                          {canEdit && (
+                            <button
+                              type="button"
+                              onClick={() => deleteIcon(ic)}
+                              className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-white text-xs"
+                            >
+                              ×
+                            </button>
+                          )}
                         </div>
                       );
                     })}
@@ -353,10 +408,14 @@ export default function IconPicker({
                               key={ic}
                               type="button"
                               onClick={() => {
-                                if (!myIcons.includes(ic)) {
-                                  saveMyIcons([...myIcons, ic]);
+                                if (
+                                  window.confirm('Add to your My Icons?')
+                                ) {
+                                  if (!myIcons.includes(ic)) {
+                                    saveMyIcons([...myIcons, ic]);
+                                  }
+                                  onChange(ic);
                                 }
-                                onChange(ic);
                                 setOpen(false);
                                 setSelectedUser(null);
                               }}

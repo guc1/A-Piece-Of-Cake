@@ -2,14 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getMyIcons, saveMyIcons } from '@/lib/icons-store';
 import { ensureUser } from '@/lib/users';
+import { getProfileSnapshot, iconsFromSnapshot } from '@/lib/profile-snapshots';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const user = await ensureUser(session);
-  const icons = await getMyIcons(user.id);
+  const url = new URL(req.url);
+  const snapshot = url.searchParams.get('snapshot');
+  let icons: string[];
+  if (snapshot) {
+    const snap = await getProfileSnapshot(user.id, snapshot);
+    icons = snap ? iconsFromSnapshot(snap) : [];
+  } else {
+    icons = await getMyIcons(user.id);
+  }
   return NextResponse.json({ icons });
 }
 
