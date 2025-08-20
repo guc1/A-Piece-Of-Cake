@@ -214,3 +214,24 @@ export const profileSnapshots = pgTable(
     ),
   }),
 );
+
+export const planSnapshots = pgTable(
+  'plan_snapshots',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    snapshotDate: date('snapshot_date').notNull(),
+    planDate: date('plan_date').notNull(),
+    blocks: jsonb('blocks').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserSnapPlan: uniqueIndex('plan_snapshots_user_snap_plan_unique').on(
+      table.userId,
+      table.snapshotDate,
+      table.planDate,
+    ),
+  }),
+);
