@@ -89,7 +89,11 @@ export async function getPlanAt(
       blocks: ((rev.payload as any).blocks as PlanBlock[]) || [],
     };
   }
-  return getPlanStrict(userId, date);
+  // When no revision exists at or before the requested time, the user had not
+  // planned this date yet. Returning the current plan would leak future edits
+  // into historical snapshots, so instead return an empty plan to reflect the
+  // absence of data at that moment in time.
+  return { id: '', userId: String(userId), date, blocks: [] };
 }
 
 export async function savePlan(
