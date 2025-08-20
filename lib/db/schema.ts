@@ -84,7 +84,9 @@ export const ingredients = pgTable(
   'ingredients',
   {
     id: serial('id').primaryKey(),
-    userId: integer('user_id').references(() => users.id).notNull(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
     title: varchar('title', { length: 80 }).notNull(),
     shortDescription: varchar('short_description', { length: 160 }),
     description: text('description'),
@@ -149,11 +151,32 @@ export const notifications = pgTable('notifications', {
   readAt: timestamp('read_at'),
 });
 
+// Store uploaded or imported icons for each user so others can browse them.
+export const userIcons = pgTable(
+  'user_icons',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    icon: text('icon').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserIcon: uniqueIndex('user_icons_user_id_icon_unique').on(
+      table.userId,
+      table.icon,
+    ),
+  }),
+);
+
 export const plans = pgTable(
   'plans',
   {
     id: serial('id').primaryKey(),
-    userId: integer('user_id').references(() => users.id).notNull(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
     date: date('date').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
@@ -168,7 +191,9 @@ export const plans = pgTable(
 
 export const planBlocks = pgTable('plan_blocks', {
   id: text('id').primaryKey(),
-  planId: integer('plan_id').references(() => plans.id).notNull(),
+  planId: integer('plan_id')
+    .references(() => plans.id)
+    .notNull(),
   start: timestamp('start').notNull(),
   end: timestamp('end').notNull(),
   title: varchar('title', { length: 60 }),
@@ -182,7 +207,9 @@ export const profileSnapshots = pgTable(
   'profile_snapshots',
   {
     id: serial('id').primaryKey(),
-    userId: integer('user_id').references(() => users.id).notNull(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
     snapshotDate: date('snapshot_date').notNull(),
     data: jsonb('data').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
