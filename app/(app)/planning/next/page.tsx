@@ -6,6 +6,7 @@ import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { getOrCreatePlan } from '@/lib/plans-store';
 import TimeOverrideBadge from '@/components/time-override-badge';
 import EditorClient from './client';
+import PlanningDateNav from './date-nav';
 
 export const revalidate = 0;
 
@@ -32,6 +33,7 @@ export default async function PlanningNextPage({
   return (
     <>
       {overrideLabel && <TimeOverrideBadge label={overrideLabel} />}
+      <PlanningDateNav date={dateStr} today={todayStr} />
       <EditorClient
         userId={String(me.id)}
         date={dateStr}
