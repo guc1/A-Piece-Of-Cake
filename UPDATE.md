@@ -93,6 +93,7 @@
 - 2025-10-09: Added self historical planning route so owners can review their past plans.
 - 2025-10-10: Expanded historical planning with landing screen and live/next/review pages for full time-capsule viewing.
 - 2025-10-10: Removed live indicator from historical planning and allowed all past reviews to open without time gating.
+- 2025-10-19: Enabled future-date planning with date navigation, added plan snapshots for historical time-capsule viewing, and updated tests.
 - 2025-10-11: Fixed profile snapshot date offset by respecting user timezone and displaying correct days in calendar.
 - 2025-10-11: Corrected ingredient owner validation, awaited search params to silence warnings, and swapped image URL input for preset choices.
 - 2025-10-11: Simplified ingredient image selector to highlight the chosen preset without large preview.

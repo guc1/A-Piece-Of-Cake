@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { getPlanStrict } from '@/lib/plans-store';
+import { startOfDay, addDays } from '@/lib/clock';
 import TimeOverrideBadge from '@/components/time-override-badge';
 import EditorClient from '@/app/(app)/planning/next/client';
 
@@ -24,7 +25,14 @@ export default async function ViewPlanningNextPage({
     cookies: cookieStore,
     searchParams: paramsObj,
   });
-  const dateStr = toYMD(info.date, info.tz);
+  let target = info.date;
+  const qDate = paramsObj?.date;
+  if (qDate && typeof qDate === 'string') {
+    const parsed = startOfDay(new Date(qDate), info.tz);
+    const min = addDays(info.today, 1, info.tz);
+    if (parsed >= min) target = parsed;
+  }
+  const dateStr = toYMD(target, info.tz);
   const todayStr = toYMD(info.today, info.tz);
   const plan = await getPlanStrict(user.id, dateStr);
   const overrideLabel = info.override

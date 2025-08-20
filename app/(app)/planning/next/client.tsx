@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 import { useViewContext } from '@/lib/view-context';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 import { savePlanAction } from './actions';
@@ -47,6 +48,7 @@ export default function EditorClient({
   review = false,
 }: Props) {
   const { editable } = useViewContext();
+  const router = useRouter();
   const storageKey = `live-plan-${userId}-${date}`;
   const reviewKey = `review-${userId}-${date}`;
   const vibeKey = `review-vibe-${userId}-${date}`;
@@ -105,6 +107,27 @@ export default function EditorClient({
   const PIXELS_PER_MINUTE = TIMELINE_HEIGHT / visibleMinutes;
   const startHour = Math.floor(startMinute / 60);
   const endHour = Math.ceil(endMinute / 60);
+
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const minDate = useMemo(() => {
+    const d = new Date(`${today}T00:00:00`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  }, [today]);
+
+  function navigateDate(d: string) {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('date', d);
+    router.push(`${window.location.pathname}?${params.toString()}`);
+  }
+
+  function shiftDate(days: number) {
+    const cur = new Date(`${date}T00:00:00`);
+    cur.setUTCDate(cur.getUTCDate() + days);
+    const target = cur.toISOString().slice(0, 10);
+    if (target >= minDate) navigateDate(target);
+  }
 
   const [nowMinute, setNowMinute] = useState(() => {
     if (!live) return 0;
@@ -520,6 +543,47 @@ export default function EditorClient({
 
   return (
     <>
+      <div className="mb-2 flex items-center justify-end gap-2 text-sm">
+        <span id={`p1an-date-label-${userId}`} className="font-medium">
+          Planning for {date}
+        </span>
+        <Button
+          id={`p1an-date-day-${userId}`}
+          variant="outline"
+          size="sm"
+          onClick={() => shiftDate(1)}
+        >
+          &gt;
+        </Button>
+        <Button
+          id={`p1an-date-week-${userId}`}
+          variant="outline"
+          size="sm"
+          onClick={() => shiftDate(7)}
+        >
+          &gt;&gt;
+        </Button>
+        <div className="relative">
+          <Button
+            id={`p1an-date-change-${userId}`}
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDatePicker((s) => !s)}
+          >
+            Change date
+          </Button>
+          {showDatePicker && (
+            <input
+              type="date"
+              id={`p1an-date-input-${userId}`}
+              className="absolute right-0 mt-1 border bg-white p-1 text-black"
+              min={minDate}
+              value={date}
+              onChange={(e) => navigateDate(e.target.value)}
+            />
+          )}
+        </div>
+      </div>
       <div className="flex h-full">
         <div
           className={`relative overflow-y-hidden ${selected ? 'w-1/2' : 'w-full'}`}

@@ -1,6 +1,6 @@
 import { db } from './db';
-import { plans, planBlocks } from './db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { plans, planBlocks, planSnapshots } from './db/schema';
+import { eq, and, inArray, lte, desc } from 'drizzle-orm';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 
 function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
@@ -68,6 +68,7 @@ export async function savePlan(
   userId: string,
   date: string,
   blocks: PlanBlockInput[],
+  snapshotDate?: string,
 ): Promise<Plan> {
   let planRow = await fetchPlan(Number(userId), date);
   if (!planRow) {
@@ -121,10 +122,56 @@ export async function savePlan(
       results.push(toPlanBlock(row));
     }
   }
-  return {
+  const plan = {
     id: String(planRow.id),
     userId,
     date,
     blocks: results,
+  };
+  if (snapshotDate) {
+    await db
+      .insert(planSnapshots)
+      .values({
+        userId: Number(userId),
+        snapshotDate,
+        planDate: date,
+        blocks: results as any,
+      })
+      .onConflictDoUpdate({
+        target: [
+          planSnapshots.userId,
+          planSnapshots.snapshotDate,
+          planSnapshots.planDate,
+        ],
+        set: { blocks: results as any },
+      });
+  }
+  return plan;
+}
+
+export async function getPlanAtSnapshot(
+  userId: number,
+  snapshotDate: string,
+  date: string,
+): Promise<Plan | null> {
+  const rows = await db
+    .select()
+    .from(planSnapshots)
+    .where(
+      and(
+        eq(planSnapshots.userId, userId),
+        eq(planSnapshots.planDate, date),
+        lte(planSnapshots.snapshotDate, snapshotDate),
+      ),
+    )
+    .orderBy(desc(planSnapshots.snapshotDate))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    id: '',
+    userId: String(userId),
+    date,
+    blocks: row.blocks as any,
   };
 }

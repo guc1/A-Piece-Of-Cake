@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { getUserByHandle } from '@/lib/users';
+import { createProfileSnapshot } from '@/lib/profile-snapshots';
 
 const PASSWORD = 'pass1234';
 
@@ -77,4 +79,51 @@ test('viewer can read historical plan without editing', async ({ page }) => {
   await expect(page.locator('[id^="p1an-now-"]')).toHaveCount(0);
   await page.click('[id^="p1an-blk-"]');
   await expect(page.locator('[id^="p1an-meta-"]')).toBeVisible();
+});
+
+test('future plan snapshots stay frozen in history', async ({ page }) => {
+  const handle = unique('owner');
+  const email = `${handle}@example.com`;
+  const planDate = '2025-09-10';
+  const snap1 = '2025-09-02';
+  const snap2 = '2025-09-03';
+
+  await page.goto('/signup');
+  await page.fill('input[placeholder="Name"]', 'Owner');
+  await page.fill('input[placeholder="Handle"]', handle);
+  await page.fill('input[placeholder="Email"]', email);
+  await page.fill('input[placeholder="Password"]', PASSWORD);
+  await page.click('text=Sign Up');
+
+  await page.goto(
+    `/planning/next?apoc_date=${snap1}&apoc_time=12:00&date=${planDate}`,
+  );
+  await page.click('[id^="p1an-add-top-"]');
+  await page.fill('input[id^="p1an-meta-ttl-"]', 'First');
+  await page.click('button[id^="p1an-meta-close-"]');
+  await page.waitForTimeout(1000);
+
+  const owner = await getUserByHandle(handle);
+  await createProfileSnapshot(owner.id, snap1);
+
+  await page.goto(
+    `/planning/next?apoc_date=${snap2}&apoc_time=12:00&date=${planDate}`,
+  );
+  await page.click('[id^="p1an-blk-"]');
+  await page.fill('input[id^="p1an-meta-ttl-"]', 'Second');
+  await page.click('button[id^="p1an-meta-close-"]');
+  await page.waitForTimeout(1000);
+  await createProfileSnapshot(owner.id, snap2);
+
+  await page.goto(`/history/self/${snap1}/planning/next?date=${planDate}`);
+  await page.click('[id^="p1an-blk-"]');
+  await expect(page.locator('input[id^="p1an-meta-ttl-"]')).toHaveValue(
+    'First',
+  );
+
+  await page.goto(`/history/self/${snap2}/planning/next?date=${planDate}`);
+  await page.click('[id^="p1an-blk-"]');
+  await expect(page.locator('input[id^="p1an-meta-ttl-"]')).toHaveValue(
+    'Second',
+  );
 });
