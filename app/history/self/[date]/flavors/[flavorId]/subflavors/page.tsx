@@ -17,12 +17,12 @@ export default async function HistorySubflavorsPage({
   const me = await ensureUser(session);
   const snapshot = await getProfileSnapshot(me.id, date);
   if (!snapshot) notFound();
-  const subflavors = (snapshot.subflavors as any[]).filter(
+  const subflavors = (snapshot.data.subflavors as any[]).filter(
     (s) => s.flavorId === flavorId,
   );
-  const flavor = (snapshot.flavors as any[]).find((f) => f.id === flavorId) as
-    | Flavor
-    | undefined;
+  const flavor = (snapshot.data.flavors as any[]).find(
+    (f) => f.id === flavorId,
+  ) as Flavor | undefined;
   if (!flavor) notFound();
   const myFlavors = await listFlavors(String(me.id));
   return (
@@ -35,4 +35,3 @@ export default async function HistorySubflavorsPage({
     />
   );
 }
-

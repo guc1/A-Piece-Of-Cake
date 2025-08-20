@@ -31,8 +31,7 @@ export default async function HistoryPlanningNext({
   }
   const dateStr = toYMD(target, tz);
   const todayStr = toYMD(day, tz);
-  const at = addDays(day, 1, tz);
-  const plan = await getPlanAt(owner.id, dateStr, at);
+  const plan = await getPlanAt(owner.id, dateStr, snapshot.createdAt);
   return (
     <section id={`hist-plan-next-${owner.id}-${date}`}>
       <EditorClient

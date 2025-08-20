@@ -5,7 +5,7 @@ import { getProfileSnapshot, iconsFromSnapshot } from '@/lib/profile-snapshots';
 
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -21,7 +21,7 @@ export async function GET(
   let icons: string[];
   if (snapshot) {
     const snap = await getProfileSnapshot(userId, snapshot);
-    icons = snap ? iconsFromSnapshot(snap) : [];
+    icons = snap ? iconsFromSnapshot(snap.data) : [];
   } else {
     icons = await listUserIcons(userId);
   }
