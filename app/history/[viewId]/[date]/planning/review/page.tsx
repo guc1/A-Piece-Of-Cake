@@ -1,8 +1,8 @@
 import { getUserByViewId } from '@/lib/users';
 import { getProfileSnapshot } from '@/lib/profile-snapshots';
 import { notFound } from 'next/navigation';
-import { getPlanStrict } from '@/lib/plans-store';
-import { getUserTimeZone, startOfDay, toYMD } from '@/lib/clock';
+import { getPlanAt } from '@/lib/plans-store';
+import { getUserTimeZone, startOfDay, addDays, toYMD } from '@/lib/clock';
 import EditorClient from '@/app/(app)/planning/next/client';
 
 export const revalidate = 0;
@@ -20,7 +20,8 @@ export default async function HistoryPlanningReview({
   const tz = getUserTimeZone(owner);
   const day = startOfDay(new Date(date), tz);
   const dateStr = toYMD(day, tz);
-  const plan = await getPlanStrict(owner.id, dateStr);
+  const at = addDays(day, 1, tz);
+  const plan = await getPlanAt(owner.id, dateStr, at);
   return (
     <section id={`hist-plan-review-${owner.id}-${date}`}>
       <EditorClient
