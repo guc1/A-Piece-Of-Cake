@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { listUserIcons } from '@/lib/icons-store';
+import { getProfileSnapshot } from '@/lib/profile-snapshots';
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
@@ -15,6 +16,18 @@ export async function GET(
   if (!userId) {
     return NextResponse.json({ error: 'Invalid user' }, { status: 400 });
   }
-  const icons = await listUserIcons(userId);
+  const url = new URL(req.url);
+  const snapshot = url.searchParams.get('snapshot');
+  let icons: string[];
+  if (snapshot) {
+    const snap = await getProfileSnapshot(userId, snapshot);
+    if (Array.isArray(snap?.icons)) {
+      icons = snap.icons as string[];
+    } else {
+      icons = await listUserIcons(userId);
+    }
+  } else {
+    icons = await listUserIcons(userId);
+  }
   return NextResponse.json({ icons });
 }
