@@ -3,6 +3,7 @@
 
 import { useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import IconPicker from '@/components/icon-picker';
 import type {
   Ingredient,
   Visibility,
@@ -22,14 +23,6 @@ const VISIBILITIES: Visibility[] = [
   'friends',
   'public',
 ];
-const PRESET_IMAGES = [
-  'https://placehold.co/100x100/FF5733/FFFFFF?text=1',
-  'https://placehold.co/100x100/33C3FF/FFFFFF?text=2',
-  'https://placehold.co/100x100/FFC300/FFFFFF?text=3',
-  'https://placehold.co/100x100/DAF7A6/000000?text=4',
-  'https://placehold.co/100x100/C70039/FFFFFF?text=5',
-];
-
 const PRESET_INGREDIENTS: IngredientInput[] = [
   {
     title: 'Morning Run',
@@ -39,7 +32,8 @@ const PRESET_INGREDIENTS: IngredientInput[] = [
     whenUsed: 'Every morning before breakfast.',
     tips: 'Prepare clothes the night before.',
     usefulness: 70,
-    imageUrl: PRESET_IMAGES[0],
+    icon: '🏃',
+    imageUrl: null,
     tags: null,
     visibility: 'private',
   },
@@ -51,11 +45,18 @@ const PRESET_INGREDIENTS: IngredientInput[] = [
     whenUsed: 'Every day after 12pm.',
     tips: 'Keep healthy snacks nearby.',
     usefulness: 60,
-    imageUrl: PRESET_IMAGES[1],
+    icon: '🍬',
+    imageUrl: null,
     tags: null,
     visibility: 'private',
   },
 ];
+
+function iconSrc(ic: string) {
+  if (ic.startsWith('data:')) return ic;
+  if (/^[A-Za-z0-9+/=]+$/.test(ic)) return `data:image/png;base64,${ic}`;
+  return null;
+}
 
 function sortIngredients(list: Ingredient[]) {
   return [...list].sort((a, b) => {
@@ -104,7 +105,7 @@ export default function IngredientsClient({
     whyUsed: '',
     whenUsed: '',
     tips: '',
-    imageUrl: '',
+    icon: '⭐',
     visibility: 'private' as Visibility,
   });
   const initialForm = useRef(form);
@@ -119,7 +120,7 @@ export default function IngredientsClient({
       whyUsed: '',
       whenUsed: '',
       tips: '',
-      imageUrl: '',
+      icon: '⭐',
       visibility: 'private' as Visibility,
     };
     setForm(blank);
@@ -138,7 +139,7 @@ export default function IngredientsClient({
       whyUsed: i.whyUsed,
       whenUsed: i.whenUsed,
       tips: i.tips,
-      imageUrl: i.imageUrl || '',
+      icon: i.icon,
       visibility: i.visibility,
     };
     setForm(data);
@@ -242,25 +243,20 @@ export default function IngredientsClient({
             className="flex cursor-pointer items-center gap-4 rounded border p-4 shadow-sm"
             onClick={() => openEdit(i)}
           >
-            {i.imageUrl ? (
-              <img
-                id={`1ngred-card-img-${i.id}-${userId}`}
-                src={i.imageUrl}
-                alt=""
-                className="h-16 w-16 rounded-full object-cover"
-              />
-            ) : (
-              <div
-                id={`1ngred-card-img-${i.id}-${userId}`}
-                className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-300 text-xl font-bold"
-              >
-                {i.title
-                  .split(' ')
-                  .map((s) => s[0])
-                  .join('')
-                  .slice(0, 2)}
-              </div>
-            )}
+            <div
+              id={`1ngred-card-img-${i.id}-${userId}`}
+              className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-300"
+            >
+              {iconSrc(i.icon) ? (
+                <img
+                  src={iconSrc(i.icon) as string}
+                  alt="icon"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-2xl">{i.icon}</span>
+              )}
+            </div>
             <div className="flex-1">
               <div className="font-semibold">{i.title}</div>
               <div className="text-sm text-gray-600">{i.shortDescription}</div>
@@ -360,9 +356,22 @@ export default function IngredientsClient({
                       className="rounded border p-2 text-left hover:bg-gray-50"
                       onClick={() => importPreset(p)}
                     >
-                      <div className="font-semibold">{p.title}</div>
-                      <div className="text-sm text-gray-600">
-                        {p.shortDescription}
+                      <div className="flex items-center gap-2">
+                        {iconSrc(p.icon) ? (
+                          <img
+                            src={iconSrc(p.icon) as string}
+                            alt="icon"
+                            className="h-6 w-6 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xl">{p.icon}</span>
+                        )}
+                        <div>
+                          <div className="font-semibold">{p.title}</div>
+                          <div className="text-sm text-gray-600">
+                            {p.shortDescription}
+                          </div>
+                        </div>
                       </div>
                     </button>
                   ))}
@@ -457,26 +466,15 @@ export default function IngredientsClient({
               <button onClick={() => setOpen(false)}>✕</button>
             </div>
             <div
-              id={`1ngred-imgup-${editing ? editing.id : 'new'}-${userId}`}
-              className="mb-4 flex flex-wrap justify-center gap-2"
+              className="mb-4"
             >
-              {PRESET_IMAGES.map((url) => (
-                <button
-                  type="button"
-                  key={url}
-                  onClick={() =>
-                    editable && setForm({ ...form, imageUrl: url })
-                  }
-                  disabled={!editable}
-                  className={`h-12 w-12 overflow-hidden rounded-full border-2 ${form.imageUrl === url ? 'border-blue-500' : 'border-transparent'}`}
-                >
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                </button>
-              ))}
+              <label className="block text-sm font-medium">Icon</label>
+              <IconPicker
+                value={form.icon}
+                onChange={(icon) => setForm({ ...form, icon })}
+                people={people}
+                editable={editable}
+              />
             </div>
             <label
               className="block text-sm font-medium"

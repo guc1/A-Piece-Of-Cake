@@ -113,3 +113,5 @@
 - 2025-10-17: Fixed empty icon src errors, awaited user icon route params, and expanded Other People Icons view for larger user lists.
 
 - 2025-10-17: Persisted My Icons server-side and exposed all user icons, including private ones, when browsing profiles.
+
+- 2025-10-17: Added icon picker and storage for ingredients.
