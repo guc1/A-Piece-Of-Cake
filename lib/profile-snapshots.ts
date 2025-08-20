@@ -2,6 +2,7 @@ import { db } from './db';
 import { profileSnapshots, users, flavors, subflavors } from './db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { startOfDay, addDays, toYMD } from './clock';
+import { listUserIcons } from './icons-store';
 
 export async function createProfileSnapshot(
   userId: number,
@@ -27,12 +28,18 @@ export async function createProfileSnapshot(
     .select()
     .from(subflavors)
     .where(eq(subflavors.userId, userId));
+  const iconList = await listUserIcons(userId);
   await db
     .insert(profileSnapshots)
     .values({
       userId,
       snapshotDate,
-      data: { user, flavors: flavorRows, subflavors: subflavorRows },
+      data: {
+        user,
+        flavors: flavorRows,
+        subflavors: subflavorRows,
+        icons: iconList,
+      },
     })
     .onConflictDoNothing();
 }
@@ -77,4 +84,25 @@ export async function getProfileSnapshot(userId: number, snapshotDate: string) {
       ),
     );
   return row?.data as any;
+}
+
+// Derive the icon set from a profile snapshot. This helper allows older
+// snapshots that predate explicit icon capture to still return the icons
+// associated with flavors and subflavors from that day.
+export function iconsFromSnapshot(snap: any): string[] {
+  const set = new Set<string>();
+  if (Array.isArray(snap?.icons)) {
+    for (const ic of snap.icons) set.add(String(ic));
+  }
+  if (Array.isArray(snap?.flavors)) {
+    for (const f of snap.flavors) {
+      if (f.icon) set.add(String(f.icon));
+    }
+  }
+  if (Array.isArray(snap?.subflavors)) {
+    for (const sf of snap.subflavors) {
+      if (sf.icon) set.add(String(sf.icon));
+    }
+  }
+  return Array.from(set);
 }
