@@ -111,3 +111,4 @@
 - 2025-10-17: Widened flavor and subflavor icon columns to text so custom images migrate without length errors.
 - 2025-10-17: Added Other People Icons tab with user search and icon import into My Icons.
 - 2025-10-17: Fixed empty icon src errors, awaited user icon route params, and expanded Other People Icons view for larger user lists.
+- 2025-10-18: Treated missing visibility as public so other people's icons appear in icon picker.
