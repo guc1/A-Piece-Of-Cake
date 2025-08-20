@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { PeopleLists, Person } from '@/lib/people-store';
+import { useViewContext } from '@/lib/view-context';
 
 interface IconPickerProps {
   value: string;
@@ -29,6 +30,7 @@ export default function IconPicker({
   editable = true,
   people,
 }: IconPickerProps) {
+  const ctx = useViewContext();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'mine' | 'preset' | 'people'>('mine');
   const [myIcons, setMyIcons] = useState<string[]>([]);
@@ -143,7 +145,8 @@ export default function IconPicker({
     setSelectedUser(u);
     setUserIcons(null);
     try {
-      const res = await fetch(`/api/users/${u.id}/icons`);
+      const query = ctx.snapshotDate ? `?snapshot=${ctx.snapshotDate}` : '';
+      const res = await fetch(`/api/users/${u.id}/icons${query}`);
       if (res.ok) {
         const data = await res.json();
         setUserIcons(Array.isArray(data.icons) ? data.icons : []);
@@ -162,16 +165,30 @@ export default function IconPicker({
   ];
 
   if (!editable) {
-    return (
-      <div className="flex items-center gap-2">
-        {resolveSrc(value) ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={resolveSrc(value)} alt="icon" className="h-6 w-6" />
-        ) : (
-          <span>{value}</span>
-        )}
-      </div>
+    const content = resolveSrc(value) ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={resolveSrc(value)} alt="icon" className="h-6 w-6" />
+    ) : (
+      <span>{value}</span>
     );
+    if (ctx.snapshotDate) {
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm('Add to your My Icons?')) {
+              if (!myIcons.includes(value)) {
+                saveMyIcons([...myIcons, value]);
+              }
+            }
+          }}
+          className="flex items-center gap-2"
+        >
+          {content}
+        </button>
+      );
+    }
+    return <div className="flex items-center gap-2">{content}</div>;
   }
 
   return (
@@ -353,10 +370,14 @@ export default function IconPicker({
                               key={ic}
                               type="button"
                               onClick={() => {
-                                if (!myIcons.includes(ic)) {
-                                  saveMyIcons([...myIcons, ic]);
+                                if (
+                                  window.confirm('Add to your My Icons?')
+                                ) {
+                                  if (!myIcons.includes(ic)) {
+                                    saveMyIcons([...myIcons, ic]);
+                                  }
+                                  onChange(ic);
                                 }
-                                onChange(ic);
                                 setOpen(false);
                                 setSelectedUser(null);
                               }}
