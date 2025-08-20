@@ -154,23 +154,14 @@ export const notifications = pgTable('notifications', {
 });
 
 // Store uploaded or imported icons for each user so others can browse them.
-export const userIcons = pgTable(
-  'user_icons',
-  {
-    id: serial('id').primaryKey(),
-    userId: integer('user_id')
-      .references(() => users.id)
-      .notNull(),
-    icon: text('icon').notNull(),
-    createdAt: timestamp('created_at').defaultNow(),
-  },
-  (table) => ({
-    uniqueUserIcon: uniqueIndex('user_icons_user_id_icon_unique').on(
-      table.userId,
-      table.icon,
-    ),
-  }),
-);
+export const userIcons = pgTable('user_icons', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
+  icon: text('icon').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
 
 export const plans = pgTable(
   'plans',
