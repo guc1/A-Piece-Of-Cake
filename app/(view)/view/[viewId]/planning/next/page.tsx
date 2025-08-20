@@ -5,6 +5,7 @@ import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { getPlanStrict } from '@/lib/plans-store';
 import TimeOverrideBadge from '@/components/time-override-badge';
 import EditorClient from '@/app/(app)/planning/next/client';
+import PlanningDateNav from '@/app/(app)/planning/next/date-nav';
 
 export const revalidate = 0;
 
@@ -33,6 +34,7 @@ export default async function ViewPlanningNextPage({
   return (
     <section id={`v13w-plan-${user.id}`}>
       {overrideLabel && <TimeOverrideBadge label={overrideLabel} />}
+      <PlanningDateNav date={dateStr} today={todayStr} />
       <EditorClient
         userId={String(user.id)}
         date={dateStr}

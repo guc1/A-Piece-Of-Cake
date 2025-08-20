@@ -196,6 +196,16 @@ export const planBlocks = pgTable('plan_blocks', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+export const planRevisions = pgTable('plan_revisions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
+  planDate: date('plan_date').notNull(),
+  payload: jsonb('payload').notNull(),
+  snapshotAt: timestamp('snapshot_at').defaultNow(),
+});
+
 export const profileSnapshots = pgTable(
   'profile_snapshots',
   {

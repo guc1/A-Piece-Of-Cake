@@ -126,3 +126,4 @@
 - 2025-10-18: Added split review page with rational and guilty pleasure sections and placeholder for AI panel.
 - 2025-10-18: Enlarged review text areas, added independent scrolling, and captured review page snapshots with viewer read-only mode.
 - 2025-10-18: Expanded review boxes so guilty pleasure starts below the fold and enforced separate scrollbars for review and AI panes with tests.
+- 2025-10-18: Added future planning date navigation with snapshots preserving historical plans.

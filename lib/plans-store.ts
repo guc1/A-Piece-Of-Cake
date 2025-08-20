@@ -1,6 +1,6 @@
 import { db } from './db';
-import { plans, planBlocks } from './db/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { plans, planBlocks, planRevisions } from './db/schema';
+import { eq, and, inArray, lte, desc } from 'drizzle-orm';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 
 function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
@@ -64,6 +64,34 @@ export async function getPlanStrict(
   return { id: '', userId: String(userId), date, blocks: [] };
 }
 
+export async function getPlanAt(
+  userId: number,
+  date: string,
+  at: Date,
+): Promise<Plan> {
+  const [rev] = await db
+    .select()
+    .from(planRevisions)
+    .where(
+      and(
+        eq(planRevisions.userId, userId),
+        eq(planRevisions.planDate, date),
+        lte(planRevisions.snapshotAt, at),
+      ),
+    )
+    .orderBy(desc(planRevisions.snapshotAt))
+    .limit(1);
+  if (rev) {
+    return {
+      id: '',
+      userId: String(userId),
+      date,
+      blocks: ((rev.payload as any).blocks as PlanBlock[]) || [],
+    };
+  }
+  return getPlanStrict(userId, date);
+}
+
 export async function savePlan(
   userId: string,
   date: string,
@@ -121,6 +149,11 @@ export async function savePlan(
       results.push(toPlanBlock(row));
     }
   }
+  await db.insert(planRevisions).values({
+    userId: Number(userId),
+    planDate: date,
+    payload: { blocks: results },
+  });
   return {
     id: String(planRow.id),
     userId,
