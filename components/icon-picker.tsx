@@ -36,23 +36,54 @@ export default function IconPicker({
   const [selectedUser, setSelectedUser] = useState<Person | null>(null);
   const [userIcons, setUserIcons] = useState<string[] | null>(null);
 
+  // Load the user's saved icons. We first attempt to fetch from the
+  // server so icons are shared across devices, falling back to any
+  // locally cached value in case the request fails (offline, etc.).
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = localStorage.getItem('my-icons');
-    if (stored) {
+    async function load() {
       try {
-        setMyIcons(JSON.parse(stored));
+        const res = await fetch('/api/my-icons');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.icons)) {
+            setMyIcons(data.icons);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('my-icons', JSON.stringify(data.icons));
+            }
+            return;
+          }
+        }
       } catch {
-        /* ignore */
+        /* ignore network errors */
+      }
+      if (typeof window === 'undefined') return;
+      const stored = localStorage.getItem('my-icons');
+      if (stored) {
+        try {
+          setMyIcons(JSON.parse(stored));
+        } catch {
+          /* ignore */
+        }
       }
     }
+    load();
   }, []);
 
+  // Persist the user's icon library locally and to the server so others
+  // can browse it. Errors from the network request are ignored; the
+  // local copy still updates.
   function saveMyIcons(icons: string[]) {
     setMyIcons(icons);
     if (typeof window !== 'undefined') {
       localStorage.setItem('my-icons', JSON.stringify(icons));
     }
+    fetch('/api/my-icons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ icons }),
+    }).catch(() => {
+      /* ignore network errors */
+    });
   }
 
   function resolveSrc(ic: string) {
@@ -163,176 +194,176 @@ export default function IconPicker({
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="flex h-[90vh] w-[90vw] max-w-3xl flex-col overflow-hidden rounded bg-white p-4">
-          <div className="mb-2 flex gap-2 text-sm">
-            <button
-              type="button"
-              onClick={() => setTab('mine')}
-              className={tab === 'mine' ? 'font-bold' : ''}
-            >
-              My Icons
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('preset')}
-              className={tab === 'preset' ? 'font-bold' : ''}
-            >
-              Preset Icons
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTab('people');
-                setSelectedUser(null);
-              }}
-              className={tab === 'people' ? 'font-bold' : ''}
-            >
-              Other People Icons
-            </button>
-          </div>
-          {tab === 'mine' && (
-            <div className="flex h-full flex-col overflow-hidden">
-              <input type="file" accept="image/*" onChange={handleUpload} />
-              <div className="mt-2 flex-1 overflow-y-auto">
-                <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
-                  {myIcons.map((ic) => {
-                    const src = resolveSrc(ic);
-                    return (
-                      <div key={ic} className="relative">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onChange(ic);
-                            setOpen(false);
-                          }}
-                          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded border"
-                          data-testid="icon-option"
-                        >
-                          {src ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={src}
-                              alt="icon"
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-lg">{ic}</span>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteIcon(ic)}
-                          className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-white text-xs"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            <div className="mb-2 flex gap-2 text-sm">
+              <button
+                type="button"
+                onClick={() => setTab('mine')}
+                className={tab === 'mine' ? 'font-bold' : ''}
+              >
+                My Icons
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('preset')}
+                className={tab === 'preset' ? 'font-bold' : ''}
+              >
+                Preset Icons
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTab('people');
+                  setSelectedUser(null);
+                }}
+                className={tab === 'people' ? 'font-bold' : ''}
+              >
+                Other People Icons
+              </button>
             </div>
-          )}
-          {tab === 'preset' && (
-            <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
-              {PRESET_ICONS.map((ic) => (
-                <button
-                  key={ic}
-                  type="button"
-                  onClick={() => {
-                    onChange(ic);
-                    setOpen(false);
-                  }}
-                  className="flex h-10 w-10 items-center justify-center rounded border"
-                  data-testid="icon-option"
-                >
-                  {ic}
-                </button>
-              ))}
-            </div>
-          )}
-          {tab === 'people' && (
-            <div className="flex h-full flex-col text-sm">
-              {!selectedUser ? (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Search users"
-                    value={peopleSearch}
-                    onChange={(e) => setPeopleSearch(e.target.value)}
-                    className="mb-2 w-full rounded border p-1"
-                  />
-                  <div className="flex-1 overflow-y-auto pr-1">
-                    {categories.map((c) => (
-                      <div key={c.label} className="mb-4">
-                        {c.list.length > 0 && (
-                          <>
-                            <div className="font-medium">{c.label}</div>
-                            <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                              {c.list.map((p) => (
-                                <button
-                                  key={p.id}
-                                  type="button"
-                                  onClick={() => openUser(p)}
-                                  className="truncate rounded border px-2 py-1 text-left"
-                                >
-                                  {p.displayName || p.handle}
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="flex h-full flex-col">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedUser(null)}
-                    className="mb-2 underline"
-                  >
-                    Back to users
-                  </button>
-                  {userIcons === null && <div>Loading…</div>}
-                  {userIcons !== null && (
-                    <div className="flex-1 overflow-y-auto">
-                      <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
-                        {userIcons.map((ic) => (
+            {tab === 'mine' && (
+              <div className="flex h-full flex-col overflow-hidden">
+                <input type="file" accept="image/*" onChange={handleUpload} />
+                <div className="mt-2 flex-1 overflow-y-auto">
+                  <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
+                    {myIcons.map((ic) => {
+                      const src = resolveSrc(ic);
+                      return (
+                        <div key={ic} className="relative">
                           <button
-                            key={ic}
                             type="button"
                             onClick={() => {
-                              if (!myIcons.includes(ic)) {
-                                saveMyIcons([...myIcons, ic]);
-                              }
                               onChange(ic);
                               setOpen(false);
-                              setSelectedUser(null);
                             }}
-                            className="flex h-10 w-10 items-center justify-center rounded border"
+                            className="flex h-10 w-10 items-center justify-center overflow-hidden rounded border"
                             data-testid="icon-option"
                           >
-                            {resolveSrc(ic) ? (
+                            {src ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
-                                src={resolveSrc(ic)}
+                                src={src}
                                 alt="icon"
                                 className="h-full w-full object-cover"
                               />
                             ) : (
-                              ic
+                              <span className="text-lg">{ic}</span>
                             )}
                           </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                          <button
+                            type="button"
+                            onClick={() => deleteIcon(ic)}
+                            className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-white text-xs"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+            {tab === 'preset' && (
+              <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
+                {PRESET_ICONS.map((ic) => (
+                  <button
+                    key={ic}
+                    type="button"
+                    onClick={() => {
+                      onChange(ic);
+                      setOpen(false);
+                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded border"
+                    data-testid="icon-option"
+                  >
+                    {ic}
+                  </button>
+                ))}
+              </div>
+            )}
+            {tab === 'people' && (
+              <div className="flex h-full flex-col text-sm">
+                {!selectedUser ? (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Search users"
+                      value={peopleSearch}
+                      onChange={(e) => setPeopleSearch(e.target.value)}
+                      className="mb-2 w-full rounded border p-1"
+                    />
+                    <div className="flex-1 overflow-y-auto pr-1">
+                      {categories.map((c) => (
+                        <div key={c.label} className="mb-4">
+                          {c.list.length > 0 && (
+                            <>
+                              <div className="font-medium">{c.label}</div>
+                              <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                                {c.list.map((p) => (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => openUser(p)}
+                                    className="truncate rounded border px-2 py-1 text-left"
+                                  >
+                                    {p.displayName || p.handle}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex h-full flex-col">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUser(null)}
+                      className="mb-2 underline"
+                    >
+                      Back to users
+                    </button>
+                    {userIcons === null && <div>Loading…</div>}
+                    {userIcons !== null && (
+                      <div className="flex-1 overflow-y-auto">
+                        <div className="grid grid-cols-8 gap-2 md:grid-cols-10">
+                          {userIcons.map((ic) => (
+                            <button
+                              key={ic}
+                              type="button"
+                              onClick={() => {
+                                if (!myIcons.includes(ic)) {
+                                  saveMyIcons([...myIcons, ic]);
+                                }
+                                onChange(ic);
+                                setOpen(false);
+                                setSelectedUser(null);
+                              }}
+                              className="flex h-10 w-10 items-center justify-center rounded border"
+                              data-testid="icon-option"
+                            >
+                              {resolveSrc(ic) ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={resolveSrc(ic)}
+                                  alt="icon"
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                ic
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
