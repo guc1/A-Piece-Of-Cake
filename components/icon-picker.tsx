@@ -46,9 +46,11 @@ export default function IconPicker({
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.icons)) {
-            setMyIcons(data.icons);
+            const iconsArr = data.icons.map((i: unknown) => String(i));
+            const unique = Array.from(new Set<string>(iconsArr));
+            setMyIcons(unique);
             if (typeof window !== 'undefined') {
-              localStorage.setItem('my-icons', JSON.stringify(data.icons));
+              localStorage.setItem('my-icons', JSON.stringify(unique));
             }
             return;
           }
@@ -60,7 +62,10 @@ export default function IconPicker({
       const stored = localStorage.getItem('my-icons');
       if (stored) {
         try {
-          setMyIcons(JSON.parse(stored));
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setMyIcons(Array.from(new Set(parsed.map(String))));
+          }
         } catch {
           /* ignore */
         }
@@ -73,14 +78,15 @@ export default function IconPicker({
   // can browse it. Errors from the network request are ignored; the
   // local copy still updates.
   function saveMyIcons(icons: string[]) {
-    setMyIcons(icons);
+    const unique = Array.from(new Set(icons));
+    setMyIcons(unique);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('my-icons', JSON.stringify(icons));
+      localStorage.setItem('my-icons', JSON.stringify(unique));
     }
     fetch('/api/my-icons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ icons }),
+      body: JSON.stringify({ icons: unique }),
     }).catch(() => {
       /* ignore network errors */
     });
@@ -194,6 +200,16 @@ export default function IconPicker({
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="flex h-[90vh] w-[90vw] max-w-3xl flex-col overflow-hidden rounded bg-white p-4">
+            <div className="mb-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
             <div className="mb-2 flex gap-2 text-sm">
               <button
                 type="button"
@@ -270,6 +286,9 @@ export default function IconPicker({
                     key={ic}
                     type="button"
                     onClick={() => {
+                      if (!myIcons.includes(ic)) {
+                        saveMyIcons([...myIcons, ic]);
+                      }
                       onChange(ic);
                       setOpen(false);
                     }}
