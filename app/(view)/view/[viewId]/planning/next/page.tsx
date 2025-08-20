@@ -1,5 +1,5 @@
 import { getUserByViewId } from '@/lib/users';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { getPlanStrict } from '@/lib/plans-store';
@@ -24,6 +24,10 @@ export default async function ViewPlanningNextPage({
     cookies: cookieStore,
     searchParams: paramsObj,
   });
+  if (info.clamped) {
+    const minStr = toYMD(info.min, info.tz);
+    redirect(`/view/${viewId}/planning/next?date=${minStr}`);
+  }
   const dateStr = toYMD(info.date, info.tz);
   const todayStr = toYMD(info.today, info.tz);
   const plan = await getPlanStrict(user.id, dateStr);

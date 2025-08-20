@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { getOrCreatePlan } from '@/lib/plans-store';
@@ -23,6 +23,10 @@ export default async function PlanningNextPage({
     cookies: cookieStore,
     searchParams: params,
   });
+  if (info.clamped) {
+    const minStr = toYMD(info.min, info.tz);
+    redirect(`/planning/next?date=${minStr}`);
+  }
   const dateStr = toYMD(info.date, info.tz);
   const todayStr = toYMD(info.today, info.tz);
   const plan = await getOrCreatePlan(me.id, dateStr);

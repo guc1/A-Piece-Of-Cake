@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useViewContext } from '@/lib/view-context';
+import PlanningDateNav from './date-nav';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 import { savePlanAction } from './actions';
 
@@ -607,6 +608,7 @@ export default function EditorClient({
                 Close
               </button>
             )}
+            <PlanningDateNav date={date} today={today} />
           </div>
           {showCustom && (
             <div
