@@ -116,3 +116,5 @@
 
 - 2025-10-17: Added icon picker and storage for ingredients.
 - 2025-10-17: Shrunk ingredient icons and ensured images fill their circular frames.
+- 2025-10-17: Saved preset icon selections to My Icons and added a close button to the icon picker.
+- 2025-10-17: Deduplicated saved icons, removed oversized My Icons unique index, and fixed duplicate-key warnings so icon uploads persist reliably.
