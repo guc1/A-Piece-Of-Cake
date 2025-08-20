@@ -158,3 +158,41 @@ test('future planning date back navigation', async ({ page }) => {
   await page.click('text=Reset');
   await page.waitForURL(`**/planning/next?date=${minDate}`);
 });
+
+test('future plan persists across day change', async ({ page }) => {
+  const handle = `user${Date.now()}fp`;
+  const email = `${handle}@example.com`;
+  const password = 'pass1234';
+
+  function addDays(base: string, days: number) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrow = addDays(today, 1);
+  const future = addDays(today, 3);
+
+  await page.goto('/signup');
+  await page.fill('input[placeholder="Name"]', 'Tester');
+  await page.fill('input[placeholder="Handle"]', handle);
+  await page.fill('input[placeholder="Email"]', email);
+  await page.fill('input[placeholder="Password"]', password);
+  await page.click('text=Sign Up');
+
+  // plan for a future date while simulating today's date
+  await page.goto(
+    `/planning/next?date=${future}&apoc_date=${today}&apoc_time=12:00`,
+  );
+  await page.click('[id^="p1an-add-top-"]');
+  await page.fill('input[id^="p1an-meta-ttl-"]', 'Persist');
+  await page.click('button[id^="p1an-meta-close-"]');
+  await page.waitForTimeout(1000);
+
+  // simulate returning the next day and ensure the block remains
+  await page.goto(
+    `/planning/next?date=${future}&apoc_date=${tomorrow}&apoc_time=12:00`,
+  );
+  await expect(page.locator('[id^="p1an-blk-"]')).toHaveCount(1);
+});

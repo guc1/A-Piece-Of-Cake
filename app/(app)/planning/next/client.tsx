@@ -48,11 +48,14 @@ export default function EditorClient({
   review = false,
 }: Props) {
   const { editable } = useViewContext();
-  const storageKey = `live-plan-${userId}-${date}`;
+  // Persist plans per-user and per-date. Live and review modes share the
+  // same key while future planning uses its own so adjustments remain across
+  // calendar days even if the network request fails.
+  const storageKey = `${live || review ? 'live' : 'next'}-plan-${userId}-${date}`;
   const reviewKey = `review-${userId}-${date}`;
   const vibeKey = `review-vibe-${userId}-${date}`;
   const [blocks, setBlocks] = useState<PlanBlock[]>(() => {
-    if ((live || review) && editable && typeof window !== 'undefined') {
+    if (editable && typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem(storageKey);
         if (raw) return JSON.parse(raw) as PlanBlock[];
@@ -112,6 +115,21 @@ export default function EditorClient({
     const d = new Date();
     return d.getHours() * 60 + d.getMinutes();
   });
+
+  // Ensure the current plan for this date is available locally so future
+  // visits (e.g., after the calendar day advances) still have a cached copy
+  // even if the network call fails.
+  useEffect(() => {
+    if (!editable) return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(blocks));
+    } catch {
+      // ignore write errors (e.g., quota exceeded)
+    }
+    // We intentionally omit `blocks` from deps so we only seed storage on
+    // mount or when the storage key changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editable, storageKey]);
 
   useEffect(() => {
     if (!live) return;
@@ -334,7 +352,13 @@ export default function EditorClient({
         }));
         savePlanAction(date, payload).then((plan) => {
           setBlocks(plan.blocks);
-          lastSaved.current = JSON.stringify(plan.blocks);
+          const ser = JSON.stringify(plan.blocks);
+          lastSaved.current = ser;
+          try {
+            window.localStorage.setItem(storageKey, ser);
+          } catch {
+            // ignore write errors
+          }
         });
       }
       saveTimer.current = null;
@@ -360,7 +384,13 @@ export default function EditorClient({
             color: b.color,
           }));
           void savePlanAction(date, payload).then((plan) => {
-            lastSaved.current = JSON.stringify(plan.blocks);
+            const ser = JSON.stringify(plan.blocks);
+            lastSaved.current = ser;
+            try {
+              window.localStorage.setItem(storageKey, ser);
+            } catch {
+              // ignore write errors
+            }
           });
         }
       }
