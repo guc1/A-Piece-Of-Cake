@@ -21,6 +21,7 @@ export default function PlanningDateNav({
   const ctx = useViewContext();
   const [showPicker, setShowPicker] = useState(false);
   const minDate = addDays(today, 1);
+  const isFuture = date > minDate;
   let base = '';
   if (ctx.mode === 'owner') {
     base = '/planning/next';
@@ -67,6 +68,31 @@ export default function PlanningDateNav({
                 if (v >= minDate) navigate(v);
               }}
             />
+          )}
+          {isFuture && (
+            <>
+              <button
+                type="button"
+                className="rounded border px-2 py-1 text-sm"
+                onClick={() => navigate(minDate)}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                className="rounded border px-2 py-1 text-sm"
+                onClick={() => navigate(addDays(date, -7))}
+              >
+                &lt;&lt;
+              </button>
+              <button
+                type="button"
+                className="rounded border px-2 py-1 text-sm"
+                onClick={() => navigate(addDays(date, -1))}
+              >
+                &lt;
+              </button>
+            </>
           )}
           <button
             type="button"
