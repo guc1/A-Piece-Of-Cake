@@ -90,6 +90,15 @@ test('flavor CRUD and ordering', async ({ page }) => {
     '❤️',
   );
 
+  // reopen picker to confirm icon persists and close without selection
+  await rows.first().click();
+  await page.click('button:has-text("Choose Icon")');
+  await expect(
+    page.locator('button[data-testid="icon-option"]:has-text("❤️")'),
+  ).toBeVisible();
+  await page.click('button[aria-label="Close"]');
+  await page.keyboard.press('Escape');
+
   // search flavors
   const flavorSearch = page.locator('input[placeholder="Search flavors…"]');
   await flavorSearch.fill('Second');

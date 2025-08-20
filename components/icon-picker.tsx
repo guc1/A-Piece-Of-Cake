@@ -194,6 +194,16 @@ export default function IconPicker({
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="flex h-[90vh] w-[90vw] max-w-3xl flex-col overflow-hidden rounded bg-white p-4">
+            <div className="mb-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
             <div className="mb-2 flex gap-2 text-sm">
               <button
                 type="button"
@@ -270,6 +280,9 @@ export default function IconPicker({
                     key={ic}
                     type="button"
                     onClick={() => {
+                      if (!myIcons.includes(ic)) {
+                        saveMyIcons([...myIcons, ic]);
+                      }
                       onChange(ic);
                       setOpen(false);
                     }}
