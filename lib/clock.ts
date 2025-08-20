@@ -114,4 +114,11 @@ export function toYMD(d: Date, tz: string): string {
   }).format(d);
 }
 
+export function parseYMD(ymd: string, tz: string): Date {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const utc = Date.UTC(y, m - 1, d);
+  const offset = getOffset(new Date(utc), tz);
+  return new Date(utc - offset);
+}
+
 export type ReqInit = ReqLike;
