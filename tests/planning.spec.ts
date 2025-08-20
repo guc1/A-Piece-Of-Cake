@@ -118,3 +118,43 @@ test('nested block appears on top', async ({ page }) => {
   );
   expect(z2).toBeGreaterThan(z1);
 });
+
+test('future planning date back navigation', async ({ page }) => {
+  const handle = `user${Date.now()}d`;
+  const email = `${handle}@example.com`;
+  const password = 'pass1234';
+
+  function addDays(base: string, days: number) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const minDate = addDays(today, 1);
+  const futureDate7 = addDays(minDate, 7);
+  const futureDate5 = addDays(minDate, 5);
+
+  await page.goto('/signup');
+  await page.fill('input[placeholder="Name"]', 'Tester');
+  await page.fill('input[placeholder="Handle"]', handle);
+  await page.fill('input[placeholder="Email"]', email);
+  await page.fill('input[placeholder="Password"]', password);
+  await page.click('text=Sign Up');
+
+  await page.goto(`/planning/next?date=${futureDate7}`);
+  await expect(page.locator('text=/^<$/')).toBeVisible();
+  await expect(page.locator('text=/^<<$/')).toBeVisible();
+  await expect(page.locator('text=Reset')).toBeVisible();
+
+  await page.click('text=/^<$/');
+  await page.waitForURL(`**/planning/next?date=${addDays(futureDate7, -1)}`);
+
+  await page.click('text=/^<<$/');
+  await page.waitForURL(`**/planning/next?date=${minDate}`);
+  await expect(page.locator('text=/^<$/')).toHaveCount(0);
+
+  await page.goto(`/planning/next?date=${futureDate5}`);
+  await page.click('text=Reset');
+  await page.waitForURL(`**/planning/next?date=${minDate}`);
+});
