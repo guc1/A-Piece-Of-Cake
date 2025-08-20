@@ -123,3 +123,5 @@
 - 2025-10-17: Made My Icons API snapshot-aware and allowed copying historical icons without altering past snapshots.
 - 2025-10-17: Fixed My Icons snapshot views to show historical icons only and block edits while allowing copying to the current library.
 - 2025-10-17: Clicking snapshot icons now opens the owner's full historical icon library with copy prompts.
+- 2025-10-18: Added split review page with rational and guilty pleasure sections and placeholder for AI panel.
+- 2025-10-18: Enlarged review text boxes, enabled independent scrolling, and added read-only viewing with snapshot test.
