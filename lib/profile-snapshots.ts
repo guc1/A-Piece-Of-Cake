@@ -2,6 +2,7 @@ import { db } from './db';
 import { profileSnapshots, users, flavors, subflavors } from './db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { startOfDay, addDays, toYMD } from './clock';
+import { listUserIcons } from './icons-store';
 
 export async function createProfileSnapshot(
   userId: number,
@@ -27,12 +28,18 @@ export async function createProfileSnapshot(
     .select()
     .from(subflavors)
     .where(eq(subflavors.userId, userId));
+  const iconList = await listUserIcons(userId);
   await db
     .insert(profileSnapshots)
     .values({
       userId,
       snapshotDate,
-      data: { user, flavors: flavorRows, subflavors: subflavorRows },
+      data: {
+        user,
+        flavors: flavorRows,
+        subflavors: subflavorRows,
+        icons: iconList,
+      },
     })
     .onConflictDoNothing();
 }

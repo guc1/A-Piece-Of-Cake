@@ -119,3 +119,5 @@
 - 2025-10-17: Saved preset icon selections to My Icons and added a close button to the icon picker.
 - 2025-10-17: Deduplicated saved icons, removed oversized My Icons unique index, and fixed duplicate-key warnings so icon uploads persist reliably.
 - 2025-10-17: Ensured My Icons saving auto-creates missing user records to prevent foreign key errors and keep icons persistent.
+- 2025-10-17: Snapshots capture user icon libraries and prompt before importing historical icons into My Icons.
+- 2025-10-17: Locked snapshot icons to their original state and kept icon picker open when import is canceled.
