@@ -21,7 +21,7 @@ export default async function HistoryViewFlavorsPage({
       <FlavorsClient
         userId={String(owner.id)}
         selfId={viewer ? String(viewer.id) : undefined}
-        initialFlavors={snapshot.flavors as any}
+        initialFlavors={snapshot.data.flavors as any}
       />
     </section>
   );

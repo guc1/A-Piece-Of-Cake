@@ -75,7 +75,10 @@ export async function listProfileSnapshotDates(
 
 export async function getProfileSnapshot(userId: number, snapshotDate: string) {
   const [row] = await db
-    .select()
+    .select({
+      data: profileSnapshots.data,
+      createdAt: profileSnapshots.createdAt,
+    })
     .from(profileSnapshots)
     .where(
       and(
@@ -83,7 +86,9 @@ export async function getProfileSnapshot(userId: number, snapshotDate: string) {
         eq(profileSnapshots.snapshotDate, snapshotDate),
       ),
     );
-  return row?.data as any;
+  return row
+    ? { data: row.data as any, createdAt: row.createdAt as Date }
+    : null;
 }
 
 // Derive the icon set from a profile snapshot. This helper allows older

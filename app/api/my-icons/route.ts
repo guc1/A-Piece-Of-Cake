@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   let icons: string[];
   if (snapshot) {
     const snap = await getProfileSnapshot(user.id, snapshot);
-    icons = snap ? iconsFromSnapshot(snap) : [];
+    icons = snap ? iconsFromSnapshot(snap.data) : [];
   } else {
     icons = await getMyIcons(user.id);
   }

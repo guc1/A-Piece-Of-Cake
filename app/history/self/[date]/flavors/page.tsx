@@ -18,7 +18,7 @@ export default async function HistoryFlavorsPage({
     <FlavorsClient
       userId={String(me.id)}
       selfId={String(me.id)}
-      initialFlavors={snapshot.flavors as any}
+      initialFlavors={snapshot.data.flavors as any}
     />
   );
 }

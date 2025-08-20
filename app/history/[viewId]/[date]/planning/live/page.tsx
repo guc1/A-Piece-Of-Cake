@@ -2,7 +2,7 @@ import { getUserByViewId } from '@/lib/users';
 import { getProfileSnapshot } from '@/lib/profile-snapshots';
 import { notFound } from 'next/navigation';
 import { getPlanAt } from '@/lib/plans-store';
-import { getUserTimeZone, startOfDay, addDays, toYMD } from '@/lib/clock';
+import { getUserTimeZone, startOfDay, toYMD } from '@/lib/clock';
 import EditorClient from '@/app/(app)/planning/next/client';
 
 export const revalidate = 0;
@@ -20,8 +20,7 @@ export default async function HistoryPlanningLive({
   const tz = getUserTimeZone(owner);
   const day = startOfDay(new Date(date), tz);
   const dateStr = toYMD(day, tz);
-  const at = addDays(day, 1, tz);
-  const plan = await getPlanAt(owner.id, dateStr, at);
+  const plan = await getPlanAt(owner.id, dateStr, snapshot.createdAt);
   return (
     <section id={`hist-plan-live-${owner.id}-${date}`}>
       <EditorClient
