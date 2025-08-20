@@ -22,6 +22,7 @@ function toIngredient(row: typeof ingredients.$inferSelect): Ingredient {
     tips: row.tips ?? '',
     usefulness: row.usefulness ?? 0,
     imageUrl: row.imageUrl ?? null,
+    icon: row.icon ?? '⭐',
     tags: row.tags ?? null,
     visibility: (row.visibility as Visibility) ?? 'private',
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
@@ -130,6 +131,7 @@ export async function createIngredient(
       tips: input.tips,
       usefulness: clamp(input.usefulness),
       imageUrl: input.imageUrl,
+      icon: input.icon,
       tags: input.tags ?? null,
       visibility: input.visibility,
       createdAt: now,
@@ -148,6 +150,7 @@ export async function createIngredient(
       tips: ing.tips,
       usefulness: ing.usefulness,
       imageUrl: ing.imageUrl,
+      icon: ing.icon,
       tags: ing.tags,
     },
   });
@@ -171,8 +174,10 @@ export async function updateIngredient(
       whyUsed: input.whyUsed,
       whenUsed: input.whenUsed,
       tips: input.tips,
-      usefulness: input.usefulness !== undefined ? clamp(input.usefulness) : undefined,
+      usefulness:
+        input.usefulness !== undefined ? clamp(input.usefulness) : undefined,
       imageUrl: input.imageUrl,
+      icon: input.icon,
       tags: input.tags,
       visibility: input.visibility,
       updatedAt: now,
@@ -192,6 +197,7 @@ export async function updateIngredient(
       tips: ing.tips,
       usefulness: ing.usefulness,
       imageUrl: ing.imageUrl,
+      icon: ing.icon,
       tags: ing.tags,
     },
   });

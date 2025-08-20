@@ -13,6 +13,8 @@ function sanitize(form: FormData) {
   obj.usefulness = clamp(Number(obj.usefulness));
   obj.title = String(obj.title || '').slice(0, 80);
   obj.shortDescription = (obj.shortDescription || '').toString().slice(0, 160);
+  obj.imageUrl = typeof obj.imageUrl === 'string' ? obj.imageUrl : null;
+  obj.icon = typeof obj.icon === 'string' ? obj.icon : '⭐';
   obj.visibility = ['private', 'followers', 'friends', 'public'].includes(obj.visibility)
     ? obj.visibility
     : 'private';

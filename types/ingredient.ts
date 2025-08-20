@@ -11,6 +11,7 @@ export interface Ingredient {
   tips: string;
   usefulness: number;
   imageUrl: string | null;
+  icon: string;
   tags: string[] | null;
   visibility: Visibility;
   createdAt: string;
