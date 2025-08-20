@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { PeopleLists, Person } from '@/lib/people-store';
+import { useViewContext } from '@/lib/view-context';
 
 interface IconPickerProps {
   value: string;
@@ -35,6 +36,7 @@ export default function IconPicker({
   const [peopleSearch, setPeopleSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<Person | null>(null);
   const [userIcons, setUserIcons] = useState<string[] | null>(null);
+  const ctx = useViewContext();
 
   // Load the user's saved icons. We first attempt to fetch from the
   // server so icons are shared across devices, falling back to any
@@ -143,7 +145,10 @@ export default function IconPicker({
     setSelectedUser(u);
     setUserIcons(null);
     try {
-      const res = await fetch(`/api/users/${u.id}/icons`);
+      const url = ctx.snapshotDate
+        ? `/api/users/${u.id}/icons?at=${ctx.snapshotDate}`
+        : `/api/users/${u.id}/icons`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setUserIcons(Array.isArray(data.icons) ? data.icons : []);
@@ -353,12 +358,16 @@ export default function IconPicker({
                               key={ic}
                               type="button"
                               onClick={() => {
-                                if (!myIcons.includes(ic)) {
-                                  saveMyIcons([...myIcons, ic]);
+                                if (
+                                  window.confirm('Add to your My Icons?')
+                                ) {
+                                  if (!myIcons.includes(ic)) {
+                                    saveMyIcons([...myIcons, ic]);
+                                  }
+                                  onChange(ic);
+                                  setOpen(false);
+                                  setSelectedUser(null);
                                 }
-                                onChange(ic);
-                                setOpen(false);
-                                setSelectedUser(null);
                               }}
                               className="flex h-10 w-10 items-center justify-center rounded border"
                               data-testid="icon-option"
