@@ -116,21 +116,6 @@ export default function EditorClient({
     return d.getHours() * 60 + d.getMinutes();
   });
 
-  // Ensure the current plan for this date is available locally so future
-  // visits (e.g., after the calendar day advances) still have a cached copy
-  // even if the network call fails.
-  useEffect(() => {
-    if (!editable) return;
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(blocks));
-    } catch {
-      // ignore write errors (e.g., quota exceeded)
-    }
-    // We intentionally omit `blocks` from deps so we only seed storage on
-    // mount or when the storage key changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editable, storageKey]);
-
   useEffect(() => {
     if (!live) return;
     const tick = () => {
@@ -331,6 +316,34 @@ export default function EditorClient({
   useEffect(() => {
     blocksRef.current = blocks;
   }, [blocks]);
+
+  // When navigating between dates or users, refresh the block list so it
+  // matches the server-provided plan (or cached local copy) without requiring
+  // a full page reload.
+  useEffect(() => {
+    let fromStorage: PlanBlock[] | null = null;
+    if (editable && typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem(storageKey);
+        if (raw) fromStorage = JSON.parse(raw) as PlanBlock[];
+      } catch {
+        // ignore malformed data
+      }
+    }
+    const next = fromStorage ?? initialPlan?.blocks ?? [];
+    const serialized = JSON.stringify(next);
+    if (serialized !== lastSaved.current) {
+      setBlocks(next);
+      lastSaved.current = serialized;
+    }
+    if (editable && !fromStorage) {
+      try {
+        window.localStorage.setItem(storageKey, serialized);
+      } catch {
+        // ignore write errors
+      }
+    }
+  }, [editable, storageKey, initialPlan]);
 
   useEffect(() => {
     if (!editable || review) return;

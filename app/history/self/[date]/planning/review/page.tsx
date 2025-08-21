@@ -22,7 +22,7 @@ export default async function HistorySelfPlanningReview({
   const tz = getUserTimeZone(me);
   const day = startOfDay(new Date(date), tz);
   const dateStr = toYMD(day, tz);
-  const at = addDays(day, 1, tz);
+  const at = snapshot.createdAt ?? addDays(day, 1, tz);
   const plan = await getPlanAt(me.id, dateStr, at);
   return (
     <section id={`hist-self-plan-review-${me.id}-${date}`}>

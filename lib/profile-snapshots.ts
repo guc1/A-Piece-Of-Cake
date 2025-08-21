@@ -83,7 +83,10 @@ export async function getProfileSnapshot(userId: number, snapshotDate: string) {
         eq(profileSnapshots.snapshotDate, snapshotDate),
       ),
     );
-  return row?.data as any;
+  if (!row) return null;
+  // Include the timestamp so historical queries can fetch data exactly as it
+  // appeared when the snapshot was captured.
+  return { ...(row.data as any), createdAt: row.createdAt };
 }
 
 // Derive the icon set from a profile snapshot. This helper allows older

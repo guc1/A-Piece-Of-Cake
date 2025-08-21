@@ -20,7 +20,7 @@ export default async function HistoryPlanningLive({
   const tz = getUserTimeZone(owner);
   const day = startOfDay(new Date(date), tz);
   const dateStr = toYMD(day, tz);
-  const at = addDays(day, 1, tz);
+  const at = snapshot.createdAt ?? addDays(day, 1, tz);
   const plan = await getPlanAt(owner.id, dateStr, at);
   return (
     <section id={`hist-plan-live-${owner.id}-${date}`}>
