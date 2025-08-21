@@ -33,7 +33,7 @@ export default async function HistorySelfPlanningNext({
   }
   const dateStr = toYMD(target, tz);
   const todayStr = toYMD(day, tz);
-  const at = addDays(day, 1, tz);
+  const at = snapshot.createdAt ?? addDays(day, 1, tz);
   const plan = await getPlanAt(me.id, dateStr, at);
   return (
     <section id={`hist-self-plan-next-${me.id}-${date}`}>
