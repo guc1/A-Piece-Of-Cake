@@ -134,3 +134,5 @@
 - 2025-10-19: Cached future planning edits in local storage and added cross-day persistence test.
 - 2025-10-20: Fixed historical plans showing future edits by ignoring revisions saved after snapshots and added test.
 - 2025-10-20: Synced planner state on client-side navigation and fetched historical plans at snapshot time to show exact past versions without refresh.
+- 2025-10-21: Documented missing ID patterns for planning, flavors, subflavors, people lists, and history pages.
+- 2025-10-21: Completed ID catalog with cake and people sections and pruned unused identifiers.
