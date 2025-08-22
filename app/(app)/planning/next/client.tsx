@@ -84,6 +84,11 @@ export default function EditorClient({
       ingredientIds: b.ingredientIds ?? [],
     }));
   });
+  const [dailyAim, setDailyAim] = useState(() => initialPlan?.dailyAim ?? '');
+  const [dailyIngredientIds, setDailyIngredientIds] = useState<number[]>(
+    () => initialPlan?.dailyIngredientIds ?? [],
+  );
+  const [showDailyAim, setShowDailyAim] = useState(false);
   const [reviews, setReviews] = useState<
     Record<string, { good: string; bad: string }>
   >(() => {
@@ -270,6 +275,10 @@ export default function EditorClient({
     });
   }
 
+  function removeDailyIngredient(ingredientId: number) {
+    setDailyIngredientIds((ids) => ids.filter((id) => id !== ingredientId));
+  }
+
   function addBlock() {
     if (!editable || review) return;
     const sorted = [...blocks].sort(
@@ -338,30 +347,60 @@ export default function EditorClient({
     setSelectedId(id);
   }
 
-  const lastSaved = useRef(JSON.stringify(blocks));
+  const lastSaved = useRef(
+    JSON.stringify({ blocks, dailyAim, dailyIngredientIds }),
+  );
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const blocksRef = useRef(blocks);
+  const dailyAimRef = useRef(dailyAim);
+  const dailyIngredientIdsRef = useRef(dailyIngredientIds);
   useEffect(() => {
     blocksRef.current = blocks;
   }, [blocks]);
+  useEffect(() => {
+    dailyAimRef.current = dailyAim;
+  }, [dailyAim]);
+  useEffect(() => {
+    dailyIngredientIdsRef.current = dailyIngredientIds;
+  }, [dailyIngredientIds]);
 
   // When navigating between dates or users, refresh the block list so it
   // matches the server-provided plan (or cached local copy) without requiring
   // a full page reload.
   useEffect(() => {
-    let fromStorage: PlanBlock[] | null = null;
+    let fromStorage: {
+      blocks?: PlanBlock[];
+      dailyAim?: string;
+      dailyIngredientIds?: number[];
+    } | null = null;
     if (editable && typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem(storageKey);
-        if (raw) fromStorage = JSON.parse(raw) as PlanBlock[];
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          fromStorage = Array.isArray(parsed)
+            ? { blocks: parsed }
+            : parsed;
+        }
       } catch {
         // ignore malformed data
       }
     }
-    const next = fromStorage ?? initialPlan?.blocks ?? [];
-    const serialized = JSON.stringify(next);
+    const nextBlocks = fromStorage?.blocks ?? initialPlan?.blocks ?? [];
+    const nextAim = fromStorage?.dailyAim ?? initialPlan?.dailyAim ?? '';
+    const nextIng =
+      fromStorage?.dailyIngredientIds ??
+      initialPlan?.dailyIngredientIds ??
+      [];
+    const serialized = JSON.stringify({
+      blocks: nextBlocks,
+      dailyAim: nextAim,
+      dailyIngredientIds: nextIng,
+    });
     if (serialized !== lastSaved.current) {
-      setBlocks(next);
+      setBlocks(nextBlocks);
+      setDailyAim(nextAim);
+      setDailyIngredientIds(nextIng);
       lastSaved.current = serialized;
     }
     if (editable && !fromStorage) {
@@ -375,15 +414,60 @@ export default function EditorClient({
 
   useEffect(() => {
     if (!editable || review) return;
-    const serialized = JSON.stringify(blocks);
+    const serialized = JSON.stringify({
+      blocks,
+      dailyAim,
+      dailyIngredientIds,
+    });
     if (serialized === lastSaved.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      if (live) {
-        window.localStorage.setItem(storageKey, serialized);
-        lastSaved.current = serialized;
-      } else {
-        const payload: PlanBlockInput[] = blocks.map((b) => ({
+      const payload: PlanBlockInput[] = blocks.map((b) => ({
+        id: b.id,
+        start: b.start,
+        end: b.end,
+        title: b.title,
+        description: b.description,
+        color: b.color,
+        ingredientIds: b.ingredientIds,
+      }));
+      savePlanAction(date, payload, dailyAim, dailyIngredientIds).then(
+        (plan) => {
+          setBlocks(plan.blocks);
+          setDailyAim(plan.dailyAim);
+          setDailyIngredientIds(plan.dailyIngredientIds);
+          const ser = JSON.stringify({
+            blocks: plan.blocks,
+            dailyAim: plan.dailyAim,
+            dailyIngredientIds: plan.dailyIngredientIds,
+          });
+          lastSaved.current = ser;
+          try {
+            window.localStorage.setItem(storageKey, ser);
+          } catch {
+            // ignore write errors
+          }
+        },
+      );
+      saveTimer.current = null;
+    }, 500);
+  }, [
+    blocks,
+    dailyAim,
+    dailyIngredientIds,
+    date,
+    editable,
+    live,
+    storageKey,
+    review,
+  ]);
+
+  useEffect(() => {
+    if (!editable || review) return;
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        const payload: PlanBlockInput[] = blocksRef.current.map((b) => ({
           id: b.id,
           start: b.start,
           end: b.end,
@@ -392,9 +476,17 @@ export default function EditorClient({
           color: b.color,
           ingredientIds: b.ingredientIds,
         }));
-        savePlanAction(date, payload).then((plan) => {
-          setBlocks(plan.blocks);
-          const ser = JSON.stringify(plan.blocks);
+        void savePlanAction(
+          date,
+          payload,
+          dailyAimRef.current,
+          dailyIngredientIdsRef.current,
+        ).then((plan) => {
+          const ser = JSON.stringify({
+            blocks: plan.blocks,
+            dailyAim: plan.dailyAim,
+            dailyIngredientIds: plan.dailyIngredientIds,
+          });
           lastSaved.current = ser;
           try {
             window.localStorage.setItem(storageKey, ser);
@@ -403,42 +495,8 @@ export default function EditorClient({
           }
         });
       }
-      saveTimer.current = null;
-    }, 500);
-  }, [blocks, date, editable, live, storageKey, review]);
-
-  useEffect(() => {
-    if (!editable || review) return;
-    return () => {
-      if (saveTimer.current) {
-        clearTimeout(saveTimer.current);
-        if (live) {
-          const serialized = JSON.stringify(blocksRef.current);
-          window.localStorage.setItem(storageKey, serialized);
-          lastSaved.current = serialized;
-        } else {
-          const payload: PlanBlockInput[] = blocksRef.current.map((b) => ({
-            id: b.id,
-            start: b.start,
-            end: b.end,
-            title: b.title,
-            description: b.description,
-            color: b.color,
-            ingredientIds: b.ingredientIds,
-          }));
-          void savePlanAction(date, payload).then((plan) => {
-            const ser = JSON.stringify(plan.blocks);
-            lastSaved.current = ser;
-            try {
-              window.localStorage.setItem(storageKey, ser);
-            } catch {
-              // ignore write errors
-            }
-          });
-        }
-      }
     };
-  }, [date, editable, live, storageKey, review]);
+  }, [date, editable, storageKey, review]);
 
   function handleTimeChange(id: string, field: 'start' | 'end', value: string) {
     if (review) return;
@@ -601,7 +659,7 @@ export default function EditorClient({
           onPointerDown={() => setSelectedId(null)}
         >
           <div
-            className="sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-gray-100 p-2 text-sm"
+            className="sticky top-0 z-10 flex flex-wrap items-end gap-2 bg-gray-100 p-2 text-sm"
             onClick={(e) => e.stopPropagation()}
           >
             {review ? (
@@ -669,6 +727,13 @@ export default function EditorClient({
                 Load later
               </button>
             )}
+            <button
+              id={`p1an-daily-aim-${userId}`}
+              className="rounded border px-3 py-2"
+              onClick={() => setShowDailyAim(true)}
+            >
+              Daily Aim
+            </button>
             {(startMinute !== DEFAULT_START || endMinute !== DEFAULT_END) && (
               <button
                 id={`p1an-close-range-${userId}`}
@@ -1151,6 +1216,94 @@ export default function EditorClient({
                 variant="outline"
                 id={`p1an-vibe-close-${userId}`}
                 onClick={() => setShowVibe(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDailyAim && (
+        <div
+          className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50 backdrop-blur"
+          onClick={() => setShowDailyAim(false)}
+        >
+          <div
+            className="w-96 max-w-full rounded bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="mb-2 text-lg font-semibold">Daily Aim</h2>
+            <textarea
+              id={`p1an-day-aim-${userId}`}
+              className="mb-4 w-full border p-1"
+              value={dailyAim}
+              onChange={(e) => setDailyAim(e.target.value)}
+              rows={3}
+              maxLength={500}
+              disabled={!editable}
+            />
+            <div className="mb-2">
+              <span className="block text-sm font-medium">Daily ingredients</span>
+              <div
+                id={`p1an-day-igrd-${userId}`}
+                className="mb-2 flex flex-wrap gap-2"
+              >
+                {dailyIngredientIds.length === 0 && (
+                  <span
+                    id={`p1an-day-igrd-none-${userId}`}
+                    className="text-sm text-gray-500"
+                  >
+                    No ingredient found
+                  </span>
+                )}
+                {dailyIngredientIds.map((iid) => {
+                  const ing = initialIngredients.find((i) => i.id === iid);
+                  const src = ing?.icon ? iconSrc(ing.icon) : null;
+                  return (
+                    <Link
+                      key={iid}
+                      id={`p1an-day-igrd-${iid}-${userId}`}
+                      href={
+                        viewId
+                          ? `/view/${viewId}/ingredient/${ing?.id ?? ''}`
+                          : `/ingredient/${ing?.id ?? ''}`
+                      }
+                      className="flex items-center gap-1 rounded border px-2 py-1"
+                    >
+                      {src ? (
+                        <img src={src} alt="" className="h-4 w-4" />
+                      ) : (
+                        <span>{ing?.icon}</span>
+                      )}
+                      <span className="text-sm">{ing?.title}</span>
+                      {editable && (
+                        <button
+                          type="button"
+                          className="ml-1 text-xs text-red-500"
+                          onClick={() => removeDailyIngredient(iid)}
+                        >
+                          X
+                        </button>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+              {editable && (
+                <Link
+                  id={`p1an-day-add-${userId}`}
+                  href={`/ingredientsforplanning?date=${date}&block=day&mode=${mode}`}
+                  className="rounded border px-2 py-1 text-sm"
+                >
+                  Add ingredients +
+                </Link>
+              )}
+            </div>
+            <div className="mt-2 text-right">
+              <Button
+                variant="outline"
+                id={`p1an-day-close-${userId}`}
+                onClick={() => setShowDailyAim(false)}
               >
                 Close
               </Button>
