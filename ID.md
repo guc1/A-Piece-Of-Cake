@@ -101,6 +101,8 @@ Modal form IDs:
 - `p1an-meta-tms-{blockId}-{ownerId}` → start time input.
 - `p1an-meta-tme-{blockId}-{ownerId}` → end time input.
 - `p1an-meta-del-{ownerId}` → delete block button.
+- `p1an-meta-igrd-{blockId}-{ownerId}` → ingredient tags container.
+- `p1an-meta-igrd-add-{blockId}-{ownerId}` → add ingredient button.
 - `p1an-vibe-{ownerId}` → general day vibe modal.
 - `p1an-vibe-close-{ownerId}` → close general vibe modal.
 
