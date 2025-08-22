@@ -106,6 +106,13 @@ Modal form IDs:
 - `p1an-meta-igrd-none-{blockId}-{ownerId}` → ingredient empty state text.
 - `p1an-vibe-{ownerId}` → general day vibe modal.
 - `p1an-vibe-close-{ownerId}` → close general vibe modal.
+- `p1an-daily-aim-{ownerId}` → open Daily Aim modal.
+- `p1an-day-aim-{ownerId}` → Daily Aim textarea.
+- `p1an-day-igrd-{ownerId}` → Daily ingredients tag container.
+- `p1an-day-igrd-none-{ownerId}` → Daily ingredients empty state text.
+- `p1an-day-add-{ownerId}` → add daily ingredient button.
+- `p1an-day-done-{ownerId}` → confirm Daily Aim modal.
+- `p1an-day-x-{ownerId}` → close Daily Aim modal.
 
 ## People
 

@@ -27,6 +27,7 @@ export default async function HistoryPlanningLive({
   return (
     <section id={`hist-plan-live-${owner.id}-${date}`}>
       <EditorClient
+        key={dateStr}
         userId={String(owner.id)}
         date={dateStr}
         today={dateStr}
