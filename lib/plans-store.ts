@@ -33,6 +33,8 @@ async function fetchPlan(userId: number, date: string): Promise<Plan | null> {
     userId: String(userId),
     date: planRow.date,
     blocks: blockRows.map(toPlanBlock),
+    dailyAim: planRow.dailyAim ?? '',
+    dailyIngredientIds: planRow.dailyIngredientIds ?? [],
   };
 }
 
@@ -44,13 +46,15 @@ export async function getOrCreatePlan(
   if (!plan) {
     const [inserted] = await db
       .insert(plans)
-      .values({ userId, date })
+      .values({ userId, date, dailyAim: '', dailyIngredientIds: [] })
       .returning();
     plan = {
       id: inserted.id.toString(),
       userId: String(userId),
       date: inserted.date,
       blocks: [],
+      dailyAim: '',
+      dailyIngredientIds: [],
     };
   }
   return plan;
@@ -62,7 +66,14 @@ export async function getPlanStrict(
 ): Promise<Plan> {
   const plan = await fetchPlan(userId, date);
   if (plan) return plan;
-  return { id: '', userId: String(userId), date, blocks: [] };
+  return {
+    id: '',
+    userId: String(userId),
+    date,
+    blocks: [],
+    dailyAim: '',
+    dailyIngredientIds: [],
+  };
 }
 
 export async function getPlanAt(
@@ -83,7 +94,8 @@ export async function getPlanAt(
     .orderBy(desc(planRevisions.snapshotAt))
     .limit(1);
   if (rev) {
-    const blocks = ((rev.payload as any).blocks as PlanBlock[]) || [];
+    const payload = rev.payload as any;
+    const blocks = (payload.blocks as PlanBlock[]) || [];
     return {
       id: '',
       userId: String(userId),
@@ -92,19 +104,30 @@ export async function getPlanAt(
         ...b,
         ingredientIds: b.ingredientIds ?? [],
       })),
+      dailyAim: payload.dailyAim ?? '',
+      dailyIngredientIds: payload.dailyIngredientIds ?? [],
     };
   }
   // When no revision exists at or before the requested time, the user had not
   // planned this date yet. Returning the current plan would leak future edits
   // into historical snapshots, so instead return an empty plan to reflect the
   // absence of data at that moment in time.
-  return { id: '', userId: String(userId), date, blocks: [] };
+  return {
+    id: '',
+    userId: String(userId),
+    date,
+    blocks: [],
+    dailyAim: '',
+    dailyIngredientIds: [],
+  };
 }
 
 export async function savePlan(
   userId: string,
   date: string,
   blocks: PlanBlockInput[],
+  dailyAim = '',
+  dailyIngredientIds: number[] = [],
 ): Promise<Plan> {
   let planRow = await fetchPlan(Number(userId), date);
   if (!planRow) {
@@ -161,15 +184,25 @@ export async function savePlan(
       results.push(toPlanBlock(row));
     }
   }
+  await db
+    .update(plans)
+    .set({
+      dailyAim,
+      dailyIngredientIds,
+      updatedAt: now,
+    })
+    .where(eq(plans.id, Number(planRow.id)));
   await db.insert(planRevisions).values({
     userId: Number(userId),
     planDate: date,
-    payload: { blocks: results },
+    payload: { blocks: results, dailyAim, dailyIngredientIds },
   });
   return {
     id: String(planRow.id),
     userId,
     date,
     blocks: results,
+    dailyAim,
+    dailyIngredientIds,
   };
 }
