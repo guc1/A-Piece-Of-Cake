@@ -38,6 +38,7 @@ export default async function HistoryPlanningNext({
   return (
     <section id={`hist-plan-next-${owner.id}-${date}`}>
       <EditorClient
+        key={dateStr}
         userId={String(owner.id)}
         date={dateStr}
         today={todayStr}

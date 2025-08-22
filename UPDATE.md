@@ -141,3 +141,6 @@
 - 2025-10-22: Enabled previewing ingredients before attaching and ensured ingredient additions persist for live and next planning.
 - 2025-10-23: Softened add-ingredient pill, added back buttons to picker and detail pages, and allowed viewers to open ingredient details without 404s.
 - 2025-10-23: Display "No ingredient found" placeholders and label hidden ingredients as "Secret 🔒".
+- 2025-10-24: Introduced Daily Aim modal with daily ingredients on planning pages and saved values in plan snapshots.
+- 2025-10-24: Ensured Daily Aim is stored per day, remounting planners on date changes and
+highlighting the Daily Aim button red when empty and green when filled.

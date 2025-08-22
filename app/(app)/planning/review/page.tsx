@@ -35,6 +35,7 @@ export default async function PlanningReviewPage({
     <>
       {overrideLabel && <TimeOverrideBadge label={overrideLabel} />}
       <EditorClient
+        key={dateStr}
         userId={String(me.id)}
         date={dateStr}
         today={todayStr}
