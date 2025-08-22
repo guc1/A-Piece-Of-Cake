@@ -12,6 +12,7 @@ function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
     title: row.title ?? '',
     description: row.description ?? '',
     color: row.color ?? '#888888',
+    ingredientIds: row.ingredientIds ?? [],
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -129,6 +130,7 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          ingredientIds: blk.ingredientIds,
           updatedAt: now,
         })
         .where(eq(planBlocks.id, blk.id))
@@ -147,6 +149,7 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          ingredientIds: blk.ingredientIds,
           createdAt: now,
           updatedAt: now,
         })

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useViewContext } from '@/lib/view-context';
 import PlanningDateNav from './date-nav';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
+import type { Ingredient } from '@/types/ingredient';
 import { savePlanAction } from './actions';
 
 const COLORS = [
@@ -34,6 +35,7 @@ interface Props {
   today: string; // today's date YYYY-MM-DD
   tz: string;
   initialPlan: Plan | null;
+  ingredients?: Ingredient[];
   live?: boolean;
   review?: boolean;
 }
@@ -44,6 +46,7 @@ export default function EditorClient({
   today,
   tz,
   initialPlan,
+  ingredients: initialIngredients = [],
   live = false,
   review = false,
 }: Props) {
@@ -58,12 +61,19 @@ export default function EditorClient({
     if (editable && typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem(storageKey);
-        if (raw) return JSON.parse(raw) as PlanBlock[];
+        if (raw)
+          return (JSON.parse(raw) as PlanBlock[]).map((b) => ({
+            ...b,
+            ingredientIds: b.ingredientIds ?? [],
+          }));
       } catch {
         // ignore malformed data
       }
     }
-    return initialPlan?.blocks ?? [];
+    return (initialPlan?.blocks ?? []).map((b) => ({
+      ...b,
+      ingredientIds: b.ingredientIds ?? [],
+    }));
   });
   const [reviews, setReviews] = useState<
     Record<string, { good: string; bad: string }>
@@ -95,6 +105,10 @@ export default function EditorClient({
   });
   const [showVibe, setShowVibe] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [ingredientPickerFor, setIngredientPickerFor] = useState<string | null>(
+    null,
+  );
+  const [viewIngredient, setViewIngredient] = useState<Ingredient | null>(null);
   const selected = useMemo(
     () => blocks.find((b) => b.id === selectedId) || null,
     [blocks, selectedId],
@@ -243,6 +257,23 @@ export default function EditorClient({
     );
   }
 
+  function addIngredient(blockId: string, ingredientId: number) {
+    const blk = blocks.find((b) => b.id === blockId);
+    if (!blk) return;
+    if (blk.ingredientIds.includes(ingredientId)) return;
+    updateBlock(blockId, {
+      ingredientIds: [...blk.ingredientIds, ingredientId],
+    });
+  }
+
+  function removeIngredient(blockId: string, ingredientId: number) {
+    const blk = blocks.find((b) => b.id === blockId);
+    if (!blk) return;
+    updateBlock(blockId, {
+      ingredientIds: blk.ingredientIds.filter((id) => id !== ingredientId),
+    });
+  }
+
   function addBlock() {
     if (!editable || review) return;
     const sorted = [...blocks].sort(
@@ -303,6 +334,7 @@ export default function EditorClient({
       title: '',
       description: '',
       color: COLORS[0],
+      ingredientIds: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -362,6 +394,7 @@ export default function EditorClient({
           title: b.title,
           description: b.description,
           color: b.color,
+          ingredientIds: b.ingredientIds,
         }));
         savePlanAction(date, payload).then((plan) => {
           setBlocks(plan.blocks);
@@ -395,6 +428,7 @@ export default function EditorClient({
             title: b.title,
             description: b.description,
             color: b.color,
+            ingredientIds: b.ingredientIds,
           }));
           void savePlanAction(date, payload).then((plan) => {
             const ser = JSON.stringify(plan.blocks);
@@ -791,7 +825,8 @@ export default function EditorClient({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (draggingRef.current) return;
-                      if (review && live && nowMinute < minutesFromIso(b.end)) return;
+                      if (review && live && nowMinute < minutesFromIso(b.end))
+                        return;
                       setSelectedId(b.id);
                     }}
                   >
@@ -1000,6 +1035,51 @@ export default function EditorClient({
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium">
+                    Ingredients
+                  </label>
+                  <div
+                    id={`p1an-meta-igrd-${selected.id}-${userId}`}
+                    className="mb-2 flex flex-wrap gap-2"
+                  >
+                    {selected.ingredientIds.map((iid) => {
+                      const ing = initialIngredients.find((i) => i.id === iid);
+                      return (
+                        <button
+                          key={iid}
+                          onClick={() => setViewIngredient(ing || null)}
+                          className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow"
+                        >
+                          <span>{ing?.icon ?? '❓'}</span>
+                          <span className="text-sm">
+                            {ing?.title ?? 'Unknown'}
+                          </span>
+                          {editable && (
+                            <span
+                              className="ml-1 cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeIngredient(selected.id, iid);
+                              }}
+                            >
+                              ×
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    {editable && (
+                      <button
+                        id={`p1an-meta-igrd-add-${selected.id}-${userId}`}
+                        className="rounded bg-green-500 px-2 py-1 text-white"
+                        onClick={() => setIngredientPickerFor(selected.id)}
+                      >
+                        +
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="mt-4 flex gap-2">
                   {editable ? (
                     <Button
@@ -1058,6 +1138,77 @@ export default function EditorClient({
                 id={`p1an-vibe-close-${userId}`}
                 onClick={() => setShowVibe(false)}
               >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {ingredientPickerFor && (
+        <div
+          className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50 backdrop-blur"
+          onClick={() => setIngredientPickerFor(null)}
+        >
+          <div
+            className="max-h-[80vh] w-96 overflow-auto rounded bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="mb-2 text-lg font-semibold">Choose ingredient</h2>
+            <div className="space-y-2">
+              {initialIngredients.map((ing) => (
+                <div
+                  key={ing.id}
+                  className="flex items-center justify-between rounded border p-2"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>{ing.icon}</span>
+                    <span>{ing.title}</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-green-500 text-white"
+                    disabled={!editable}
+                    onClick={() => {
+                      addIngredient(ingredientPickerFor, ing.id);
+                      setIngredientPickerFor(null);
+                    }}
+                  >
+                    +
+                  </Button>
+                </div>
+              ))}
+              {initialIngredients.length === 0 && <p>No ingredients</p>}
+            </div>
+            <div className="mt-2 text-right">
+              <Button
+                variant="outline"
+                onClick={() => setIngredientPickerFor(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {viewIngredient && (
+        <div
+          className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50 backdrop-blur"
+          onClick={() => setViewIngredient(null)}
+        >
+          <div
+            className="w-96 rounded bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="mb-2 text-lg font-semibold">
+              {viewIngredient.title}
+            </h2>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-2xl">{viewIngredient.icon}</span>
+              <span>{viewIngredient.shortDescription}</span>
+            </div>
+            <p className="mb-2 text-sm">{viewIngredient.description}</p>
+            <div className="mt-2 text-right">
+              <Button variant="outline" onClick={() => setViewIngredient(null)}>
                 Close
               </Button>
             </div>
