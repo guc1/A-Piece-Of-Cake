@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { getUserByHandle } from '@/lib/users';
 import { savePlan, getPlanAt } from '@/lib/plans-store';
-import { createProfileSnapshot, getProfileSnapshot } from '@/lib/profile-snapshots';
+import {
+  createProfileSnapshot,
+  getProfileSnapshot,
+} from '@/lib/profile-snapshots';
 
 const PASSWORD = 'pass1234';
 
@@ -44,6 +47,7 @@ test('historical plans keep past versions', async ({ page }) => {
       title: 'Old',
       description: '',
       color: '#F87171',
+      ingredientIds: [],
     },
   ];
   await savePlan(String(user.id), future, blocksA);
@@ -58,6 +62,7 @@ test('historical plans keep past versions', async ({ page }) => {
       title: 'New',
       description: '',
       color: '#34D399',
+      ingredientIds: [],
     },
   ];
   await savePlan(String(user.id), future, blocksB);
@@ -92,6 +97,7 @@ test('plans added after snapshot are hidden from past snapshots', async ({
       title: 'Future',
       description: '',
       color: '#FBBF24',
+      ingredientIds: [],
     },
   ];
   await savePlan(String(user.id), future, blocks);

@@ -192,6 +192,7 @@ export const planBlocks = pgTable('plan_blocks', {
   title: varchar('title', { length: 60 }),
   description: text('description'),
   color: varchar('color', { length: 10 }),
+  ingredientIds: integer('ingredient_ids').array(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

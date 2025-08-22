@@ -12,6 +12,7 @@ function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
     title: row.title ?? '',
     description: row.description ?? '',
     color: row.color ?? '#888888',
+    ingredientIds: row.ingredientIds ?? [],
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -82,11 +83,15 @@ export async function getPlanAt(
     .orderBy(desc(planRevisions.snapshotAt))
     .limit(1);
   if (rev) {
+    const blocks = ((rev.payload as any).blocks as PlanBlock[]) || [];
     return {
       id: '',
       userId: String(userId),
       date,
-      blocks: ((rev.payload as any).blocks as PlanBlock[]) || [],
+      blocks: blocks.map((b) => ({
+        ...b,
+        ingredientIds: b.ingredientIds ?? [],
+      })),
     };
   }
   // When no revision exists at or before the requested time, the user had not
@@ -129,6 +134,7 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          ingredientIds: blk.ingredientIds,
           updatedAt: now,
         })
         .where(eq(planBlocks.id, blk.id))
@@ -147,6 +153,7 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          ingredientIds: blk.ingredientIds,
           createdAt: now,
           updatedAt: now,
         })
