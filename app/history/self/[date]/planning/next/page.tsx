@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { getPlanAt } from '@/lib/plans-store';
 import { getUserTimeZone, startOfDay, addDays, toYMD } from '@/lib/clock';
 import EditorClient from '@/app/(app)/planning/next/client';
+import { listIngredients } from '@/lib/ingredients-store';
 
 export const revalidate = 0;
 
@@ -35,6 +36,7 @@ export default async function HistorySelfPlanningNext({
   const todayStr = toYMD(day, tz);
   const at = snapshot.createdAt ?? addDays(day, 1, tz);
   const plan = await getPlanAt(me.id, dateStr, at);
+  const ingredients = await listIngredients(String(me.id), me.id, at);
   return (
     <section id={`hist-self-plan-next-${me.id}-${date}`}>
       <EditorClient
@@ -43,6 +45,7 @@ export default async function HistorySelfPlanningNext({
         today={todayStr}
         tz={tz}
         initialPlan={plan}
+        ingredients={ingredients}
       />
     </section>
   );
