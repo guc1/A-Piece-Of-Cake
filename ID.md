@@ -100,7 +100,12 @@ Modal form IDs:
 - `p1an-meta-col-{blockId}-{ownerId}` → metadata color input.
 - `p1an-meta-tms-{blockId}-{ownerId}` → start time input.
 - `p1an-meta-tme-{blockId}-{ownerId}` → end time input.
+- `p1an-meta-igrds-{blockId}-{ownerId}` → ingredient chips container.
+- `p1an-meta-igrd-{blockId}-{ingredientId}-{ownerId}` → ingredient chip.
+- `p1an-meta-addigr-{blockId}-{ownerId}` → add ingredient button.
 - `p1an-meta-del-{ownerId}` → delete block button.
+- `p1an-igrd-modal-{ownerId}` → ingredient picker modal.
+- `p1an-igrd-add-{ingredientId}-{ownerId}` → add ingredient in picker.
 - `p1an-vibe-{ownerId}` → general day vibe modal.
 - `p1an-vibe-close-{ownerId}` → close general vibe modal.
 
