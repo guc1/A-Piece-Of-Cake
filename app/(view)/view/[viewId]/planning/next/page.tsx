@@ -40,6 +40,7 @@ export default async function ViewPlanningNextPage({
     <section id={`v13w-plan-${user.id}`}>
       {overrideLabel && <TimeOverrideBadge label={overrideLabel} />}
       <EditorClient
+        key={dateStr}
         userId={String(user.id)}
         date={dateStr}
         today={todayStr}
