@@ -29,6 +29,7 @@ export default async function HistorySelfPlanningReview({
   return (
     <section id={`hist-self-plan-review-${me.id}-${date}`}>
       <EditorClient
+        key={dateStr}
         userId={String(me.id)}
         date={dateStr}
         today={dateStr}

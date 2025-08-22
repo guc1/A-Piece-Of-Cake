@@ -3,6 +3,8 @@ export interface Plan {
   userId: string;
   date: string; // ISO date YYYY-MM-DD
   blocks: PlanBlock[];
+  dailyAim: string;
+  dailyIngredientIds: number[];
 }
 
 export interface PlanBlock {
