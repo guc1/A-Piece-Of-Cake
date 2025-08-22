@@ -143,6 +143,9 @@
 - 2025-10-23: Display "No ingredient found" placeholders and label hidden ingredients as "Secret 🔒".
 - 2025-10-24: Introduced Daily Aim modal with daily ingredients on planning pages and saved values in plan snapshots.
 - 2025-10-24: Ensured Daily Aim is stored per day, remounting planners on date changes and
-highlighting the Daily Aim button red when empty and green when filled.
+  highlighting the Daily Aim button red when empty and green when filled.
 - 2025-10-24: Enlarged Daily Aim editor with top-left close and Done buttons, prevented accidental closing during text selection, and kept toolbar color green when filled.
 - 2025-10-24: Further expanded Daily Aim modal for more editing space and turned toolbar green when text or daily ingredients are present.
+- 2025-08-22: Resized Daily Aim modal to 800x650px with spacious padding, repositioned close button, enlarged textarea, and added red/green button state transitions.
+- 2025-08-22: Fixed Daily Aim toolbar button green/red toggle logic and styled modal close button with hover state.
+- 2025-08-22: Extracted shared Daily Aim modal, removed size clamps, and added test id for verification.
