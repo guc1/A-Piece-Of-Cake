@@ -1,10 +1,13 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { useViewContext } from '@/lib/view-context';
 import PlanningDateNav from './date-nav';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
+import type { Ingredient } from '@/types/ingredient';
 import { savePlanAction } from './actions';
 
 const COLORS = [
@@ -20,6 +23,12 @@ const COLORS = [
   '#94A3B8',
 ];
 
+function iconSrc(ic: string) {
+  if (ic.startsWith('data:')) return ic;
+  if (/^[A-Za-z0-9+/=]+$/.test(ic)) return `data:image/png;base64,${ic}`;
+  return null;
+}
+
 // shrink timeline so 24h fits on one screen
 const BASE_PIXELS_PER_MINUTE = 0.5;
 const TIMELINE_HEIGHT = 24 * 60 * BASE_PIXELS_PER_MINUTE; // full-day height
@@ -34,6 +43,7 @@ interface Props {
   today: string; // today's date YYYY-MM-DD
   tz: string;
   initialPlan: Plan | null;
+  ingredients?: Ingredient[];
   live?: boolean;
   review?: boolean;
 }
@@ -44,10 +54,12 @@ export default function EditorClient({
   today,
   tz,
   initialPlan,
+  ingredients: initialIngredients = [],
   live = false,
   review = false,
 }: Props) {
-  const { editable } = useViewContext();
+  const { editable, viewId } = useViewContext();
+  const mode = live ? 'live' : 'next';
   // Persist plans per-user and per-date. Live and review modes share the
   // same key while future planning uses its own so adjustments remain across
   // calendar days even if the network request fails.
@@ -58,12 +70,19 @@ export default function EditorClient({
     if (editable && typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem(storageKey);
-        if (raw) return JSON.parse(raw) as PlanBlock[];
+        if (raw)
+          return (JSON.parse(raw) as PlanBlock[]).map((b) => ({
+            ...b,
+            ingredientIds: b.ingredientIds ?? [],
+          }));
       } catch {
         // ignore malformed data
       }
     }
-    return initialPlan?.blocks ?? [];
+    return (initialPlan?.blocks ?? []).map((b) => ({
+      ...b,
+      ingredientIds: b.ingredientIds ?? [],
+    }));
   });
   const [reviews, setReviews] = useState<
     Record<string, { good: string; bad: string }>
@@ -243,6 +262,14 @@ export default function EditorClient({
     );
   }
 
+  function removeIngredient(blockId: string, ingredientId: number) {
+    const blk = blocks.find((b) => b.id === blockId);
+    if (!blk) return;
+    updateBlock(blockId, {
+      ingredientIds: blk.ingredientIds.filter((id) => id !== ingredientId),
+    });
+  }
+
   function addBlock() {
     if (!editable || review) return;
     const sorted = [...blocks].sort(
@@ -303,6 +330,7 @@ export default function EditorClient({
       title: '',
       description: '',
       color: COLORS[0],
+      ingredientIds: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -362,6 +390,7 @@ export default function EditorClient({
           title: b.title,
           description: b.description,
           color: b.color,
+          ingredientIds: b.ingredientIds,
         }));
         savePlanAction(date, payload).then((plan) => {
           setBlocks(plan.blocks);
@@ -395,6 +424,7 @@ export default function EditorClient({
             title: b.title,
             description: b.description,
             color: b.color,
+            ingredientIds: b.ingredientIds,
           }));
           void savePlanAction(date, payload).then((plan) => {
             const ser = JSON.stringify(plan.blocks);
@@ -791,7 +821,8 @@ export default function EditorClient({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (draggingRef.current) return;
-                      if (review && live && nowMinute < minutesFromIso(b.end)) return;
+                      if (review && live && nowMinute < minutesFromIso(b.end))
+                        return;
                       setSelectedId(b.id);
                     }}
                   >
@@ -998,6 +1029,61 @@ export default function EditorClient({
                         handleTimeChange(selected.id, 'end', e.target.value)
                       }
                     />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">
+                    Ingredients
+                  </label>
+                  <div
+                    id={`p1an-meta-igrd-${selected.id}-${userId}`}
+                    className="mb-2 flex flex-wrap gap-2"
+                  >
+                    {(selected.ingredientIds ?? []).map((iid) => {
+                      const ing = initialIngredients.find((i) => i.id === iid);
+                      const src = ing?.icon ? iconSrc(ing.icon) : null;
+                      return (
+                        <Link
+                          key={iid}
+                          href={
+                            viewId
+                              ? `/view/${viewId}/ingredient/${ing?.id ?? ''}`
+                              : `/ingredient/${ing?.id ?? ''}`
+                          }
+                          className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow"
+                        >
+                          {src ? (
+                            <img src={src} alt="" className="h-4 w-4" />
+                          ) : (
+                            <span>{ing?.icon ?? '❓'}</span>
+                          )}
+                          <span className="text-sm">
+                            {ing?.title ?? 'Unknown'}
+                          </span>
+                          {editable && (
+                            <span
+                              className="ml-1 cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                removeIngredient(selected.id, iid);
+                              }}
+                            >
+                              ×
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                    {editable && (
+                      <Link
+                        id={`p1an-meta-igrd-add-${selected.id}-${userId}`}
+                        href={`/ingredientsforplanning?date=${date}&block=${selected.id}&mode=${mode}`}
+                        className="rounded-full bg-green-200 px-3 py-1 text-green-800 shadow"
+                      >
+                        Add ingredients +
+                      </Link>
+                    )}
                   </div>
                 </div>
                 <div className="mt-4 flex gap-2">
