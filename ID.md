@@ -101,6 +101,9 @@ Modal form IDs:
 - `p1an-meta-tms-{blockId}-{ownerId}` → start time input.
 - `p1an-meta-tme-{blockId}-{ownerId}` → end time input.
 - `p1an-meta-del-{ownerId}` → delete block button.
+- `p1an-meta-igrd-{blockId}-{ownerId}` → ingredient tags container.
+- `p1an-meta-igrd-add-{blockId}-{ownerId}` → add ingredient button.
+- `p1an-meta-igrd-none-{blockId}-{ownerId}` → ingredient empty state text.
 - `p1an-vibe-{ownerId}` → general day vibe modal.
 - `p1an-vibe-close-{ownerId}` → close general vibe modal.
 
@@ -156,6 +159,12 @@ Modal form IDs:
 - `1ngred-imp-srch-{ownerId}` → search others import option.
 - `1ngred-pr3-{index}-{ownerId}` → preset selection button.
 - `1ngred-ppl-{userId}-{ownerId}` → person entry in import search.
+- `igrd-plan-list-{ownerId}` → ingredient picker list when tagging plan blocks.
+- `igrd-plan-view-{ingredientId}-{ownerId}` → view ingredient details link in picker.
+- `igrd-plan-add-{ingredientId}-{ownerId}` → add ingredient to block button in picker.
+- `igrd-plan-list-back-{ownerId}` → ingredient picker back button.
+- `igrd-plan-back-{ingredientId}-{ownerId}` → ingredient detail back button.
+- `igrd-plan-none-{ownerId}` → empty state text when no ingredients exist.
 
 ## History Pages
 
