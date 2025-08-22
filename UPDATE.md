@@ -136,3 +136,4 @@
 - 2025-10-20: Synced planner state on client-side navigation and fetched historical plans at snapshot time to show exact past versions without refresh.
 - 2025-10-21: Documented missing ID patterns for planning, flavors, subflavors, people lists, and history pages.
 - 2025-10-21: Completed ID catalog with cake and people sections and pruned unused identifiers.
+- 2025-10-21: Enabled attaching ingredients to planning blocks with selection modal and snapshot support.
