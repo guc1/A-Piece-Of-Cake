@@ -6,6 +6,7 @@ import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { getOrCreatePlan } from '@/lib/plans-store';
 import TimeOverrideBadge from '@/components/time-override-badge';
 import EditorClient from '../next/client';
+import { listIngredients } from '@/lib/ingredients-store';
 
 export const revalidate = 0;
 
@@ -26,6 +27,7 @@ export default async function PlanningLivePage({
   const dateStr = toYMD(info.date, info.tz);
   const todayStr = toYMD(info.today, info.tz);
   const plan = await getOrCreatePlan(me.id, dateStr);
+  const ingredients = await listIngredients(String(me.id), me.id);
   const overrideLabel = info.override
     ? `${info.now.toLocaleString('en-US', { timeZone: info.tz })} (tz: ${info.tz})`
     : null;
@@ -39,6 +41,7 @@ export default async function PlanningLivePage({
         tz={info.tz}
         initialPlan={plan}
         live
+        ingredients={ingredients}
       />
     </>
   );
