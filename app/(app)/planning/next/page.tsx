@@ -39,6 +39,7 @@ export default async function PlanningNextPage({
     <>
       {overrideLabel && <TimeOverrideBadge label={overrideLabel} />}
       <EditorClient
+        key={dateStr}
         userId={String(me.id)}
         date={dateStr}
         today={todayStr}

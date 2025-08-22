@@ -56,21 +56,49 @@ export default function IngredientsForPlanningClient({
               id={`igrd-plan-add-${ing.id}-${userId}`}
               className="bg-green-500 px-3 text-xl text-white"
               onClick={async () => {
-                await addIngredientAction(date, blockId, String(ing.id)).catch(() => {});
+                await addIngredientAction(date, blockId, String(ing.id)).catch(
+                  () => {},
+                );
                 try {
                   const raw = window.localStorage.getItem(storageKey);
-                  const blocks: PlanBlock[] = raw ? JSON.parse(raw) : [];
-                  const updated = blocks.map((b) =>
-                    b.id === blockId
-                      ? {
-                          ...b,
-                          ingredientIds: b.ingredientIds?.includes(Number(ing.id))
-                            ? b.ingredientIds
-                            : [...(b.ingredientIds ?? []), Number(ing.id)],
-                        }
-                      : b,
+                  let data: {
+                    blocks: PlanBlock[];
+                    dailyAim?: string;
+                    dailyIngredientIds?: number[];
+                  } = { blocks: [] };
+                  if (raw) {
+                    const parsed = JSON.parse(raw);
+                    data = Array.isArray(parsed)
+                      ? { blocks: parsed }
+                      : parsed;
+                  }
+                  if (blockId === 'day') {
+                    data.dailyIngredientIds = (
+                      data.dailyIngredientIds || []
+                    ).includes(Number(ing.id))
+                      ? data.dailyIngredientIds || []
+                      : [...(data.dailyIngredientIds || []), Number(ing.id)];
+                  } else {
+                    data.blocks = data.blocks.map((b) =>
+                      b.id === blockId
+                        ? {
+                            ...b,
+                            ingredientIds: b.ingredientIds?.includes(
+                              Number(ing.id),
+                            )
+                              ? b.ingredientIds
+                              : [
+                                  ...(b.ingredientIds ?? []),
+                                  Number(ing.id),
+                                ],
+                          }
+                        : b,
+                    );
+                  }
+                  window.localStorage.setItem(
+                    storageKey,
+                    JSON.stringify(data),
                   );
-                  window.localStorage.setItem(storageKey, JSON.stringify(updated));
                 } catch {
                   // ignore
                 }

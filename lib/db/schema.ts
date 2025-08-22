@@ -171,6 +171,8 @@ export const plans = pgTable(
       .references(() => users.id)
       .notNull(),
     date: date('date').notNull(),
+    dailyAim: text('daily_aim'),
+    dailyIngredientIds: integer('daily_ingredient_ids').array(),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },
