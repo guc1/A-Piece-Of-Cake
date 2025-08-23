@@ -153,3 +153,4 @@
 - 2025-10-24: Increased Daily Aim ingredient list padding and turned Daily Aim button green when text or ingredients present.
 - 2025-10-24: Added matching padding to Daily ingredients heading and add button, and kept Daily Aim button green after edits.
 - 2025-10-24: Colored Daily Aim button red when empty and green when any text or ingredients are added.
+- 2025-10-24: Exposed activity ingredients in review mode and let users write per-ingredient feedback.
