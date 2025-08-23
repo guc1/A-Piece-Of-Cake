@@ -102,7 +102,9 @@ export default function IngredientsForPlanningClient({
                 } catch {
                   // ignore
                 }
-                router.push(`/planning/${mode}?date=${date}`);
+                router.push(
+                  `/planning/${mode}?date=${date}${blockId === 'day' ? '&showDailyAim=1' : ''}`,
+                );
               }}
             >
               +

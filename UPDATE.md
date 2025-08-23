@@ -149,3 +149,5 @@ highlighting the Daily Aim button red when empty and green when filled.
 - 2025-10-24: Fixed Daily Aim button colors to show red when empty and green when filled, and greatly enlarged modal editor with a top-left close button.
 - 2025-10-24: Widened Daily Aim modal and restored red/green button colors when empty vs filled.
 - 2025-10-24: Halved Daily Aim modal width, added generous padding, and fixed green state when content present.
+- 2025-10-24: Kept Daily Aim modal open after adding ingredients, centered title text, and added spacing to ingredient list.
+- 2025-10-24: Increased Daily Aim ingredient list padding and turned Daily Aim button green when text or ingredients present.

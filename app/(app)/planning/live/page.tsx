@@ -20,6 +20,7 @@ export default async function PlanningLivePage({
   const me = await ensureUser(session);
   const cookieStore = await cookies();
   const params = searchParams ? await searchParams : undefined;
+  const showDailyAim = params?.showDailyAim === '1';
   const info = resolvePlanDate('live', me, {
     cookies: cookieStore,
     searchParams: params,
@@ -43,6 +44,7 @@ export default async function PlanningLivePage({
         initialPlan={plan}
         live
         ingredients={ingredients}
+        initialShowDailyAim={showDailyAim}
       />
     </>
   );

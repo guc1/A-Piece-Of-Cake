@@ -47,6 +47,7 @@ interface Props {
   ingredients?: Ingredient[];
   live?: boolean;
   review?: boolean;
+  initialShowDailyAim?: boolean;
 }
 
 export default function EditorClient({
@@ -58,6 +59,7 @@ export default function EditorClient({
   ingredients: initialIngredients = [],
   live = false,
   review = false,
+  initialShowDailyAim = false,
 }: Props) {
   const { editable, viewId } = useViewContext();
   const mode = live ? 'live' : 'next';
@@ -89,11 +91,29 @@ export default function EditorClient({
   const [dailyIngredientIds, setDailyIngredientIds] = useState<number[]>(
     () => initialPlan?.dailyIngredientIds ?? [],
   );
-  const [showDailyAim, setShowDailyAim] = useState(false);
+  const [showDailyAim, setShowDailyAim] = useState(initialShowDailyAim);
   const hasDailyAim = useMemo(
     () => dailyAim.trim().length > 0 || dailyIngredientIds.length > 0,
     [dailyAim, dailyIngredientIds],
   );
+  useEffect(() => {
+    if (!initialShowDailyAim) return;
+    setShowDailyAim(true);
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          dailyAim?: string;
+          dailyIngredientIds?: number[];
+        };
+        if (typeof parsed.dailyAim === 'string') setDailyAim(parsed.dailyAim);
+        if (Array.isArray(parsed.dailyIngredientIds))
+          setDailyIngredientIds(parsed.dailyIngredientIds);
+      }
+    } catch {
+      // ignore
+    }
+  }, [initialShowDailyAim, storageKey]);
   const [reviews, setReviews] = useState<
     Record<string, { good: string; bad: string }>
   >(() => {
@@ -1248,7 +1268,7 @@ export default function EditorClient({
             >
               X
             </button>
-            <h2 className="mb-4 text-lg font-semibold">Daily Aim</h2>
+            <h2 className="mb-4 text-lg font-semibold text-center">Daily Aim</h2>
             <textarea
               id={`p1an-day-aim-${userId}`}
               className="mb-8 h-[32rem] w-full border p-6"
@@ -1262,7 +1282,7 @@ export default function EditorClient({
               <span className="block text-sm font-medium">Daily ingredients</span>
               <div
                 id={`p1an-day-igrd-${userId}`}
-                className="mb-2 flex flex-wrap gap-2"
+                className="mb-2 flex flex-wrap gap-2 pl-4"
               >
                 {dailyIngredientIds.length === 0 && (
                   <span
