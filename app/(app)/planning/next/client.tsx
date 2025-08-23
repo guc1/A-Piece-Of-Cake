@@ -754,8 +754,8 @@ export default function EditorClient({
               className={cn(
                 'border-2 px-3 py-2',
                 hasDailyAim
-                  ? '!border-green-500 !text-green-600 !bg-green-50'
-                  : '!border-red-500 !text-red-600 !bg-red-50',
+                  ? '!border-green-500 !text-green-600 !bg-green-50 hover:!bg-green-100'
+                  : '!border-red-500 !text-red-600 !bg-red-50 hover:!bg-red-100',
               )}
               onClick={() => setShowDailyAim(true)}
             >
