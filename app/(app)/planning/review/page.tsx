@@ -20,6 +20,7 @@ export default async function PlanningReviewPage({
   const me = await ensureUser(session);
   const cookieStore = await cookies();
   const params = searchParams ? await searchParams : undefined;
+  const showDailyAim = params?.showDailyAim === '1';
   const info = resolvePlanDate('review', me, {
     cookies: cookieStore,
     searchParams: params,
@@ -44,6 +45,7 @@ export default async function PlanningReviewPage({
         live
         review
         ingredients={ingredients}
+        initialShowDailyAim={showDailyAim}
       />
     </>
   );

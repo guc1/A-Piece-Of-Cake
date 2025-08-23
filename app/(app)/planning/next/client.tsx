@@ -47,6 +47,7 @@ interface Props {
   ingredients?: Ingredient[];
   live?: boolean;
   review?: boolean;
+  initialShowDailyAim?: boolean;
 }
 
 export default function EditorClient({
@@ -58,6 +59,7 @@ export default function EditorClient({
   ingredients: initialIngredients = [],
   live = false,
   review = false,
+  initialShowDailyAim = false,
 }: Props) {
   const { editable, viewId } = useViewContext();
   const mode = live ? 'live' : 'next';
@@ -89,11 +91,29 @@ export default function EditorClient({
   const [dailyIngredientIds, setDailyIngredientIds] = useState<number[]>(
     () => initialPlan?.dailyIngredientIds ?? [],
   );
-  const [showDailyAim, setShowDailyAim] = useState(false);
+  const [showDailyAim, setShowDailyAim] = useState(initialShowDailyAim);
   const hasDailyAim = useMemo(
     () => dailyAim.trim().length > 0 || dailyIngredientIds.length > 0,
     [dailyAim, dailyIngredientIds],
   );
+  useEffect(() => {
+    if (!initialShowDailyAim) return;
+    setShowDailyAim(true);
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          dailyAim?: string;
+          dailyIngredientIds?: number[];
+        };
+        if (typeof parsed.dailyAim === 'string') setDailyAim(parsed.dailyAim);
+        if (Array.isArray(parsed.dailyIngredientIds))
+          setDailyIngredientIds(parsed.dailyIngredientIds);
+      }
+    } catch {
+      // ignore
+    }
+  }, [initialShowDailyAim, storageKey]);
   const [reviews, setReviews] = useState<
     Record<string, { good: string; bad: string }>
   >(() => {
@@ -383,9 +403,7 @@ export default function EditorClient({
         const raw = window.localStorage.getItem(storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
-          fromStorage = Array.isArray(parsed)
-            ? { blocks: parsed }
-            : parsed;
+          fromStorage = Array.isArray(parsed) ? { blocks: parsed } : parsed;
         }
       } catch {
         // ignore malformed data
@@ -394,9 +412,7 @@ export default function EditorClient({
     const nextBlocks = fromStorage?.blocks ?? initialPlan?.blocks ?? [];
     const nextAim = fromStorage?.dailyAim ?? initialPlan?.dailyAim ?? '';
     const nextIng =
-      fromStorage?.dailyIngredientIds ??
-      initialPlan?.dailyIngredientIds ??
-      [];
+      fromStorage?.dailyIngredientIds ?? initialPlan?.dailyIngredientIds ?? [];
     const serialized = JSON.stringify({
       blocks: nextBlocks,
       dailyAim: nextAim,
@@ -732,18 +748,19 @@ export default function EditorClient({
                 Load later
               </button>
             )}
-            <button
+            <Button
               id={`p1an-daily-aim-${userId}`}
+              variant="outline"
               className={cn(
-                'rounded border-2 px-3 py-2',
+                'border-2 px-3 py-2',
                 hasDailyAim
-                  ? 'border-green-500 text-green-600 bg-green-50'
-                  : 'border-red-500 text-red-600 bg-red-50',
+                  ? '!border-green-500 !text-green-600 !bg-green-50'
+                  : '!border-red-500 !text-red-600 !bg-red-50',
               )}
               onClick={() => setShowDailyAim(true)}
             >
               Daily Aim
-            </button>
+            </Button>
             {(startMinute !== DEFAULT_START || endMinute !== DEFAULT_END) && (
               <button
                 id={`p1an-close-range-${userId}`}
@@ -1114,7 +1131,7 @@ export default function EditorClient({
                     id={`p1an-meta-igrd-${selected.id}-${userId}`}
                     className="mb-2 flex flex-wrap gap-2"
                   >
-                    {((selected.ingredientIds ?? []).length === 0) && (
+                    {(selected.ingredientIds ?? []).length === 0 && (
                       <span
                         id={`p1an-meta-igrd-none-${selected.id}-${userId}`}
                         className="text-sm text-gray-500"
@@ -1248,7 +1265,9 @@ export default function EditorClient({
             >
               X
             </button>
-            <h2 className="mb-4 text-lg font-semibold">Daily Aim</h2>
+            <h2 className="mb-4 text-lg font-semibold text-center">
+              Daily Aim
+            </h2>
             <textarea
               id={`p1an-day-aim-${userId}`}
               className="mb-8 h-[32rem] w-full border p-6"
@@ -1258,8 +1277,10 @@ export default function EditorClient({
               maxLength={500}
               disabled={!editable}
             />
-            <div className="mb-2">
-              <span className="block text-sm font-medium">Daily ingredients</span>
+            <div className="mb-2 pl-4">
+              <span className="block text-sm font-medium">
+                Daily ingredients
+              </span>
               <div
                 id={`p1an-day-igrd-${userId}`}
                 className="mb-2 flex flex-wrap gap-2"
