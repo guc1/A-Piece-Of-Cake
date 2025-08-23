@@ -157,7 +157,8 @@
 - 2025-10-24: Moved ingredient list and feedback button below good/bad review fields.
 - 2025-10-24: Placed ingredient feedback boxes above the ingredient list in review mode.
 - 2025-10-24: Added review-only Daily Aim modal with feedback fields and per-ingredient reviews; renamed button to "Review daily aim" and kept it red when empty.
- - 2025-10-24: Added review-only Daily Aim modal with feedback fields and per-ingredient reviews; renamed button to "Review daily aim" and kept it red when empty.
- - 2025-10-24: Split Review Daily Aim modal into side-by-side columns with scrollable feedback and removed general vibe button.
+- 2025-10-24: Added review-only Daily Aim modal with feedback fields and per-ingredient reviews; renamed button to "Review daily aim" and kept it red when empty.
+- 2025-10-24: Split Review Daily Aim modal into side-by-side columns with scrollable feedback and removed general vibe button.
 - 2025-10-24: Locked page scroll when reviewing daily aim, capped modal height, and preserved line breaks in aim text.
 - 2025-10-24: Made Review Daily Aim modal scrollable and allowed resizing the Daily Aim editor.
+- 2025-10-24: Extended NextAuth session tolerance to prevent JWT expiry when overriding the site clock.
