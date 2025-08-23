@@ -115,16 +115,27 @@ export default function EditorClient({
     }
   }, [initialShowDailyAim, storageKey]);
   const [reviews, setReviews] = useState<
-    Record<string, { good: string; bad: string }>
+    Record<
+      string,
+      { good: string; bad: string; ingredients: Record<number, string> }
+    >
   >(() => {
     if (typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem(reviewKey);
-        if (raw)
-          return JSON.parse(raw) as Record<
+        if (raw) {
+          const parsed = JSON.parse(raw) as Record<
             string,
-            { good: string; bad: string }
+            { good: string; bad: string; ingredients?: Record<number, string> }
           >;
+          for (const k of Object.keys(parsed)) {
+            parsed[k].ingredients = parsed[k].ingredients ?? {};
+          }
+          return parsed as Record<
+            string,
+            { good: string; bad: string; ingredients: Record<number, string> }
+          >;
+        }
       } catch {
         // ignore malformed data
       }
@@ -148,6 +159,15 @@ export default function EditorClient({
     () => blocks.find((b) => b.id === selectedId) || null,
     [blocks, selectedId],
   );
+  const [selectIngredient, setSelectIngredient] = useState(false);
+  useEffect(() => {
+    setSelectIngredient(false);
+  }, [selectedId]);
+  const unreviewedIngredientIds = useMemo(() => {
+    if (!selected) return [] as number[];
+    const reviewed = reviews[selected.id]?.ingredients || {};
+    return (selected.ingredientIds ?? []).filter((iid) => !(iid in reviewed));
+  }, [selected, reviews]);
   const draggingRef = useRef(false);
   const [startMinute, setStartMinute] = useState(DEFAULT_START);
   const [endMinute, setEndMinute] = useState(DEFAULT_END);
@@ -263,7 +283,12 @@ export default function EditorClient({
     if (!review) return;
     setReviews((prev) => {
       const ids = new Set(blocks.map((b) => b.id));
-      const next: Record<string, { good: string; bad: string }> = { ...prev };
+      const next: Record<
+        string,
+        { good: string; bad: string; ingredients: Record<number, string> }
+      > = {
+        ...prev,
+      };
       for (const id of Object.keys(next)) {
         if (!ids.has(id)) delete next[id];
       }
@@ -275,7 +300,12 @@ export default function EditorClient({
     if (!review) return;
     const now = nowMinute;
     setReviews((prev) => {
-      const next: Record<string, { good: string; bad: string }> = { ...prev };
+      const next: Record<
+        string,
+        { good: string; bad: string; ingredients: Record<number, string> }
+      > = {
+        ...prev,
+      };
       for (const b of blocks) {
         if (minutesFromIso(b.end) > now && next[b.id]) {
           delete next[b.id];
@@ -302,6 +332,32 @@ export default function EditorClient({
 
   function removeDailyIngredient(ingredientId: number) {
     setDailyIngredientIds((ids) => ids.filter((id) => id !== ingredientId));
+  }
+
+  function addIngredientReview(blockId: string, ingredientId: number) {
+    setReviews((prev) => ({
+      ...prev,
+      [blockId]: {
+        ...(prev[blockId] || { good: '', bad: '', ingredients: {} }),
+        ingredients: {
+          ...(prev[blockId]?.ingredients || {}),
+          [ingredientId]: '',
+        },
+      },
+    }));
+  }
+
+  function removeIngredientReview(blockId: string, ingredientId: number) {
+    setReviews((prev) => {
+      const copy = { ...prev };
+      const entry = copy[blockId];
+      if (entry) {
+        const ing = { ...entry.ingredients };
+        delete ing[ingredientId];
+        copy[blockId] = { ...entry, ingredients: ing };
+      }
+      return copy;
+    });
   }
 
   function addBlock() {
@@ -993,7 +1049,11 @@ export default function EditorClient({
                     setReviews((prev) => ({
                       ...prev,
                       [selected.id]: {
-                        ...(prev[selected.id] || { good: '', bad: '' }),
+                        ...(prev[selected.id] || {
+                          good: '',
+                          bad: '',
+                          ingredients: {},
+                        }),
                         good: e.target.value,
                       },
                     }))
@@ -1016,12 +1076,134 @@ export default function EditorClient({
                     setReviews((prev) => ({
                       ...prev,
                       [selected.id]: {
-                        ...(prev[selected.id] || { good: '', bad: '' }),
+                        ...(prev[selected.id] || {
+                          good: '',
+                          bad: '',
+                          ingredients: {},
+                        }),
                         bad: e.target.value,
                       },
                     }))
                   }
                 />
+                <label className="block text-sm font-medium">Ingredients</label>
+                <div
+                  id={`p1an-meta-igrd-${selected.id}-${userId}`}
+                  className="mb-2 flex flex-wrap gap-2"
+                >
+                  {unreviewedIngredientIds.length === 0 && (
+                    <span
+                      id={`p1an-meta-igrd-none-${selected.id}-${userId}`}
+                      className="text-sm text-gray-500"
+                    >
+                      No ingredient found
+                    </span>
+                  )}
+                  {unreviewedIngredientIds.map((iid) => {
+                    const ing = initialIngredients.find((i) => i.id === iid);
+                    const src = ing?.icon ? iconSrc(ing.icon) : null;
+                    return (
+                      <div
+                        key={iid}
+                        className={cn(
+                          'flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow',
+                          selectIngredient && editable
+                            ? 'cursor-pointer hover:bg-gray-200'
+                            : '',
+                        )}
+                        onClick={() => {
+                          if (selectIngredient && editable) {
+                            addIngredientReview(selected.id, iid);
+                            setSelectIngredient(false);
+                          }
+                        }}
+                      >
+                        {src ? (
+                          <img src={src} alt="" className="h-4 w-4" />
+                        ) : (
+                          <span>{ing?.icon ?? '❓'}</span>
+                        )}
+                        <span className="text-sm">
+                          {ing?.title ?? 'Secret 🔒'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {editable && unreviewedIngredientIds.length > 0 && (
+                  <Button
+                    id={`p1an-meta-igrd-review-${selected.id}-${userId}`}
+                    variant="outline"
+                    size="sm"
+                    className="mb-2"
+                    onClick={() => setSelectIngredient((s) => !s)}
+                  >
+                    {selectIngredient
+                      ? 'Cancel ingredient feedback'
+                      : 'Write feedback on ingredient'}
+                  </Button>
+                )}
+                {selectIngredient && (
+                  <div className="mb-2 text-sm text-gray-500">
+                    Select an ingredient above
+                  </div>
+                )}
+                {Object.entries(reviews[selected.id]?.ingredients ?? {}).map(
+                  ([iidStr, text]) => {
+                    const iid = Number(iidStr);
+                    const ing = initialIngredients.find((i) => i.id === iid);
+                    const src = ing?.icon ? iconSrc(ing.icon) : null;
+                    return (
+                      <div key={iid} className="mb-2">
+                        <div className="mb-1 flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            {src ? (
+                              <img src={src} alt="" className="h-4 w-4" />
+                            ) : (
+                              <span>{ing?.icon ?? '❓'}</span>
+                            )}
+                            <span className="text-sm">
+                              {ing?.title ?? 'Secret 🔒'}
+                            </span>
+                          </div>
+                          {editable && (
+                            <button
+                              className="text-sm"
+                              onClick={() =>
+                                removeIngredientReview(selected.id, iid)
+                              }
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                        <textarea
+                          className="w-full border p-1"
+                          value={text}
+                          disabled={!editable}
+                          maxLength={1000}
+                          rows={3}
+                          onChange={(e) =>
+                            setReviews((prev) => ({
+                              ...prev,
+                              [selected.id]: {
+                                ...(prev[selected.id] || {
+                                  good: '',
+                                  bad: '',
+                                  ingredients: {},
+                                }),
+                                ingredients: {
+                                  ...(prev[selected.id]?.ingredients || {}),
+                                  [iid]: e.target.value,
+                                },
+                              },
+                            }))
+                          }
+                        />
+                      </div>
+                    );
+                  },
+                )}
                 <div className="mt-4 flex gap-2">
                   <Button
                     variant="outline"
