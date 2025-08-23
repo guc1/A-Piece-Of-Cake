@@ -81,7 +81,6 @@ Modal form IDs:
 - `p1an-btn-live-{ownerId}` → Live Planning button.
 - `p1an-btn-review-{ownerId}` → Review button.
 - `p1an-timecol-{ownerId}` → time column container.
-- `p1an-vibe-open-{ownerId}` → open general vibe modal.
 - `p1an-add-top-{ownerId}` → add block at top button.
 - `p1an-range-btn-{ownerId}` → open range selector.
 - `p1an-load-early-{ownerId}` → load earlier hours.
@@ -104,8 +103,6 @@ Modal form IDs:
 - `p1an-meta-igrd-{blockId}-{ownerId}` → ingredient tags container.
 - `p1an-meta-igrd-add-{blockId}-{ownerId}` → add ingredient button.
 - `p1an-meta-igrd-none-{blockId}-{ownerId}` → ingredient empty state text.
-- `p1an-vibe-{ownerId}` → general day vibe modal.
-- `p1an-vibe-close-{ownerId}` → close general vibe modal.
 - `p1an-daily-aim-{ownerId}` → open Daily Aim modal.
 - `p1an-day-aim-{ownerId}` → Daily Aim textarea.
 - `p1an-day-igrd-{ownerId}` → Daily ingredients tag container.
