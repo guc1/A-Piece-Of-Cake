@@ -5,6 +5,7 @@ import { ensureUser } from '@/lib/users';
 import { assertOwner } from '@/lib/profile';
 import { savePlan, getPlanStrict } from '@/lib/plans-store';
 import type { PlanBlockInput } from '@/types/plan';
+import type { ColorPreset } from '@/lib/color-presets';
 import { revalidatePath } from 'next/cache';
 
 export async function savePlanAction(
@@ -12,6 +13,7 @@ export async function savePlanAction(
   blocks: PlanBlockInput[],
   dailyAim: string,
   dailyIngredientIds: number[],
+  colorPresets: ColorPreset[],
 ) {
   const session = await auth();
   const self = await ensureUser(session);
@@ -22,6 +24,7 @@ export async function savePlanAction(
     blocks,
     dailyAim,
     dailyIngredientIds,
+    colorPresets,
   );
   revalidatePath('/planning');
   return plan;
@@ -48,6 +51,7 @@ export async function addIngredientAction(
       plan.blocks,
       plan.dailyAim,
       dailyIngredientIds,
+      plan.colorPresets ?? [],
     );
   } else {
     const blocks = plan.blocks.map((b) =>
@@ -66,6 +70,7 @@ export async function addIngredientAction(
       blocks,
       plan.dailyAim,
       plan.dailyIngredientIds,
+      plan.colorPresets ?? [],
     );
   }
   revalidatePath('/planning/next');
