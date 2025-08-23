@@ -2,6 +2,7 @@ import { db } from './db';
 import { plans, planBlocks, planRevisions } from './db/schema';
 import { eq, and, inArray, lte, desc } from 'drizzle-orm';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
+import type { ColorPreset } from '@/lib/color-presets';
 
 function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
   return {
@@ -12,6 +13,7 @@ function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
     title: row.title ?? '',
     description: row.description ?? '',
     color: row.color ?? '#888888',
+    colorPreset: row.colorPreset ?? '',
     ingredientIds: row.ingredientIds ?? [],
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
@@ -35,6 +37,7 @@ async function fetchPlan(userId: number, date: string): Promise<Plan | null> {
     blocks: blockRows.map(toPlanBlock),
     dailyAim: planRow.dailyAim ?? '',
     dailyIngredientIds: planRow.dailyIngredientIds ?? [],
+    colorPresets: [],
   };
 }
 
@@ -55,6 +58,7 @@ export async function getOrCreatePlan(
       blocks: [],
       dailyAim: '',
       dailyIngredientIds: [],
+      colorPresets: [],
     };
   }
   return plan;
@@ -73,6 +77,7 @@ export async function getPlanStrict(
     blocks: [],
     dailyAim: '',
     dailyIngredientIds: [],
+    colorPresets: [],
   };
 }
 
@@ -103,9 +108,11 @@ export async function getPlanAt(
       blocks: blocks.map((b) => ({
         ...b,
         ingredientIds: b.ingredientIds ?? [],
+        colorPreset: b.colorPreset ?? '',
       })),
       dailyAim: payload.dailyAim ?? '',
       dailyIngredientIds: payload.dailyIngredientIds ?? [],
+      colorPresets: (payload.colorPresets as ColorPreset[]) || [],
     };
   }
   // When no revision exists at or before the requested time, the user had not
@@ -119,6 +126,7 @@ export async function getPlanAt(
     blocks: [],
     dailyAim: '',
     dailyIngredientIds: [],
+    colorPresets: [],
   };
 }
 
@@ -128,6 +136,7 @@ export async function savePlan(
   blocks: PlanBlockInput[],
   dailyAim = '',
   dailyIngredientIds: number[] = [],
+  colorPresets: ColorPreset[] = [],
 ): Promise<Plan> {
   let planRow = await fetchPlan(Number(userId), date);
   if (!planRow) {
@@ -157,6 +166,7 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          colorPreset: blk.colorPreset || null,
           ingredientIds: blk.ingredientIds,
           updatedAt: now,
         })
@@ -176,6 +186,7 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          colorPreset: blk.colorPreset || null,
           ingredientIds: blk.ingredientIds,
           createdAt: now,
           updatedAt: now,
@@ -195,7 +206,7 @@ export async function savePlan(
   await db.insert(planRevisions).values({
     userId: Number(userId),
     planDate: date,
-    payload: { blocks: results, dailyAim, dailyIngredientIds },
+    payload: { blocks: results, dailyAim, dailyIngredientIds, colorPresets },
   });
   return {
     id: String(planRow.id),
@@ -204,5 +215,6 @@ export async function savePlan(
     blocks: results,
     dailyAim,
     dailyIngredientIds,
+    colorPresets,
   };
 }
