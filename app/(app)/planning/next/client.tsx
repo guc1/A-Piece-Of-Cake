@@ -378,9 +378,7 @@ export default function EditorClient({
         const raw = window.localStorage.getItem(storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
-          fromStorage = Array.isArray(parsed)
-            ? { blocks: parsed }
-            : parsed;
+          fromStorage = Array.isArray(parsed) ? { blocks: parsed } : parsed;
         }
       } catch {
         // ignore malformed data
@@ -389,9 +387,7 @@ export default function EditorClient({
     const nextBlocks = fromStorage?.blocks ?? initialPlan?.blocks ?? [];
     const nextAim = fromStorage?.dailyAim ?? initialPlan?.dailyAim ?? '';
     const nextIng =
-      fromStorage?.dailyIngredientIds ??
-      initialPlan?.dailyIngredientIds ??
-      [];
+      fromStorage?.dailyIngredientIds ?? initialPlan?.dailyIngredientIds ?? [];
     const serialized = JSON.stringify({
       blocks: nextBlocks,
       dailyAim: nextAim,
@@ -731,8 +727,8 @@ export default function EditorClient({
               id={`p1an-daily-aim-${userId}`}
               className={`rounded border px-3 py-2 ${
                 dailyAim.trim().length > 0 || dailyIngredientIds.length > 0
-                  ? 'border-green-300 bg-green-50 text-green-600'
-                  : 'border-red-300 bg-red-50 text-red-600'
+                  ? '!border-green-500 !bg-green-50 !text-green-700'
+                  : '!border-red-500 !bg-red-50 !text-red-700'
               }`}
               onClick={() => setShowDailyAim(true)}
             >
@@ -1108,7 +1104,7 @@ export default function EditorClient({
                     id={`p1an-meta-igrd-${selected.id}-${userId}`}
                     className="mb-2 flex flex-wrap gap-2"
                   >
-                    {((selected.ingredientIds ?? []).length === 0) && (
+                    {(selected.ingredientIds ?? []).length === 0 && (
                       <span
                         id={`p1an-meta-igrd-none-${selected.id}-${userId}`}
                         className="text-sm text-gray-500"
@@ -1234,7 +1230,7 @@ export default function EditorClient({
             if (e.target === e.currentTarget) setShowDailyAim(false);
           }}
         >
-          <div className="relative w-[60rem] max-w-[90vw] rounded bg-white p-6 shadow-lg">
+          <div className="relative w-[90rem] max-w-[95vw] rounded bg-white p-10 shadow-lg">
             <button
               id={`p1an-day-x-${userId}`}
               className="absolute left-2 top-2 text-gray-500"
@@ -1245,7 +1241,7 @@ export default function EditorClient({
             <h2 className="mb-2 text-lg font-semibold">Daily Aim</h2>
             <textarea
               id={`p1an-day-aim-${userId}`}
-              className="mb-6 h-48 w-full border p-3"
+              className="mb-6 min-h-[24rem] w-full border p-6"
               value={dailyAim}
               onChange={(e) => setDailyAim(e.target.value)}
               rows={8}
@@ -1253,7 +1249,9 @@ export default function EditorClient({
               disabled={!editable}
             />
             <div className="mb-2">
-              <span className="block text-sm font-medium">Daily ingredients</span>
+              <span className="block text-sm font-medium">
+                Daily ingredients
+              </span>
               <div
                 id={`p1an-day-igrd-${userId}`}
                 className="mb-2 flex flex-wrap gap-2"
