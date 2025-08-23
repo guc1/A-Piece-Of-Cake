@@ -65,9 +65,11 @@ export default function EditorClient({
 }: Props) {
   const { editable, viewId, viewerId } = useViewContext();
   // Viewer id is null when editing own plan; otherwise it represents the
-  // currently logged-in user. This helper simplifies targeting the correct
-  // storage key for color presets in both owner and viewer modes.
-  const currentUserId = viewerId !== null ? String(viewerId) : userId;
+  // currently logged-in user. Some browsers may provide `undefined` before the
+  // context hydrates, so fall back to the owner id only when a viewer id is not
+  // present. This ensures copied presets in viewer mode target the viewer's
+  // library instead of the plan owner's.
+  const currentUserId = viewerId != null ? String(viewerId) : userId;
   const mode = live ? 'live' : 'next';
   // Persist plans per-user and per-date. Live and review modes share the
   // same key while future planning uses its own so adjustments remain across
@@ -1377,12 +1379,19 @@ export default function EditorClient({
                               colorPreset: name,
                             });
                           } else {
-                            if (window.confirm('Copy to own presets?')) {
+                            if (viewerId == null) {
+                              alert('Please sign in to copy presets.');
+                            } else if (
+                              window.confirm('Copy to own presets?')
+                            ) {
+                              // Generate a fresh ID to avoid clashes with the
+                              // original owner's preset and ensure it appears
+                              // in the viewer's library.
                               addUserColorPreset(currentUserId, {
-                                id,
                                 name,
                                 colors: [color],
                               });
+                              alert('Preset copied.');
                             }
                           }
                           setShowPresetPicker(false);
