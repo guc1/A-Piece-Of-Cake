@@ -9,6 +9,7 @@ import PlanningDateNav from './date-nav';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 import type { Ingredient } from '@/types/ingredient';
 import { savePlanAction } from './actions';
+import { cn } from '@/lib/utils';
 
 const COLORS = [
   '#F87171',
@@ -89,6 +90,10 @@ export default function EditorClient({
     () => initialPlan?.dailyIngredientIds ?? [],
   );
   const [showDailyAim, setShowDailyAim] = useState(false);
+  const hasDailyAim = useMemo(
+    () => dailyAim.trim().length > 0 || dailyIngredientIds.length > 0,
+    [dailyAim, dailyIngredientIds],
+  );
   const [reviews, setReviews] = useState<
     Record<string, { good: string; bad: string }>
   >(() => {
@@ -729,11 +734,12 @@ export default function EditorClient({
             )}
             <button
               id={`p1an-daily-aim-${userId}`}
-              className={`rounded border px-3 py-2 ${
-                dailyAim.trim().length > 0 || dailyIngredientIds.length > 0
-                  ? 'border-green-300 bg-green-50 text-green-600'
-                  : 'border-red-300 bg-red-50 text-red-600'
-              }`}
+              className={cn(
+                'rounded border-2 px-3 py-2',
+                hasDailyAim
+                  ? 'border-green-500 text-green-600 bg-green-50'
+                  : 'border-red-500 text-red-600 bg-red-50',
+              )}
               onClick={() => setShowDailyAim(true)}
             >
               Daily Aim
@@ -1234,21 +1240,21 @@ export default function EditorClient({
             if (e.target === e.currentTarget) setShowDailyAim(false);
           }}
         >
-          <div className="relative w-[60rem] max-w-[90vw] rounded bg-white p-6 shadow-lg">
+          <div className="relative w-[90vw] sm:w-[50vw] sm:max-w-xl rounded bg-white p-10 sm:p-20 shadow-lg">
             <button
               id={`p1an-day-x-${userId}`}
-              className="absolute left-2 top-2 text-gray-500"
+              className="absolute left-4 top-4 text-gray-500"
               onClick={() => setShowDailyAim(false)}
             >
               X
             </button>
-            <h2 className="mb-2 text-lg font-semibold">Daily Aim</h2>
+            <h2 className="mb-4 text-lg font-semibold">Daily Aim</h2>
             <textarea
               id={`p1an-day-aim-${userId}`}
-              className="mb-6 h-48 w-full border p-3"
+              className="mb-8 h-[32rem] w-full border p-6"
               value={dailyAim}
               onChange={(e) => setDailyAim(e.target.value)}
-              rows={8}
+              rows={16}
               maxLength={500}
               disabled={!editable}
             />
