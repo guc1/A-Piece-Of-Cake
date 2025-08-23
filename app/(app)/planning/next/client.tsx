@@ -10,6 +10,8 @@ import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 import type { Ingredient } from '@/types/ingredient';
 import { savePlanAction } from './actions';
 import { cn } from '@/lib/utils';
+import ColorPresetPicker from '@/components/color-preset-picker';
+import { addUserColorPreset } from '@/lib/color-presets';
 
 const COLORS = [
   '#F87171',
@@ -61,7 +63,7 @@ export default function EditorClient({
   review = false,
   initialShowDailyAim = false,
 }: Props) {
-  const { editable, viewId } = useViewContext();
+  const { editable, viewId, viewerId } = useViewContext();
   const mode = live ? 'live' : 'next';
   // Persist plans per-user and per-date. Live and review modes share the
   // same key while future planning uses its own so adjustments remain across
@@ -76,6 +78,7 @@ export default function EditorClient({
           return (JSON.parse(raw) as PlanBlock[]).map((b) => ({
             ...b,
             ingredientIds: b.ingredientIds ?? [],
+            colorPreset: b.colorPreset ?? '',
           }));
       } catch {
         // ignore malformed data
@@ -84,8 +87,21 @@ export default function EditorClient({
     return (initialPlan?.blocks ?? []).map((b) => ({
       ...b,
       ingredientIds: b.ingredientIds ?? [],
+      colorPreset: b.colorPreset ?? '',
     }));
   });
+  const foreignPresets = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of blocks) {
+      if (b.colorPreset && b.color && !map.has(b.colorPreset)) {
+        map.set(b.colorPreset, b.color);
+      }
+    }
+    return Array.from(map.entries()).map(([name, color]) => ({
+      name,
+      color,
+    }));
+  }, [blocks]);
   const [dailyAim, setDailyAim] = useState(() => initialPlan?.dailyAim ?? '');
   const [dailyIngredientIds, setDailyIngredientIds] = useState<number[]>(
     () => initialPlan?.dailyIngredientIds ?? [],
@@ -141,6 +157,7 @@ export default function EditorClient({
     }
     return {};
   });
+  const [showPresetPicker, setShowPresetPicker] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = useMemo(
     () => blocks.find((b) => b.id === selectedId) || null,
@@ -416,6 +433,7 @@ export default function EditorClient({
       title: '',
       description: '',
       color: COLORS[0],
+      colorPreset: '',
       ingredientIds: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -461,7 +479,13 @@ export default function EditorClient({
         // ignore malformed data
       }
     }
-    const nextBlocks = fromStorage?.blocks ?? initialPlan?.blocks ?? [];
+    const nextBlocks = (fromStorage?.blocks ?? initialPlan?.blocks ?? []).map(
+      (b) => ({
+        ...b,
+        ingredientIds: b.ingredientIds ?? [],
+        colorPreset: b.colorPreset ?? '',
+      }),
+    );
     const nextAim = fromStorage?.dailyAim ?? initialPlan?.dailyAim ?? '';
     const nextIng =
       fromStorage?.dailyIngredientIds ?? initialPlan?.dailyIngredientIds ?? [];
@@ -502,6 +526,7 @@ export default function EditorClient({
         title: b.title,
         description: b.description,
         color: b.color,
+        colorPreset: b.colorPreset,
         ingredientIds: b.ingredientIds,
       }));
       savePlanAction(date, payload, dailyAim, dailyIngredientIds).then(
@@ -547,6 +572,7 @@ export default function EditorClient({
           title: b.title,
           description: b.description,
           color: b.color,
+          colorPreset: b.colorPreset,
           ingredientIds: b.ingredientIds,
         }));
         void savePlanAction(
@@ -735,8 +761,8 @@ export default function EditorClient({
             className="sticky top-0 z-10 flex flex-wrap items-end gap-2 bg-gray-100 p-2 text-sm"
             onClick={(e) => e.stopPropagation()}
           >
-            {!review && (
-              editable ? (
+            {!review &&
+              (editable ? (
                 <button
                   id={`p1an-add-top-${userId}`}
                   onClick={() => addBlock()}
@@ -754,8 +780,7 @@ export default function EditorClient({
                 >
                   + Add timeslot
                 </button>
-              )
-            )}
+              ))}
             <button
               id={`p1an-range-btn-${userId}`}
               className="rounded border px-2 py-1"
@@ -1077,7 +1102,10 @@ export default function EditorClient({
                       <div key={iid} className="mb-2">
                         <div className="mb-1 flex items-center justify-between">
                           {link ? (
-                            <Link href={link} className="flex items-center gap-1">
+                            <Link
+                              href={link}
+                              className="flex items-center gap-1"
+                            >
                               {src ? (
                                 <img src={src} alt="" className="h-4 w-4" />
                               ) : (
@@ -1212,7 +1240,7 @@ export default function EditorClient({
                       : 'Write feedback on ingredient'}
                   </Button>
                 )}
-                  {selectIngredient && (
+                {selectIngredient && (
                   <div className="mb-2 text-sm text-gray-500">
                     Select an ingredient above
                   </div>
@@ -1276,12 +1304,54 @@ export default function EditorClient({
                       className="h-6 w-6 rounded"
                       style={{ background: c }}
                       onClick={() =>
-                        editable && updateBlock(selected.id, { color: c })
+                        editable &&
+                        updateBlock(selected.id, { color: c, colorPreset: '' })
                       }
                       disabled={!editable}
                     />
                   ))}
                 </div>
+                {selected.colorPreset && (
+                  <div className="mb-2 text-xs text-gray-500">
+                    Preset: {selected.colorPreset}
+                  </div>
+                )}
+                {(editable || viewerId) && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mb-2"
+                      id={`p1an-meta-col-pre-${selected.id}-${userId}`}
+                      onClick={() => setShowPresetPicker((s) => !s)}
+                    >
+                      Presets
+                    </Button>
+                    {showPresetPicker && (
+                      <ColorPresetPicker
+                        userId={String(viewerId ?? userId)}
+                        foreignPresets={!editable ? foreignPresets : undefined}
+                        onSelect={({ name, color }) => {
+                          if (editable) {
+                            updateBlock(selected.id, {
+                              color,
+                              colorPreset: name,
+                            });
+                          } else if (viewerId) {
+                            if (window.confirm('Copy to own presets?')) {
+                              addUserColorPreset(String(viewerId), {
+                                name,
+                                colors: [color],
+                              });
+                            }
+                          }
+                          setShowPresetPicker(false);
+                        }}
+                        onClose={() => setShowPresetPicker(false)}
+                      />
+                    )}
+                  </>
+                )}
                 <div className="mb-2 flex gap-2">
                   <div>
                     <label
@@ -1514,7 +1584,9 @@ export default function EditorClient({
                           </span>
                         )}
                         {dailyIngredientIds.map((iid) => {
-                          const ing = initialIngredients.find((i) => i.id === iid);
+                          const ing = initialIngredients.find(
+                            (i) => i.id === iid,
+                          );
                           const src = ing?.icon ? iconSrc(ing.icon) : null;
                           const selectable = selectDailyIngredient && editable;
                           const content = (
@@ -1537,7 +1609,9 @@ export default function EditorClient({
                               : `/ingredient/${ing.id}`);
                           const cls = cn(
                             'flex items-center gap-1 rounded border px-2 py-1',
-                            selectable ? 'cursor-pointer bg-gray-100 hover:bg-gray-200' : '',
+                            selectable
+                              ? 'cursor-pointer bg-gray-100 hover:bg-gray-200'
+                              : '',
                           );
                           if (link) {
                             return (
@@ -1565,7 +1639,9 @@ export default function EditorClient({
                       {Object.entries(reviews['day']?.ingredients ?? {}).map(
                         ([iidStr, text]) => {
                           const iid = Number(iidStr);
-                          const ing = initialIngredients.find((i) => i.id === iid);
+                          const ing = initialIngredients.find(
+                            (i) => i.id === iid,
+                          );
                           const src = ing?.icon ? iconSrc(ing.icon) : null;
                           const link =
                             ing &&
@@ -1653,9 +1729,7 @@ export default function EditorClient({
                           variant="outline"
                           size="sm"
                           className="mb-2"
-                          onClick={() =>
-                            setSelectDailyIngredient((s) => !s)
-                          }
+                          onClick={() => setSelectDailyIngredient((s) => !s)}
                         >
                           {selectDailyIngredient
                             ? 'Cancel ingredient feedback'

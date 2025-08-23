@@ -12,6 +12,7 @@ function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
     title: row.title ?? '',
     description: row.description ?? '',
     color: row.color ?? '#888888',
+    colorPreset: row.colorPreset ?? '',
     ingredientIds: row.ingredientIds ?? [],
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
@@ -103,6 +104,7 @@ export async function getPlanAt(
       blocks: blocks.map((b) => ({
         ...b,
         ingredientIds: b.ingredientIds ?? [],
+        colorPreset: b.colorPreset ?? '',
       })),
       dailyAim: payload.dailyAim ?? '',
       dailyIngredientIds: payload.dailyIngredientIds ?? [],
@@ -157,6 +159,7 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          colorPreset: blk.colorPreset || null,
           ingredientIds: blk.ingredientIds,
           updatedAt: now,
         })
@@ -176,6 +179,7 @@ export async function savePlan(
           title: blk.title.slice(0, 60),
           description: blk.description.slice(0, 500),
           color: blk.color,
+          colorPreset: blk.colorPreset || null,
           ingredientIds: blk.ingredientIds,
           createdAt: now,
           updatedAt: now,
