@@ -1,0 +1,172 @@
+export interface ColorPreset {
+  id: string;
+  name: string;
+  colors: string[]; // primary, secondary, etc.
+}
+
+function generateId() {
+  // `crypto.randomUUID` isn't available on some browsers (e.g. older Safari),
+  // so fall back to a simple random string when needed.
+  try {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      // @ts-ignore: randomUUID existence checked above
+      return crypto.randomUUID();
+    }
+  } catch {
+    // ignore and fall back
+  }
+  return Math.random().toString(36).slice(2, 11);
+}
+
+export const DEFAULT_COLOR_PRESETS: ColorPreset[] = [
+  {
+    id: 'focused-work',
+    name: 'Focused work',
+    colors: ['#2563EB', '#22D3EE', '#F1F5F9'],
+  },
+  {
+    id: 'studying-detail',
+    name: 'Studying – detail/recall',
+    colors: ['#334155', '#EF4444', '#FAFAFA'],
+  },
+  {
+    id: 'studying-concept',
+    name: 'Studying – concept building',
+    colors: ['#3B82F6', '#7C3AED', '#F0F9FF'],
+  },
+  {
+    id: 'gym-hiit',
+    name: 'Gym – HIIT & strength',
+    colors: ['#DC2626', '#F97316', '#0B0F19'],
+  },
+  {
+    id: 'cardio-endurance',
+    name: 'Cardio & endurance',
+    colors: ['#22C55E', '#86EFAC', '#F0FDF4'],
+  },
+  {
+    id: 'team-sports',
+    name: 'Team sports / competition day',
+    colors: ['#B91C1C', '#F59E0B', '#0A0A0A'],
+  },
+  {
+    id: 'planning-organizing',
+    name: 'Planning / organizing',
+    colors: ['#14B8A6', '#F59E0B', '#F8FAFC'],
+  },
+  {
+    id: 'admin-chores',
+    name: 'Admin / chores',
+    colors: ['#EAB308', '#22C55E', '#FFFBEB'],
+  },
+  {
+    id: 'creative-work',
+    name: 'Creative work',
+    colors: ['#0EA5E9', '#A78BFA', '#ECFEFF'],
+  },
+  {
+    id: 'social-networking',
+    name: 'Social / networking',
+    colors: ['#F97316', '#FB7185', '#FFF7ED'],
+  },
+  {
+    id: 'relax-meditation',
+    name: 'Relax / meditation',
+    colors: ['#38BDF8', '#86EFAC', '#E6FFFB'],
+  },
+  {
+    id: 'sleep-prep',
+    name: 'Sleep prep',
+    colors: ['#D97706', '#1F2937', '#FEF3C7'],
+  },
+  {
+    id: 'finance-budgeting',
+    name: 'Finance / budgeting',
+    colors: ['#1D4ED8', '#93C5FD', '#EFF6FF'],
+  },
+];
+
+export function userColorPresetsKey(userId: string) {
+  return `color-presets-${userId}`;
+}
+
+export function getUserColorPresets(userId: string): ColorPreset[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(userColorPresetsKey(userId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      const upgraded: ColorPreset[] = [];
+      let needsSave = false;
+      for (const p of parsed) {
+        if (typeof p?.name === 'string' && Array.isArray(p.colors)) {
+          const id = typeof p.id === 'string' ? p.id : generateId();
+          if (!p.id) needsSave = true;
+          upgraded.push({ id, name: p.name, colors: p.colors });
+        }
+      }
+      if (needsSave) saveUserColorPresets(userId, upgraded);
+      return upgraded;
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+export function saveUserColorPresets(userId: string, presets: ColorPreset[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      userColorPresetsKey(userId),
+      JSON.stringify(presets),
+    );
+  } catch {
+    // ignore
+  }
+}
+
+export function addUserColorPreset(
+  userId: string,
+  preset: Omit<ColorPreset, 'id'> & { id?: string },
+): ColorPreset {
+  const existing = getUserColorPresets(userId);
+  const withId: ColorPreset = {
+    id: preset.id ?? generateId(),
+    name: preset.name,
+    colors: preset.colors,
+  };
+  if (!existing.some((p) => p.id === withId.id)) {
+    existing.push(withId);
+  }
+  saveUserColorPresets(userId, existing);
+  // Manually dispatch a storage event so open pages update immediately
+  try {
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: userColorPresetsKey(userId),
+        newValue: JSON.stringify(existing),
+      }),
+    );
+  } catch {
+    // ignore
+  }
+  return withId;
+}
+
+export function removeUserColorPreset(userId: string, id: string) {
+  const existing = getUserColorPresets(userId);
+  const next = existing.filter((p) => p.id !== id);
+  saveUserColorPresets(userId, next);
+  try {
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: userColorPresetsKey(userId),
+        newValue: JSON.stringify(next),
+      }),
+    );
+  } catch {
+    // ignore
+  }
+}
