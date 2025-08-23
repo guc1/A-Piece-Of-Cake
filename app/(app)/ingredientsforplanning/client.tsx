@@ -68,9 +68,7 @@ export default function IngredientsForPlanningClient({
                   } = { blocks: [] };
                   if (raw) {
                     const parsed = JSON.parse(raw);
-                    data = Array.isArray(parsed)
-                      ? { blocks: parsed }
-                      : parsed;
+                    data = Array.isArray(parsed) ? { blocks: parsed } : parsed;
                   }
                   if (blockId === 'day') {
                     data.dailyIngredientIds = (
@@ -87,22 +85,20 @@ export default function IngredientsForPlanningClient({
                               Number(ing.id),
                             )
                               ? b.ingredientIds
-                              : [
-                                  ...(b.ingredientIds ?? []),
-                                  Number(ing.id),
-                                ],
+                              : [...(b.ingredientIds ?? []), Number(ing.id)],
                           }
                         : b,
                     );
                   }
-                  window.localStorage.setItem(
-                    storageKey,
-                    JSON.stringify(data),
-                  );
+                  window.localStorage.setItem(storageKey, JSON.stringify(data));
                 } catch {
                   // ignore
                 }
-                router.push(`/planning/${mode}?date=${date}`);
+                router.push(
+                  `/planning/${mode}?date=${date}${
+                    blockId === 'day' ? '&dailyAim=1' : ''
+                  }`,
+                );
               }}
             >
               +
@@ -116,4 +112,3 @@ export default function IngredientsForPlanningClient({
     </div>
   );
 }
-
