@@ -102,11 +102,15 @@ Modal form IDs:
 - `p1an-meta-del-{ownerId}` → delete block button.
 - `p1an-meta-igrd-{blockId}-{ownerId}` → ingredient tags container.
 - `p1an-meta-igrd-add-{blockId}-{ownerId}` → add ingredient button.
+- `p1an-meta-igrd-review-{blockId}-{ownerId}` → toggle ingredient feedback.
 - `p1an-meta-igrd-none-{blockId}-{ownerId}` → ingredient empty state text.
 - `p1an-daily-aim-{ownerId}` → open Daily Aim modal.
 - `p1an-day-aim-{ownerId}` → Daily Aim textarea.
+- `p1an-day-feedback-{ownerId}` → overall day feedback textarea.
 - `p1an-day-igrd-{ownerId}` → Daily ingredients tag container.
+- `p1an-day-igrd-{ingredientId}-{ownerId}` → Daily ingredient tag.
 - `p1an-day-igrd-none-{ownerId}` → Daily ingredients empty state text.
+- `p1an-day-igrd-review-{ownerId}` → toggle daily ingredient feedback.
 - `p1an-day-add-{ownerId}` → add daily ingredient button.
 - `p1an-day-done-{ownerId}` → confirm Daily Aim modal.
 - `p1an-day-x-{ownerId}` → close Daily Aim modal.

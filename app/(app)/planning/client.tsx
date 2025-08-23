@@ -94,7 +94,6 @@ export default function PlanningLanding({
       </div>
       <Button
         id={`p1an-btn-review-${userId}`}
-        disabled={!editable && viewerId !== ownerId}
         title={tooltip}
         onClick={handleReview}
       >

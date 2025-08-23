@@ -55,3 +55,49 @@ test('viewer can read next-day plan without editing', async ({ page }) => {
   await expect(page.locator('button[id^="p1an-meta-save-"]')).toHaveCount(0);
   await expect(page.locator('input[id^="p1an-meta-ttl-"]')).toBeDisabled();
 });
+
+test('viewer can read today review without editing', async ({ page }) => {
+  const handleA = unique('owner');
+  const emailA = `${handleA}@example.com`;
+
+  // sign up owner and create today's plan block
+  await page.goto('/signup');
+  await page.fill('input[placeholder="Name"]', 'Owner');
+  await page.fill('input[placeholder="Handle"]', handleA);
+  await page.fill('input[placeholder="Email"]', emailA);
+  await page.fill('input[placeholder="Password"]', PASSWORD);
+  await page.click('text=Sign Up');
+
+  await page.goto('/planning/live');
+  await page.click('[id^="p1an-add-top-"]');
+  await page.fill('input[id^="p1an-meta-ttl-"]', 'Task');
+  await page.click('button[id^="p1an-meta-close-"]');
+  await page.waitForTimeout(1000);
+
+  // fetch view link for owner
+  await page.goto(`/u/${handleA}`);
+  const viewHref = await page.getAttribute('[id^="pr0ovr-view-"]', 'href');
+
+  // sign out
+  await page.click('text=Sign out');
+
+  // sign up viewer
+  const handleB = unique('viewer');
+  const emailB = `${handleB}@example.com`;
+  await page.goto('/signup');
+  await page.fill('input[placeholder="Name"]', 'Viewer');
+  await page.fill('input[placeholder="Handle"]', handleB);
+  await page.fill('input[placeholder="Email"]', emailB);
+  await page.fill('input[placeholder="Password"]', PASSWORD);
+  await page.click('text=Sign Up');
+
+  // navigate to owner's planning via view link
+  await page.goto(`${viewHref}/planning`);
+  await expect(page.locator('[id^="p1an-btn-review-"]')).toBeEnabled();
+  await page.click('[id^="p1an-btn-review-"]');
+
+  // verify block is visible and metadata is read-only
+  await expect(page.locator('[id^="p1an-blk-"]')).toHaveCount(1);
+  await page.click('[id^="p1an-blk-"]');
+  await expect(page.locator('input[id^="p1an-meta-ttl-"]')).toBeDisabled();
+});
