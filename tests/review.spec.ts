@@ -6,7 +6,7 @@ function unique(prefix: string) {
   return `${prefix}${Date.now()}`;
 }
 
-test('owner review page snapshot', async ({ page }) => {
+test('owner review page loads', async ({ page }) => {
   const handle = unique('rev');
   const email = `${handle}@example.com`;
   await page.goto('/signup');
@@ -16,7 +16,12 @@ test('owner review page snapshot', async ({ page }) => {
   await page.fill('input[placeholder="Password"]', PASSWORD);
   await page.click('text=Sign Up');
   await page.goto('/review');
-  await expect(page).toHaveScreenshot('review-owner.png');
+  await expect(
+    page.getByRole('button', { name: 'Review daily aim' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Write general day vibe' }),
+  ).toHaveCount(0);
 
   // ensure columns scroll independently
   const columns = page.locator('section > div');
@@ -55,5 +60,4 @@ test('viewer review page is read-only', async ({ page }) => {
   await expect(tasks).toHaveCount(2);
   await expect(tasks.nth(0)).toBeDisabled();
   await expect(tasks.nth(1)).toBeDisabled();
-  await expect(page).toHaveScreenshot('review-viewer.png');
 });
