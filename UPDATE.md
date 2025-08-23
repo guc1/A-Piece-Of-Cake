@@ -175,3 +175,5 @@
 - 2025-10-25: Fixed copying foreign color presets on older browsers by falling back to a generated ID when `crypto.randomUUID` isn't available.
 - 2025-10-26: Ensured presets copied in viewing mode save to the viewer's library like snapshot copies.
 - 2025-10-26: Fixed preset copying to target the viewer's ID reliably and display foreign palettes when viewing other profiles.
+- 2025-10-26: Corrected live-mode preset copying to always use the viewer's ID and alert anonymous users.
+- 2025-10-26: Generated fresh IDs when copying foreign color presets so they appear in My presets.
