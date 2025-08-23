@@ -9,6 +9,7 @@ import PlanningDateNav from './date-nav';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 import type { Ingredient } from '@/types/ingredient';
 import { savePlanAction } from './actions';
+import { cn } from '@/lib/utils';
 
 const COLORS = [
   '#F87171',
@@ -89,6 +90,10 @@ export default function EditorClient({
     () => initialPlan?.dailyIngredientIds ?? [],
   );
   const [showDailyAim, setShowDailyAim] = useState(false);
+  const hasDailyAim = useMemo(
+    () => dailyAim.trim().length > 0 || dailyIngredientIds.length > 0,
+    [dailyAim, dailyIngredientIds],
+  );
   const [reviews, setReviews] = useState<
     Record<string, { good: string; bad: string }>
   >(() => {
@@ -729,11 +734,12 @@ export default function EditorClient({
             )}
             <button
               id={`p1an-daily-aim-${userId}`}
-              className={`rounded border px-3 py-2 ${
-                dailyAim.trim().length > 0 || dailyIngredientIds.length > 0
-                  ? 'border-green-300 bg-green-50 text-green-600'
-                  : 'border-red-300 bg-red-50 text-red-600'
-              }`}
+              className={cn(
+                'rounded border-2 px-3 py-2',
+                hasDailyAim
+                  ? 'border-green-500 text-green-600 bg-green-50'
+                  : 'border-red-500 text-red-600 bg-red-50',
+              )}
               onClick={() => setShowDailyAim(true)}
             >
               Daily Aim
@@ -1234,89 +1240,89 @@ export default function EditorClient({
             if (e.target === e.currentTarget) setShowDailyAim(false);
           }}
         >
-          <div className="relative w-[60rem] max-w-[90vw] rounded bg-white p-6 shadow-lg">
+          <div className="relative w-[92vw] sm:w-[70vw] lg:w-[45vw] max-w-[900px] rounded-2xl bg-white p-8 lg:p-10 shadow-xl">
             <button
               id={`p1an-day-x-${userId}`}
-              className="absolute left-2 top-2 text-gray-500"
+              className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700"
               onClick={() => setShowDailyAim(false)}
             >
-              X
+              ✕
             </button>
-            <h2 className="mb-2 text-lg font-semibold">Daily Aim</h2>
-            <textarea
-              id={`p1an-day-aim-${userId}`}
-              className="mb-6 h-48 w-full border p-3"
-              value={dailyAim}
-              onChange={(e) => setDailyAim(e.target.value)}
-              rows={8}
-              maxLength={500}
-              disabled={!editable}
-            />
-            <div className="mb-2">
-              <span className="block text-sm font-medium">Daily ingredients</span>
-              <div
-                id={`p1an-day-igrd-${userId}`}
-                className="mb-2 flex flex-wrap gap-2"
-              >
-                {dailyIngredientIds.length === 0 && (
-                  <span
-                    id={`p1an-day-igrd-none-${userId}`}
-                    className="text-sm text-gray-500"
-                  >
-                    No ingredient found
-                  </span>
-                )}
-                {dailyIngredientIds.map((iid) => {
-                  const ing = initialIngredients.find((i) => i.id === iid);
-                  const src = ing?.icon ? iconSrc(ing.icon) : null;
-                  return (
-                    <Link
-                      key={iid}
-                      id={`p1an-day-igrd-${iid}-${userId}`}
-                      href={
-                        viewId
-                          ? `/view/${viewId}/ingredient/${ing?.id ?? ''}`
-                          : `/ingredient/${ing?.id ?? ''}`
-                      }
-                      className="flex items-center gap-1 rounded border px-2 py-1"
-                    >
-                      {src ? (
-                        <img src={src} alt="" className="h-4 w-4" />
-                      ) : (
-                        <span>{ing?.icon}</span>
-                      )}
-                      <span className="text-sm">{ing?.title}</span>
-                      {editable && (
-                        <button
-                          type="button"
-                          className="ml-1 text-xs text-red-500"
-                          onClick={() => removeDailyIngredient(iid)}
-                        >
-                          X
-                        </button>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-              {editable && (
-                <Link
-                  id={`p1an-day-add-${userId}`}
-                  href={`/ingredientsforplanning?date=${date}&block=day&mode=${mode}`}
-                  className="rounded border px-2 py-1 text-sm"
+            <h2 className="mb-6 pr-10 text-xl font-semibold">Daily Aim</h2>
+            <div className="space-y-6">
+              <textarea
+                id={`p1an-day-aim-${userId}`}
+                className="w-full min-h-[18rem] max-h-[50vh] rounded-lg border p-4"
+                value={dailyAim}
+                onChange={(e) => setDailyAim(e.target.value)}
+                disabled={!editable}
+              />
+              <div>
+                <span className="mb-2 block text-sm font-medium">Daily ingredients</span>
+                <div
+                  id={`p1an-day-igrd-${userId}`}
+                  className="flex flex-wrap gap-2"
                 >
-                  Add ingredients +
-                </Link>
-              )}
-            </div>
-            <div className="mt-2 text-right">
-              <Button
-                variant="outline"
-                id={`p1an-day-done-${userId}`}
-                onClick={() => setShowDailyAim(false)}
-              >
-                Done
-              </Button>
+                  {dailyIngredientIds.length === 0 && (
+                    <span
+                      id={`p1an-day-igrd-none-${userId}`}
+                      className="text-sm text-gray-500"
+                    >
+                      No ingredient found
+                    </span>
+                  )}
+                  {dailyIngredientIds.map((iid) => {
+                    const ing = initialIngredients.find((i) => i.id === iid);
+                    const src = ing?.icon ? iconSrc(ing.icon) : null;
+                    return (
+                      <Link
+                        key={iid}
+                        id={`p1an-day-igrd-${iid}-${userId}`}
+                        href={
+                          viewId
+                            ? `/view/${viewId}/ingredient/${ing?.id ?? ''}`
+                            : `/ingredient/${ing?.id ?? ''}`
+                        }
+                        className="flex items-center gap-1 rounded border px-2 py-1"
+                      >
+                        {src ? (
+                          <img src={src} alt="" className="h-4 w-4" />
+                        ) : (
+                          <span>{ing?.icon}</span>
+                        )}
+                        <span className="text-sm">{ing?.title}</span>
+                        {editable && (
+                          <button
+                            type="button"
+                            className="ml-1 text-xs text-red-500"
+                            onClick={() => removeDailyIngredient(iid)}
+                          >
+                            X
+                          </button>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+                {editable && (
+                  <Link
+                    id={`p1an-day-add-${userId}`}
+                    href={`/ingredientsforplanning?date=${date}&block=day&mode=${mode}`}
+                    className="rounded border px-2 py-1 text-sm"
+                  >
+                    Add ingredients +
+                  </Link>
+                )}
+              </div>
+              <div className="text-right">
+                <Button
+                  variant="outline"
+                  id={`p1an-day-done-${userId}`}
+                  onClick={() => setShowDailyAim(false)}
+                >
+                  Done
+                </Button>
+              </div>
             </div>
           </div>
         </div>
