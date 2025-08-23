@@ -152,3 +152,5 @@
 - 2025-10-24: Kept Daily Aim modal open after adding ingredients, centered title text, and added spacing to ingredient list.
 - 2025-10-24: Increased Daily Aim ingredient list padding and turned Daily Aim button green when text or ingredients present.
 - 2025-10-24: Added matching padding to Daily ingredients heading and add button, and kept Daily Aim button green after edits.
+- 2025-10-24: Colored Daily Aim button red when empty and green when any text or ingredients are added.
+- 2025-10-24: Fixed Daily Aim button text staying black by forcing green text when content is present.
