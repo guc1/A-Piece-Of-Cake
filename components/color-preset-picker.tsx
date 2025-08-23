@@ -39,7 +39,12 @@ export default function ColorPresetPicker({
   useEffect(() => {
     if (viewingOther) return;
     if (initialCustom) {
-      setCustom(initialCustom);
+      const local = getUserColorPresets(userId);
+      const merged = [...initialCustom];
+      for (const p of local) {
+        if (!merged.some((m) => m.id === p.id)) merged.push(p);
+      }
+      setCustom(merged);
     } else {
       setCustom(getUserColorPresets(userId));
     }
