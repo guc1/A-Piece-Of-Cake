@@ -1,3 +1,5 @@
+import type { ColorPreset } from '@/lib/color-presets';
+
 export interface Plan {
   id: string;
   userId: string;
@@ -5,6 +7,7 @@ export interface Plan {
   blocks: PlanBlock[];
   dailyAim: string;
   dailyIngredientIds: number[];
+  colorPresets?: ColorPreset[];
 }
 
 export interface PlanBlock {
@@ -15,6 +18,7 @@ export interface PlanBlock {
   title: string;
   description: string;
   color: string;
+  colorPreset?: string;
   ingredientIds: number[];
   createdAt: string;
   updatedAt: string;
@@ -27,5 +31,6 @@ export interface PlanBlockInput {
   title: string;
   description: string;
   color: string;
+  colorPreset?: string;
   ingredientIds: number[];
 }
