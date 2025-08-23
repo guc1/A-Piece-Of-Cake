@@ -4,6 +4,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useViewContext } from '@/lib/view-context';
 import PlanningDateNav from './date-nav';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
@@ -89,7 +90,19 @@ export default function EditorClient({
   const [dailyIngredientIds, setDailyIngredientIds] = useState<number[]>(
     () => initialPlan?.dailyIngredientIds ?? [],
   );
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [showDailyAim, setShowDailyAim] = useState(false);
+  useEffect(() => {
+    if (searchParams.get('dailyAim') === '1') {
+      setShowDailyAim(true);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('dailyAim');
+      const query = params.toString();
+      const path = window.location.pathname + (query ? `?${query}` : '');
+      router.replace(path, { scroll: false });
+    }
+  }, [searchParams, router]);
   const hasDailyAim = useMemo(
     () => dailyAim.trim().length > 0 || dailyIngredientIds.length > 0,
     [dailyAim, dailyIngredientIds],
@@ -383,9 +396,7 @@ export default function EditorClient({
         const raw = window.localStorage.getItem(storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
-          fromStorage = Array.isArray(parsed)
-            ? { blocks: parsed }
-            : parsed;
+          fromStorage = Array.isArray(parsed) ? { blocks: parsed } : parsed;
         }
       } catch {
         // ignore malformed data
@@ -394,9 +405,7 @@ export default function EditorClient({
     const nextBlocks = fromStorage?.blocks ?? initialPlan?.blocks ?? [];
     const nextAim = fromStorage?.dailyAim ?? initialPlan?.dailyAim ?? '';
     const nextIng =
-      fromStorage?.dailyIngredientIds ??
-      initialPlan?.dailyIngredientIds ??
-      [];
+      fromStorage?.dailyIngredientIds ?? initialPlan?.dailyIngredientIds ?? [];
     const serialized = JSON.stringify({
       blocks: nextBlocks,
       dailyAim: nextAim,
@@ -1114,7 +1123,7 @@ export default function EditorClient({
                     id={`p1an-meta-igrd-${selected.id}-${userId}`}
                     className="mb-2 flex flex-wrap gap-2"
                   >
-                    {((selected.ingredientIds ?? []).length === 0) && (
+                    {(selected.ingredientIds ?? []).length === 0 && (
                       <span
                         id={`p1an-meta-igrd-none-${selected.id}-${userId}`}
                         className="text-sm text-gray-500"
@@ -1248,7 +1257,9 @@ export default function EditorClient({
             >
               X
             </button>
-            <h2 className="mb-4 text-lg font-semibold">Daily Aim</h2>
+            <h2 className="mb-4 text-lg font-semibold text-center">
+              Daily Aim
+            </h2>
             <textarea
               id={`p1an-day-aim-${userId}`}
               className="mb-8 h-[32rem] w-full border p-6"
@@ -1259,10 +1270,12 @@ export default function EditorClient({
               disabled={!editable}
             />
             <div className="mb-2">
-              <span className="block text-sm font-medium">Daily ingredients</span>
+              <span className="block text-sm font-medium">
+                Daily ingredients
+              </span>
               <div
                 id={`p1an-day-igrd-${userId}`}
-                className="mb-2 flex flex-wrap gap-2"
+                className="mb-2 flex flex-wrap gap-2 pl-4"
               >
                 {dailyIngredientIds.length === 0 && (
                   <span
@@ -1309,7 +1322,7 @@ export default function EditorClient({
                 <Link
                   id={`p1an-day-add-${userId}`}
                   href={`/ingredientsforplanning?date=${date}&block=day&mode=${mode}`}
-                  className="rounded border px-2 py-1 text-sm"
+                  className="ml-4 rounded border px-2 py-1 text-sm"
                 >
                   Add ingredients +
                 </Link>
