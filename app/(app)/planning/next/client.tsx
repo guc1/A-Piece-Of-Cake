@@ -1068,19 +1068,37 @@ export default function EditorClient({
                     const iid = Number(iidStr);
                     const ing = initialIngredients.find((i) => i.id === iid);
                     const src = ing?.icon ? iconSrc(ing.icon) : null;
+                    const link =
+                      ing &&
+                      (viewId
+                        ? `/view/${viewId}/ingredient/${ing.id}`
+                        : `/ingredient/${ing.id}`);
                     return (
                       <div key={iid} className="mb-2">
                         <div className="mb-1 flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            {src ? (
-                              <img src={src} alt="" className="h-4 w-4" />
-                            ) : (
-                              <span>{ing?.icon ?? '❓'}</span>
-                            )}
-                            <span className="text-sm">
-                              {ing?.title ?? 'Secret 🔒'}
+                          {link ? (
+                            <Link href={link} className="flex items-center gap-1">
+                              {src ? (
+                                <img src={src} alt="" className="h-4 w-4" />
+                              ) : (
+                                <span>{ing?.icon ?? '❓'}</span>
+                              )}
+                              <span className="text-sm">
+                                {ing?.title ?? 'Secret 🔒'}
+                              </span>
+                            </Link>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              {src ? (
+                                <img src={src} alt="" className="h-4 w-4" />
+                              ) : (
+                                <span>{ing?.icon ?? '❓'}</span>
+                              )}
+                              <span className="text-sm">
+                                {ing?.title ?? 'Secret 🔒'}
+                              </span>
                             </span>
-                          </div>
+                          )}
                           {editable && (
                             <button
                               className="text-sm"
@@ -1135,22 +1153,9 @@ export default function EditorClient({
                   {unreviewedIngredientIds.map((iid) => {
                     const ing = initialIngredients.find((i) => i.id === iid);
                     const src = ing?.icon ? iconSrc(ing.icon) : null;
-                    return (
-                      <div
-                        key={iid}
-                        className={cn(
-                          'flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow',
-                          selectIngredient && editable
-                            ? 'cursor-pointer hover:bg-gray-200'
-                            : '',
-                        )}
-                        onClick={() => {
-                          if (selectIngredient && editable) {
-                            addIngredientReview(selected.id, iid);
-                            setSelectIngredient(false);
-                          }
-                        }}
-                      >
+                    const selectable = selectIngredient && editable;
+                    const content = (
+                      <>
                         {src ? (
                           <img src={src} alt="" className="h-4 w-4" />
                         ) : (
@@ -1159,6 +1164,37 @@ export default function EditorClient({
                         <span className="text-sm">
                           {ing?.title ?? 'Secret 🔒'}
                         </span>
+                      </>
+                    );
+                    const link =
+                      ing &&
+                      !selectable &&
+                      (viewId
+                        ? `/view/${viewId}/ingredient/${ing.id}`
+                        : `/ingredient/${ing.id}`);
+                    const cls = cn(
+                      'flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow',
+                      selectable ? 'cursor-pointer hover:bg-gray-200' : '',
+                    );
+                    if (link) {
+                      return (
+                        <Link key={iid} href={link} className={cls}>
+                          {content}
+                        </Link>
+                      );
+                    }
+                    return (
+                      <div
+                        key={iid}
+                        className={cls}
+                        onClick={() => {
+                          if (selectable) {
+                            addIngredientReview(selected.id, iid);
+                            setSelectIngredient(false);
+                          }
+                        }}
+                      >
+                        {content}
                       </div>
                     );
                   })}
@@ -1301,16 +1337,8 @@ export default function EditorClient({
                     {(selected.ingredientIds ?? []).map((iid) => {
                       const ing = initialIngredients.find((i) => i.id === iid);
                       const src = ing?.icon ? iconSrc(ing.icon) : null;
-                      return (
-                        <Link
-                          key={iid}
-                          href={
-                            viewId
-                              ? `/view/${viewId}/ingredient/${ing?.id ?? ''}`
-                              : `/ingredient/${ing?.id ?? ''}`
-                          }
-                          className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow"
-                        >
+                      const content = (
+                        <>
                           {src ? (
                             <img src={src} alt="" className="h-4 w-4" />
                           ) : (
@@ -1319,7 +1347,7 @@ export default function EditorClient({
                           <span className="text-sm">
                             {ing?.title ?? 'Secret 🔒'}
                           </span>
-                          {editable && (
+                          {editable && ing && (
                             <span
                               className="ml-1 cursor-pointer"
                               onClick={(e) => {
@@ -1331,7 +1359,28 @@ export default function EditorClient({
                               ×
                             </span>
                           )}
+                        </>
+                      );
+                      const link =
+                        ing &&
+                        (viewId
+                          ? `/view/${viewId}/ingredient/${ing.id}`
+                          : `/ingredient/${ing.id}`);
+                      return link ? (
+                        <Link
+                          key={iid}
+                          href={link}
+                          className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow"
+                        >
+                          {content}
                         </Link>
+                      ) : (
+                        <span
+                          key={iid}
+                          className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow"
+                        >
+                          {content}
+                        </span>
                       );
                     })}
                     {editable && (
@@ -1467,28 +1516,48 @@ export default function EditorClient({
                         {dailyIngredientIds.map((iid) => {
                           const ing = initialIngredients.find((i) => i.id === iid);
                           const src = ing?.icon ? iconSrc(ing.icon) : null;
+                          const selectable = selectDailyIngredient && editable;
+                          const content = (
+                            <>
+                              {src ? (
+                                <img src={src} alt="" className="h-4 w-4" />
+                              ) : (
+                                <span>{ing?.icon ?? '❓'}</span>
+                              )}
+                              <span className="text-sm">
+                                {ing?.title ?? 'Secret 🔒'}
+                              </span>
+                            </>
+                          );
+                          const link =
+                            ing &&
+                            !selectable &&
+                            (viewId
+                              ? `/view/${viewId}/ingredient/${ing.id}`
+                              : `/ingredient/${ing.id}`);
+                          const cls = cn(
+                            'flex items-center gap-1 rounded border px-2 py-1',
+                            selectable ? 'cursor-pointer bg-gray-100 hover:bg-gray-200' : '',
+                          );
+                          if (link) {
+                            return (
+                              <Link key={iid} href={link} className={cls}>
+                                {content}
+                              </Link>
+                            );
+                          }
                           return (
                             <div
                               key={iid}
-                              className={cn(
-                                'flex items-center gap-1 rounded border px-2 py-1',
-                                selectDailyIngredient && editable
-                                  ? 'cursor-pointer bg-gray-100 hover:bg-gray-200'
-                                  : '',
-                              )}
+                              className={cls}
                               onClick={() => {
-                                if (selectDailyIngredient && editable) {
+                                if (selectable) {
                                   addIngredientReview('day', iid);
                                   setSelectDailyIngredient(false);
                                 }
                               }}
                             >
-                              {src ? (
-                                <img src={src} alt="" className="h-4 w-4" />
-                              ) : (
-                                <span>{ing?.icon}</span>
-                              )}
-                              <span className="text-sm">{ing?.title}</span>
+                              {content}
                             </div>
                           );
                         })}
@@ -1498,19 +1567,48 @@ export default function EditorClient({
                           const iid = Number(iidStr);
                           const ing = initialIngredients.find((i) => i.id === iid);
                           const src = ing?.icon ? iconSrc(ing.icon) : null;
+                          const link =
+                            ing &&
+                            (viewId
+                              ? `/view/${viewId}/ingredient/${ing.id}`
+                              : `/ingredient/${ing.id}`);
                           return (
                             <div key={iid} className="mb-2">
                               <div className="mb-1 flex items-center justify-between">
-                                <div className="flex items-center gap-1">
-                                  {src ? (
-                                    <img src={src} alt="" className="h-4 w-4" />
-                                  ) : (
-                                    <span>{ing?.icon ?? '❓'}</span>
-                                  )}
-                                  <span className="text-sm">
-                                    {ing?.title ?? 'Secret 🔒'}
+                                {link ? (
+                                  <Link
+                                    href={link}
+                                    className="flex items-center gap-1"
+                                  >
+                                    {src ? (
+                                      <img
+                                        src={src}
+                                        alt=""
+                                        className="h-4 w-4"
+                                      />
+                                    ) : (
+                                      <span>{ing?.icon ?? '❓'}</span>
+                                    )}
+                                    <span className="text-sm">
+                                      {ing?.title ?? 'Secret 🔒'}
+                                    </span>
+                                  </Link>
+                                ) : (
+                                  <span className="flex items-center gap-1">
+                                    {src ? (
+                                      <img
+                                        src={src}
+                                        alt=""
+                                        className="h-4 w-4"
+                                      />
+                                    ) : (
+                                      <span>{ing?.icon ?? '❓'}</span>
+                                    )}
+                                    <span className="text-sm">
+                                      {ing?.title ?? 'Secret 🔒'}
+                                    </span>
                                   </span>
-                                </div>
+                                )}
                                 {editable && (
                                   <button
                                     className="text-sm"
@@ -1615,24 +1713,17 @@ export default function EditorClient({
                     {dailyIngredientIds.map((iid) => {
                       const ing = initialIngredients.find((i) => i.id === iid);
                       const src = ing?.icon ? iconSrc(ing.icon) : null;
-                      return (
-                        <Link
-                          key={iid}
-                          id={`p1an-day-igrd-${iid}-${userId}`}
-                          href={
-                            viewId
-                              ? `/view/${viewId}/ingredient/${ing?.id ?? ''}`
-                              : `/ingredient/${ing?.id ?? ''}`
-                          }
-                          className="flex items-center gap-1 rounded border px-2 py-1"
-                        >
+                      const content = (
+                        <>
                           {src ? (
                             <img src={src} alt="" className="h-4 w-4" />
                           ) : (
-                            <span>{ing?.icon}</span>
+                            <span>{ing?.icon ?? '❓'}</span>
                           )}
-                          <span className="text-sm">{ing?.title}</span>
-                          {editable && (
+                          <span className="text-sm">
+                            {ing?.title ?? 'Secret 🔒'}
+                          </span>
+                          {editable && ing && (
                             <button
                               type="button"
                               className="ml-1 text-xs text-red-500"
@@ -1641,7 +1732,29 @@ export default function EditorClient({
                               X
                             </button>
                           )}
+                        </>
+                      );
+                      const link =
+                        ing &&
+                        (viewId
+                          ? `/view/${viewId}/ingredient/${ing.id}`
+                          : `/ingredient/${ing.id}`);
+                      return link ? (
+                        <Link
+                          key={iid}
+                          id={`p1an-day-igrd-${iid}-${userId}`}
+                          href={link}
+                          className="flex items-center gap-1 rounded border px-2 py-1"
+                        >
+                          {content}
                         </Link>
+                      ) : (
+                        <span
+                          key={iid}
+                          className="flex items-center gap-1 rounded border px-2 py-1"
+                        >
+                          {content}
+                        </span>
                       );
                     })}
                   </div>
