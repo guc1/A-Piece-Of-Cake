@@ -164,3 +164,6 @@
 - 2025-10-24: Extended NextAuth session tolerance to prevent JWT expiry when overriding the site clock.
 - 2025-10-25: Enabled viewing mode access to Review Today’s Planning, documented new IDs, and added viewer review test.
 - 2025-10-25: Show ingredient names in viewer modes, link public ingredients to detail pages, and label private ones as Secret.
+- 2025-10-25: Added color preset picker with default palettes and personal presets; viewers can copy presets from plans.
+- 2025-10-25: Showed custom presets above defaults and allowed copying presets via picker in viewer and snapshot modes.
+- 2025-10-25: Exposed plan owner's presets in viewer picker and ensured copying adds them to My presets.
