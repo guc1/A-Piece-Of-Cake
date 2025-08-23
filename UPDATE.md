@@ -162,3 +162,5 @@
 - 2025-10-24: Locked page scroll when reviewing daily aim, capped modal height, and preserved line breaks in aim text.
 - 2025-10-24: Made Review Daily Aim modal scrollable and allowed resizing the Daily Aim editor.
 - 2025-10-24: Extended NextAuth session tolerance to prevent JWT expiry when overriding the site clock.
+- 2025-10-25: Enabled viewing mode access to Review Today’s Planning, documented new IDs, and added viewer review test.
+- 2025-10-25: Show ingredient names in viewer modes, link public ingredients to detail pages, and label private ones as Secret.
