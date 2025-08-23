@@ -20,6 +20,7 @@ export default async function PlanningNextPage({
   const me = await ensureUser(session);
   const cookieStore = await cookies();
   const params = searchParams ? await searchParams : undefined;
+  const showDailyAim = params?.showDailyAim === '1';
   const info = resolvePlanDate('next', me, {
     cookies: cookieStore,
     searchParams: params,
@@ -46,6 +47,7 @@ export default async function PlanningNextPage({
         tz={info.tz}
         initialPlan={plan}
         ingredients={ingredients}
+        initialShowDailyAim={showDailyAim}
       />
     </>
   );
