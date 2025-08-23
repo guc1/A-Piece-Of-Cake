@@ -146,3 +146,4 @@
 highlighting the Daily Aim button red when empty and green when filled.
 - 2025-10-24: Enlarged Daily Aim editor with top-left close and Done buttons, prevented accidental closing during text selection, and kept toolbar color green when filled.
 - 2025-10-24: Further expanded Daily Aim modal for more editing space and turned toolbar green when text or daily ingredients are present.
+- 2025-10-24: Fixed Daily Aim button colors to show red when empty and green when filled, and greatly enlarged modal editor with a top-left close button.

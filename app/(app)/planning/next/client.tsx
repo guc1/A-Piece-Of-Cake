@@ -731,8 +731,8 @@ export default function EditorClient({
               id={`p1an-daily-aim-${userId}`}
               className={`rounded border px-3 py-2 ${
                 dailyAim.trim().length > 0 || dailyIngredientIds.length > 0
-                  ? 'border-green-300 bg-green-50 text-green-600'
-                  : 'border-red-300 bg-red-50 text-red-600'
+                  ? '!border-green-500 !text-green-600 !bg-green-50'
+                  : '!border-red-500 !text-red-600 !bg-red-50'
               }`}
               onClick={() => setShowDailyAim(true)}
             >
@@ -1234,21 +1234,21 @@ export default function EditorClient({
             if (e.target === e.currentTarget) setShowDailyAim(false);
           }}
         >
-          <div className="relative w-[60rem] max-w-[90vw] rounded bg-white p-6 shadow-lg">
+          <div className="relative w-[120rem] max-w-[95vw] rounded bg-white p-12 shadow-lg">
             <button
               id={`p1an-day-x-${userId}`}
-              className="absolute left-2 top-2 text-gray-500"
+              className="absolute left-4 top-4 text-gray-500"
               onClick={() => setShowDailyAim(false)}
             >
               X
             </button>
-            <h2 className="mb-2 text-lg font-semibold">Daily Aim</h2>
+            <h2 className="mb-4 text-lg font-semibold">Daily Aim</h2>
             <textarea
               id={`p1an-day-aim-${userId}`}
-              className="mb-6 h-48 w-full border p-3"
+              className="mb-8 h-96 w-full border p-6"
               value={dailyAim}
               onChange={(e) => setDailyAim(e.target.value)}
-              rows={8}
+              rows={16}
               maxLength={500}
               disabled={!editable}
             />
