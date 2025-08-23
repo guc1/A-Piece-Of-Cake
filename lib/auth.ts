@@ -1,8 +1,12 @@
 import { getServerSession, type NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import { jwtDecrypt } from 'jose';
+import hkdf from '@panva/hkdf';
 import { getUserByEmail, verifyPassword } from '@/lib/users';
 
 // NextAuth configuration used both by the route handler and server helpers
+const SESSION_MAX_AGE = 10 * 365 * 24 * 60 * 60; // 10 years in seconds
+
 export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
@@ -17,7 +21,11 @@ export const authOptions: NextAuthOptions = {
         if (!user) return null;
         const ok = verifyPassword(credentials.password, user.passwordHash);
         if (!ok) return null;
-        return { id: user.id.toString(), name: user.name ?? undefined, email: user.email };
+        return {
+          id: user.id.toString(),
+          name: user.name ?? undefined,
+          email: user.email,
+        };
       },
     }),
   ],
@@ -38,7 +46,25 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  session: { strategy: 'jwt' },
+  jwt: {
+    maxAge: SESSION_MAX_AGE,
+    async decode({ token, secret, salt = '' }) {
+      if (!token || !secret) return null;
+      const encryptionSecret = await hkdf(
+        'sha256',
+        secret,
+        salt,
+        `NextAuth.js Generated Encryption Key${salt ? ` (${salt})` : ''}`,
+        32,
+      );
+      const { payload } = await jwtDecrypt(token, encryptionSecret, {
+        // Permit large clock skew so overridden site times don't expire sessions.
+        clockTolerance: SESSION_MAX_AGE,
+      });
+      return payload as any;
+    },
+  },
+  session: { strategy: 'jwt', maxAge: SESSION_MAX_AGE },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/signin',
