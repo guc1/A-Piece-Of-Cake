@@ -156,3 +156,4 @@
 - 2025-10-24: Exposed activity ingredients in review mode and let users write per-ingredient feedback.
 - 2025-10-24: Moved ingredient list and feedback button below good/bad review fields.
 - 2025-10-24: Placed ingredient feedback boxes above the ingredient list in review mode.
+- 2025-10-24: Added review-only Daily Aim modal with feedback fields and per-ingredient reviews; renamed button to "Review daily aim" and kept it red when empty.
