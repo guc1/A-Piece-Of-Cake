@@ -168,6 +168,14 @@ export default function EditorClient({
     const reviewed = reviews[selected.id]?.ingredients || {};
     return (selected.ingredientIds ?? []).filter((iid) => !(iid in reviewed));
   }, [selected, reviews]);
+  const [selectDailyIngredient, setSelectDailyIngredient] = useState(false);
+  useEffect(() => {
+    if (!showDailyAim) setSelectDailyIngredient(false);
+  }, [showDailyAim]);
+  const unreviewedDailyIngredientIds = useMemo(() => {
+    const reviewed = reviews['day']?.ingredients || {};
+    return dailyIngredientIds.filter((iid) => !(iid in reviewed));
+  }, [dailyIngredientIds, reviews]);
   const draggingRef = useRef(false);
   const [startMinute, setStartMinute] = useState(DEFAULT_START);
   const [endMinute, setEndMinute] = useState(DEFAULT_END);
@@ -815,7 +823,7 @@ export default function EditorClient({
               )}
               onClick={() => setShowDailyAim(true)}
             >
-              Daily Aim
+              {review ? 'Review daily aim' : 'Daily Aim'}
             </Button>
             {(startMinute !== DEFAULT_START || endMinute !== DEFAULT_END) && (
               <button
@@ -1447,86 +1455,267 @@ export default function EditorClient({
             >
               X
             </button>
-            <h2 className="mb-4 text-lg font-semibold text-center">
-              Daily Aim
-            </h2>
-            <textarea
-              id={`p1an-day-aim-${userId}`}
-              className="mb-8 h-[32rem] w-full border p-6"
-              value={dailyAim}
-              onChange={(e) => setDailyAim(e.target.value)}
-              rows={16}
-              maxLength={500}
-              disabled={!editable}
-            />
-            <div className="mb-2 pl-4">
-              <span className="block text-sm font-medium">
-                Daily ingredients
-              </span>
-              <div
-                id={`p1an-day-igrd-${userId}`}
-                className="mb-2 flex flex-wrap gap-2"
-              >
-                {dailyIngredientIds.length === 0 && (
-                  <span
-                    id={`p1an-day-igrd-none-${userId}`}
-                    className="text-sm text-gray-500"
-                  >
-                    No ingredient found
+            {review ? (
+              <>
+                <h2 className="mb-4 text-lg font-semibold text-center">
+                  Review daily aim
+                </h2>
+                <div className="mb-6">
+                  <span className="mb-2 block text-sm font-medium">
+                    Daily aim
                   </span>
-                )}
-                {dailyIngredientIds.map((iid) => {
-                  const ing = initialIngredients.find((i) => i.id === iid);
-                  const src = ing?.icon ? iconSrc(ing.icon) : null;
-                  return (
-                    <Link
-                      key={iid}
-                      id={`p1an-day-igrd-${iid}-${userId}`}
-                      href={
-                        viewId
-                          ? `/view/${viewId}/ingredient/${ing?.id ?? ''}`
-                          : `/ingredient/${ing?.id ?? ''}`
-                      }
-                      className="flex items-center gap-1 rounded border px-2 py-1"
-                    >
-                      {src ? (
-                        <img src={src} alt="" className="h-4 w-4" />
-                      ) : (
-                        <span>{ing?.icon}</span>
-                      )}
-                      <span className="text-sm">{ing?.title}</span>
-                      {editable && (
-                        <button
-                          type="button"
-                          className="ml-1 text-xs text-red-500"
-                          onClick={() => removeDailyIngredient(iid)}
+                  <div className="mb-4 h-[16rem] w-full overflow-y-auto whitespace-pre-wrap rounded border p-6">
+                    {dailyAim ? (
+                      dailyAim
+                    ) : (
+                      <span className="text-sm text-gray-500">
+                        No daily aim set
+                      </span>
+                    )}
+                  </div>
+                  <label
+                    className="block text-sm font-medium"
+                    htmlFor={`p1an-day-feedback-${userId}`}
+                  >
+                    How did your day go?
+                  </label>
+                  <textarea
+                    id={`p1an-day-feedback-${userId}`}
+                    className="mb-4 h-40 w-full border p-4"
+                    value={reviews['day']?.good ?? ''}
+                    disabled={!editable}
+                    maxLength={1000}
+                    onChange={(e) =>
+                      setReviews((prev) => ({
+                        ...prev,
+                        day: {
+                          ...(prev.day || {
+                            good: '',
+                            bad: '',
+                            ingredients: {},
+                          }),
+                          good: e.target.value,
+                        },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="mb-2 pl-4">
+                  <span className="block text-sm font-medium">
+                    Daily ingredients
+                  </span>
+                  <div
+                    id={`p1an-day-igrd-${userId}`}
+                    className="mb-2 flex flex-wrap gap-2"
+                  >
+                    {dailyIngredientIds.length === 0 && (
+                      <span
+                        id={`p1an-day-igrd-none-${userId}`}
+                        className="text-sm text-gray-500"
+                      >
+                        No ingredient found
+                      </span>
+                    )}
+                    {dailyIngredientIds.map((iid) => {
+                      const ing = initialIngredients.find((i) => i.id === iid);
+                      const src = ing?.icon ? iconSrc(ing.icon) : null;
+                      return (
+                        <div
+                          key={iid}
+                          className={cn(
+                            'flex items-center gap-1 rounded border px-2 py-1',
+                            selectDailyIngredient && editable
+                              ? 'cursor-pointer bg-gray-100 hover:bg-gray-200'
+                              : '',
+                          )}
+                          onClick={() => {
+                            if (selectDailyIngredient && editable) {
+                              addIngredientReview('day', iid);
+                              setSelectDailyIngredient(false);
+                            }
+                          }}
                         >
-                          X
-                        </button>
-                      )}
+                          {src ? (
+                            <img src={src} alt="" className="h-4 w-4" />
+                          ) : (
+                            <span>{ing?.icon}</span>
+                          )}
+                          <span className="text-sm">{ing?.title}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {Object.entries(reviews['day']?.ingredients ?? {}).map(
+                    ([iidStr, text]) => {
+                      const iid = Number(iidStr);
+                      const ing = initialIngredients.find((i) => i.id === iid);
+                      const src = ing?.icon ? iconSrc(ing.icon) : null;
+                      return (
+                        <div key={iid} className="mb-2">
+                          <div className="mb-1 flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              {src ? (
+                                <img src={src} alt="" className="h-4 w-4" />
+                              ) : (
+                                <span>{ing?.icon ?? '❓'}</span>
+                              )}
+                              <span className="text-sm">
+                                {ing?.title ?? 'Secret 🔒'}
+                              </span>
+                            </div>
+                            {editable && (
+                              <button
+                                className="text-sm"
+                                onClick={() =>
+                                  removeIngredientReview('day', iid)
+                                }
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                          <textarea
+                            className="w-full border p-1"
+                            value={text}
+                            disabled={!editable}
+                            maxLength={1000}
+                            rows={3}
+                            onChange={(e) =>
+                              setReviews((prev) => ({
+                                ...prev,
+                                day: {
+                                  ...(prev.day || {
+                                    good: '',
+                                    bad: '',
+                                    ingredients: {},
+                                  }),
+                                  ingredients: {
+                                    ...(prev.day?.ingredients || {}),
+                                    [iid]: e.target.value,
+                                  },
+                                },
+                              }))
+                            }
+                          />
+                        </div>
+                      );
+                    },
+                  )}
+                  {editable && unreviewedDailyIngredientIds.length > 0 && (
+                    <Button
+                      id={`p1an-day-igrd-review-${userId}`}
+                      variant="outline"
+                      size="sm"
+                      className="mb-2"
+                      onClick={() =>
+                        setSelectDailyIngredient((s) => !s)
+                      }
+                    >
+                      {selectDailyIngredient
+                        ? 'Cancel ingredient feedback'
+                        : 'Write feedback on ingredient'}
+                    </Button>
+                  )}
+                  {selectDailyIngredient && (
+                    <div className="mb-2 text-sm text-gray-500">
+                      Select an ingredient above
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 text-right">
+                  <Button
+                    variant="outline"
+                    id={`p1an-day-done-${userId}`}
+                    onClick={() => setShowDailyAim(false)}
+                  >
+                    Done
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="mb-4 text-lg font-semibold text-center">
+                  Daily Aim
+                </h2>
+                <textarea
+                  id={`p1an-day-aim-${userId}`}
+                  className="mb-8 h-[32rem] w-full border p-6"
+                  value={dailyAim}
+                  onChange={(e) => setDailyAim(e.target.value)}
+                  rows={16}
+                  maxLength={500}
+                  disabled={!editable}
+                />
+                <div className="mb-2 pl-4">
+                  <span className="block text-sm font-medium">
+                    Daily ingredients
+                  </span>
+                  <div
+                    id={`p1an-day-igrd-${userId}`}
+                    className="mb-2 flex flex-wrap gap-2"
+                  >
+                    {dailyIngredientIds.length === 0 && (
+                      <span
+                        id={`p1an-day-igrd-none-${userId}`}
+                        className="text-sm text-gray-500"
+                      >
+                        No ingredient found
+                      </span>
+                    )}
+                    {dailyIngredientIds.map((iid) => {
+                      const ing = initialIngredients.find((i) => i.id === iid);
+                      const src = ing?.icon ? iconSrc(ing.icon) : null;
+                      return (
+                        <Link
+                          key={iid}
+                          id={`p1an-day-igrd-${iid}-${userId}`}
+                          href={
+                            viewId
+                              ? `/view/${viewId}/ingredient/${ing?.id ?? ''}`
+                              : `/ingredient/${ing?.id ?? ''}`
+                          }
+                          className="flex items-center gap-1 rounded border px-2 py-1"
+                        >
+                          {src ? (
+                            <img src={src} alt="" className="h-4 w-4" />
+                          ) : (
+                            <span>{ing?.icon}</span>
+                          )}
+                          <span className="text-sm">{ing?.title}</span>
+                          {editable && (
+                            <button
+                              type="button"
+                              className="ml-1 text-xs text-red-500"
+                              onClick={() => removeDailyIngredient(iid)}
+                            >
+                              X
+                            </button>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  {editable && (
+                    <Link
+                      id={`p1an-day-add-${userId}`}
+                      href={`/ingredientsforplanning?date=${date}&block=day&mode=${mode}`}
+                      className="rounded border px-2 py-1 text-sm"
+                    >
+                      Add ingredients +
                     </Link>
-                  );
-                })}
-              </div>
-              {editable && (
-                <Link
-                  id={`p1an-day-add-${userId}`}
-                  href={`/ingredientsforplanning?date=${date}&block=day&mode=${mode}`}
-                  className="rounded border px-2 py-1 text-sm"
-                >
-                  Add ingredients +
-                </Link>
-              )}
-            </div>
-            <div className="mt-2 text-right">
-              <Button
-                variant="outline"
-                id={`p1an-day-done-${userId}`}
-                onClick={() => setShowDailyAim(false)}
-              >
-                Done
-              </Button>
-            </div>
+                  )}
+                </div>
+                <div className="mt-2 text-right">
+                  <Button
+                    variant="outline"
+                    id={`p1an-day-done-${userId}`}
+                    onClick={() => setShowDailyAim(false)}
+                  >
+                    Done
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
