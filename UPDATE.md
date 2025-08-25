@@ -181,3 +181,4 @@
 - 2025-10-26: Stored copied color presets under the viewer's ID in live view mode so they appear in My presets.
 - 2025-10-27: Added flavor and subflavor tagging for planning blocks with selection modal, detail pages, and ID catalog entries.
 - 2025-10-27: Polished flavor tagging UI with orange add button, visible selection rings, scrollable metadata panel, higher modal z-index, and proper rendering of custom icons.
+- 2025-10-27: Prevented planner metadata from auto-closing; panels now stay open until manually dismissed or the page unloads.
