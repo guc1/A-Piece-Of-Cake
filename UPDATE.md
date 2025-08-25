@@ -185,3 +185,4 @@
 - 2025-10-27: Removed outside-click auto-close and reset drag state so metadata opens on single clicks and stays open until closed.
 - 2025-10-27: Preserved open metadata after autosave by remapping temporary timeslot IDs to server-issued IDs.
 - 2025-10-27: Kept planner metadata open during autosave by matching blocks by id or time so typing doesn't close panels.
+- 2025-10-27: Improved planning block title visibility with contrast-based text color and responsive font sizing.
