@@ -103,7 +103,7 @@ export async function copySubflavor(
   const session = await auth();
   const user = await ensureUser(session);
   await assertOwner(user.id, user.id);
-  const sub = await getSubflavor(fromUserId, subflavorId);
+    const sub = await getSubflavor(fromUserId, subflavorId, Number(user.id));
   if (!sub) throw new Error('Not found');
   const created = await createSubflavorStore(String(user.id), targetFlavorId, {
     flavorId: targetFlavorId,
@@ -128,7 +128,7 @@ export async function copySubflavorAsFlavor(
   const session = await auth();
   const user = await ensureUser(session);
   await assertOwner(user.id, user.id);
-  const sub = await getSubflavor(fromUserId, subflavorId);
+    const sub = await getSubflavor(fromUserId, subflavorId, Number(user.id));
   if (!sub) throw new Error('Not found');
   const created = await createFlavorStore(String(user.id), {
     name: sub.name,

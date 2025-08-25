@@ -41,14 +41,16 @@ test('historical plans keep past versions', async ({ page }) => {
 
   const user = await getUserByHandle(handle);
   const blocksA = [
-    {
-      start: iso(future, 9),
-      end: iso(future, 10),
-      title: 'Old',
-      description: '',
-      color: '#F87171',
-      ingredientIds: [],
-    },
+      {
+        start: iso(future, 9),
+        end: iso(future, 10),
+        title: 'Old',
+        description: '',
+        color: '#F87171',
+        ingredientIds: [],
+        flavorIds: [],
+        subflavorIds: [],
+      },
   ];
   await savePlan(String(user.id), future, blocksA);
   await createProfileSnapshot(user.id, todayStr);
@@ -56,14 +58,16 @@ test('historical plans keep past versions', async ({ page }) => {
   if (!snap) throw new Error('missing snapshot');
   await new Promise((r) => setTimeout(r, 1000));
   const blocksB = [
-    {
-      start: iso(future, 9),
-      end: iso(future, 10),
-      title: 'New',
-      description: '',
-      color: '#34D399',
-      ingredientIds: [],
-    },
+      {
+        start: iso(future, 9),
+        end: iso(future, 10),
+        title: 'New',
+        description: '',
+        color: '#34D399',
+        ingredientIds: [],
+        flavorIds: [],
+        subflavorIds: [],
+      },
   ];
   await savePlan(String(user.id), future, blocksB);
 
@@ -91,14 +95,16 @@ test('plans added after snapshot are hidden from past snapshots', async ({
   await createProfileSnapshot(user.id, todayStr);
 
   const blocks = [
-    {
-      start: iso(future, 9),
-      end: iso(future, 10),
-      title: 'Future',
-      description: '',
-      color: '#FBBF24',
-      ingredientIds: [],
-    },
+      {
+        start: iso(future, 9),
+        end: iso(future, 10),
+        title: 'Future',
+        description: '',
+        color: '#FBBF24',
+        ingredientIds: [],
+        flavorIds: [],
+        subflavorIds: [],
+      },
   ];
   await savePlan(String(user.id), future, blocks);
 
