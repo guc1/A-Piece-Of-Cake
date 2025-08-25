@@ -179,3 +179,4 @@
 - 2025-10-26: Generated fresh IDs when copying foreign color presets so they appear in My presets.
 - 2025-10-26: Merged copied presets into the viewer's library so they show up in My presets immediately.
 - 2025-10-26: Stored copied color presets under the viewer's ID in live view mode so they appear in My presets.
+- 2025-10-27: Added flavor and subflavor tagging for planning blocks with selection modal, detail pages, and ID catalog entries.

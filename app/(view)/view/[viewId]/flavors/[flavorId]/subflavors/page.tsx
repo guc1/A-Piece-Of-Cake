@@ -19,7 +19,7 @@ export default async function ViewSubflavorsPage({
   const session = await auth();
   const viewer = session ? await ensureUser(session) : null;
   const subflavors = await listSubflavors(String(user.id), flavorId);
-  const flavor = await getFlavor(String(user.id), flavorId);
+  const flavor = await getFlavor(String(user.id), flavorId, viewer?.id || null);
   if (!flavor) notFound();
   const viewerFlavors = viewer ? await listFlavors(String(viewer.id)) : [];
   return (

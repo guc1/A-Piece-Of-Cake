@@ -9,7 +9,7 @@ export async function GET(req: Request, context: any) {
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const flavor = await getFlavor(userId, params.id);
+  const flavor = await getFlavor(userId, params.id, Number(userId));
   if (!flavor) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(flavor);
 }
