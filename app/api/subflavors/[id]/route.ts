@@ -13,7 +13,7 @@ export async function GET(req: Request, context: any) {
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const subflavor = await getSubflavor(userId, params.id);
+  const subflavor = await getSubflavor(userId, params.id, Number(userId));
   if (!subflavor)
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(subflavor);

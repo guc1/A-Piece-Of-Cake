@@ -8,6 +8,8 @@ import { useViewContext } from '@/lib/view-context';
 import PlanningDateNav from './date-nav';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 import type { Ingredient } from '@/types/ingredient';
+import type { Flavor } from '@/types/flavor';
+import type { Subflavor } from '@/types/subflavor';
 import { savePlanAction } from './actions';
 import { cn } from '@/lib/utils';
 import ColorPresetPicker from '@/components/color-preset-picker';
@@ -47,6 +49,8 @@ interface Props {
   tz: string;
   initialPlan: Plan | null;
   ingredients?: Ingredient[];
+  flavors?: Flavor[];
+  subflavors?: Subflavor[];
   live?: boolean;
   review?: boolean;
   initialShowDailyAim?: boolean;
@@ -59,11 +63,14 @@ export default function EditorClient({
   tz,
   initialPlan,
   ingredients: initialIngredients = [],
+  flavors: initialFlavors = [],
+  subflavors: initialSubflavors = [],
   live = false,
   review = false,
   initialShowDailyAim = false,
 }: Props) {
-  const { editable, viewId, viewerId } = useViewContext();
+  const { editable, viewId, viewerId, mode: viewMode, snapshotDate, ownerId } =
+    useViewContext();
   // Viewer id is null when editing own plan; otherwise it represents the
   // currently logged-in user. Some browsers may provide `undefined` before the
   // context hydrates, so fall back to the owner id only when a viewer id is not
@@ -84,6 +91,8 @@ export default function EditorClient({
           return (JSON.parse(raw) as PlanBlock[]).map((b) => ({
             ...b,
             ingredientIds: b.ingredientIds ?? [],
+            flavorIds: b.flavorIds ?? [],
+            subflavorIds: b.subflavorIds ?? [],
             colorPreset: b.colorPreset ?? '',
           }));
       } catch {
@@ -93,6 +102,8 @@ export default function EditorClient({
     return (initialPlan?.blocks ?? []).map((b) => ({
       ...b,
       ingredientIds: b.ingredientIds ?? [],
+      flavorIds: b.flavorIds ?? [],
+      subflavorIds: b.subflavorIds ?? [],
       colorPreset: b.colorPreset ?? '',
     }));
   });
@@ -119,6 +130,13 @@ export default function EditorClient({
   const [dailyIngredientIds, setDailyIngredientIds] = useState<number[]>(
     () => initialPlan?.dailyIngredientIds ?? [],
   );
+  const [flavors] = useState(initialFlavors);
+  const [subflavors] = useState(initialSubflavors);
+  const [selectFlavor, setSelectFlavor] = useState(false);
+  const [flavorTab, setFlavorTab] = useState<'flavor' | 'subflavor'>('flavor');
+  const [flavorSearch, setFlavorSearch] = useState('');
+  const [tempFlavors, setTempFlavors] = useState<string[]>([]);
+  const [tempSubs, setTempSubs] = useState<string[]>([]);
   const [showDailyAim, setShowDailyAim] = useState(initialShowDailyAim);
   const hasDailyAim = useMemo(
     () => dailyAim.trim().length > 0 || dailyIngredientIds.length > 0,
@@ -179,6 +197,9 @@ export default function EditorClient({
   const [selectIngredient, setSelectIngredient] = useState(false);
   useEffect(() => {
     setSelectIngredient(false);
+  }, [selectedId]);
+  useEffect(() => {
+    setSelectFlavor(false);
   }, [selectedId]);
   const unreviewedIngredientIds = useMemo(() => {
     if (!selected) return [] as number[];
@@ -356,6 +377,22 @@ export default function EditorClient({
     });
   }
 
+  function removeFlavor(blockId: string, flavorId: string) {
+    const blk = blocks.find((b) => b.id === blockId);
+    if (!blk) return;
+    updateBlock(blockId, {
+      flavorIds: (blk.flavorIds || []).filter((id) => id !== flavorId),
+    });
+  }
+
+  function removeSubflavor(blockId: string, subId: string) {
+    const blk = blocks.find((b) => b.id === blockId);
+    if (!blk) return;
+    updateBlock(blockId, {
+      subflavorIds: (blk.subflavorIds || []).filter((id) => id !== subId),
+    });
+  }
+
   function removeDailyIngredient(ingredientId: number) {
     setDailyIngredientIds((ids) => ids.filter((id) => id !== ingredientId));
   }
@@ -448,6 +485,8 @@ export default function EditorClient({
       color: COLORS[0],
       colorPreset: '',
       ingredientIds: [],
+      flavorIds: [],
+      subflavorIds: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -541,6 +580,8 @@ export default function EditorClient({
         color: b.color,
         colorPreset: b.colorPreset,
         ingredientIds: b.ingredientIds,
+        flavorIds: b.flavorIds,
+        subflavorIds: b.subflavorIds,
       }));
       const presetsSnapshot = getUserColorPresets(userId);
       savePlanAction(
@@ -593,6 +634,8 @@ export default function EditorClient({
           color: b.color,
           colorPreset: b.colorPreset,
           ingredientIds: b.ingredientIds,
+          flavorIds: b.flavorIds,
+          subflavorIds: b.subflavorIds,
         }));
         const presetsSnapshot = getUserColorPresets(userId);
         void savePlanAction(
@@ -1512,6 +1555,132 @@ export default function EditorClient({
                     )}
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium">
+                    Flavors
+                  </label>
+                  <div
+                    id={`p1an-meta-flav-${selected.id}-${userId}`}
+                    className="mb-2 flex flex-wrap gap-2"
+                  >
+                    {(selected.flavorIds ?? []).length === 0 &&
+                      (selected.subflavorIds ?? []).length === 0 && (
+                        <span className="text-sm text-gray-500">
+                          No flavor selected
+                        </span>
+                      )}
+                    {(selected.flavorIds ?? []).map((fid) => {
+                      const fl = flavors.find((f) => f.id === fid);
+                      const content = (
+                        <>
+                          <span>{fl?.icon ?? '❓'}</span>
+                          <span className="text-sm">
+                            {fl?.name ?? 'Secret 🔒'}
+                          </span>
+                          {editable && fl && (
+                            <span
+                              className="ml-1 cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                removeFlavor(selected.id, fid);
+                              }}
+                            >
+                              ×
+                            </span>
+                          )}
+                        </>
+                      );
+                      const link =
+                        fl &&
+                        (viewMode === 'historical'
+                          ? viewerId === ownerId
+                            ? `/history/self/${snapshotDate}/flavors/${fl.id}`
+                            : viewId
+                              ? `/history/${viewId}/${snapshotDate}/flavors/${fl.id}`
+                              : null
+                          : viewId
+                            ? `/view/${viewId}/flavor/${fl.id}`
+                            : `/flavor/${fl.id}`);
+                      return link ? (
+                        <Link
+                          key={fid}
+                          href={link}
+                          className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow"
+                        >
+                          {content}
+                        </Link>
+                      ) : (
+                        <span
+                          key={fid}
+                          className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow"
+                        >
+                          {content}
+                        </span>
+                      );
+                    })}
+                    {(selected.subflavorIds ?? []).map((sid) => {
+                      const sub = subflavors.find((s) => s.id === sid);
+                      const content = (
+                        <>
+                          <span>{sub?.icon ?? '❓'}</span>
+                          <span className="text-sm">
+                            {sub?.name ?? 'Secret 🔒'}
+                          </span>
+                          {editable && sub && (
+                            <span
+                              className="ml-1 cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                removeSubflavor(selected.id, sid);
+                              }}
+                            >
+                              ×
+                            </span>
+                          )}
+                        </>
+                      );
+                      const link =
+                        sub &&
+                        (viewMode === 'historical'
+                          ? viewerId === ownerId
+                            ? `/history/self/${snapshotDate}/flavors/${sub.flavorId}/subflavors#s7ubflavourrow${sub.id}-${ownerId}`
+                            : viewId
+                              ? `/history/${viewId}/${snapshotDate}/flavors/${sub.flavorId}/subflavors#s7ubflavourrow${sub.id}-${ownerId}`
+                              : null
+                          : viewId
+                            ? `/view/${viewId}/subflavor/${sub.id}`
+                            : `/subflavor/${sub.id}`);
+                      return link ? (
+                        <Link
+                          key={sid}
+                          href={link}
+                          className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow"
+                        >
+                          {content}
+                        </Link>
+                      ) : (
+                        <span
+                          key={sid}
+                          className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 shadow"
+                        >
+                          {content}
+                        </span>
+                      );
+                    })}
+                    {editable && (
+                      <button
+                        id={`p1an-meta-flav-add-${selected.id}-${userId}`}
+                        type="button"
+                        className="rounded-full bg-blue-200 px-3 py-1 text-blue-800 shadow"
+                        onClick={() => setSelectFlavor(true)}
+                      >
+                        Reasoning behind activity
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="mt-4 flex gap-2">
                   {editable ? (
                     <Button
@@ -1900,6 +2069,74 @@ export default function EditorClient({
                   </Button>
                 </div>
               </>
+            )}
+          </div>
+        </div>
+      )}
+      {selectFlavor && selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur"
+          onClick={() => setSelectFlavor(false)}
+        >
+          <div className="w-96 max-h-[80vh] overflow-y-auto rounded bg-white p-4 shadow-lg" onClick={(e)=>e.stopPropagation()}>
+            <div className="mb-2 flex justify-between">
+              <div className="flex gap-2">
+                <button
+                  className={`px-2 py-1 ${flavorTab==='flavor'?'border-b-2 border-black':''}`}
+                  onClick={()=>setFlavorTab('flavor')}
+                >
+                  Main flavor
+                </button>
+                <button
+                  className={`px-2 py-1 ${flavorTab==='subflavor'?'border-b-2 border-black':''}`}
+                  onClick={()=>setFlavorTab('subflavor')}
+                >
+                  Subflavor
+                </button>
+              </div>
+              <button onClick={()=>setSelectFlavor(false)}>×</button>
+            </div>
+            <input
+              type="text"
+              placeholder="Search"
+              value={flavorSearch}
+              onChange={(e)=>setFlavorSearch(e.target.value)}
+              className="mb-2 w-full rounded border p-1"
+            />
+            <div className="max-h-60 overflow-y-auto">
+              {flavorTab === 'flavor'
+                ? flavors
+                    .filter((f)=>f.name.toLowerCase().includes(flavorSearch.toLowerCase()))
+                    .map((f)=>(
+                      <div key={f.id} className={`cursor-pointer rounded p-1 ${tempFlavors.includes(f.id)?'bg-blue-100':''}`} onClick={()=>setTempFlavors((prev)=>prev.includes(f.id)?prev.filter(id=>id!==f.id):[...prev,f.id])}>
+                        {f.icon} {f.name}
+                      </div>
+                    ))
+                : subflavors
+                    .filter((s)=>s.name.toLowerCase().includes(flavorSearch.toLowerCase()))
+                    .map((s)=>(
+                      <div key={s.id} className={`cursor-pointer rounded p-1 ${tempSubs.includes(s.id)?'bg-blue-100':''}`} onClick={()=>setTempSubs((prev)=>prev.includes(s.id)?prev.filter(id=>id!==s.id):[...prev,s.id])}>
+                        {s.icon} {s.name}
+                      </div>
+                    ))}
+            </div>
+            {(tempFlavors.length>0 || tempSubs.length>0) && (
+              <div className="mt-4 text-right">
+                <Button
+                  onClick={() => {
+                    updateBlock(selected.id, {
+                      flavorIds: Array.from(new Set([...(selected.flavorIds || []), ...tempFlavors])),
+                      subflavorIds: Array.from(new Set([...(selected.subflavorIds || []), ...tempSubs])),
+                    });
+                    setSelectFlavor(false);
+                    setTempFlavors([]);
+                    setTempSubs([]);
+                    setFlavorSearch('');
+                  }}
+                >
+                  Add
+                </Button>
+              </div>
             )}
           </div>
         </div>

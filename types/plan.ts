@@ -20,6 +20,8 @@ export interface PlanBlock {
   color: string;
   colorPreset?: string;
   ingredientIds: number[];
+  flavorIds: string[];
+  subflavorIds: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -33,4 +35,6 @@ export interface PlanBlockInput {
   color: string;
   colorPreset?: string;
   ingredientIds: number[];
+  flavorIds: string[];
+  subflavorIds: string[];
 }

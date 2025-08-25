@@ -90,7 +90,7 @@ export async function copyFlavor(
 ) {
   const session = await auth();
   const self = await ensureUser(session);
-  const source = await getFlavor(fromUserId, flavorId);
+    const source = await getFlavor(fromUserId, flavorId, Number(self.id));
   if (!source) throw new Error('Not found');
   const created = await createFlavorStore(String(self.id), {
     name: source.name,
