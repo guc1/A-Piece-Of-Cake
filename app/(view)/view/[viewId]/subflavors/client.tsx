@@ -9,6 +9,12 @@ import {
 import { useViewContext } from '@/lib/view-context';
 import { useState } from 'react';
 
+function iconSrc(ic: string) {
+  if (ic.startsWith('data:')) return ic;
+  if (/^[A-Za-z0-9+/=]+$/.test(ic)) return `data:image/png;base64,${ic}`;
+  return null;
+}
+
 export default function AllSubflavorsClient({
   userId,
   selfId,
@@ -55,13 +61,21 @@ export default function AllSubflavorsClient({
                   className="flex items-center justify-between rounded border p-2"
                 >
                   <div className="flex items-center gap-2">
-                    <span
-                      aria-label={s.name}
-                      className="text-2xl"
-                      style={{ color: s.color }}
-                    >
-                      {s.icon}
-                    </span>
+                    {iconSrc(s.icon) ? (
+                      <img
+                        src={iconSrc(s.icon) as string}
+                        alt=""
+                        className="h-6 w-6"
+                      />
+                    ) : (
+                      <span
+                        aria-label={s.name}
+                        className="text-2xl"
+                        style={{ color: s.color }}
+                      >
+                        {s.icon}
+                      </span>
+                    )}
                     <div className="min-w-0">
                       <div className="font-semibold">{s.name}</div>
                       <div className="truncate text-sm text-gray-600">

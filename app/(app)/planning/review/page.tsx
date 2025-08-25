@@ -7,6 +7,8 @@ import { getPlanStrict } from '@/lib/plans-store';
 import TimeOverrideBadge from '@/components/time-override-badge';
 import EditorClient from '../next/client';
 import { listIngredients } from '@/lib/ingredients-store';
+import { listFlavors } from '@/lib/flavors-store';
+import { listAllSubflavors } from '@/lib/subflavors-store';
 
 export const revalidate = 0;
 
@@ -29,6 +31,8 @@ export default async function PlanningReviewPage({
   const todayStr = toYMD(info.today, info.tz);
   const plan = await getPlanStrict(me.id, dateStr);
   const ingredients = await listIngredients(String(me.id), me.id);
+  const flavors = await listFlavors(String(me.id));
+  const subflavors = await listAllSubflavors(String(me.id));
   const overrideLabel = info.override
     ? `${info.now.toLocaleString('en-US', { timeZone: info.tz })} (tz: ${info.tz})`
     : null;
@@ -45,6 +49,8 @@ export default async function PlanningReviewPage({
         live
         review
         ingredients={ingredients}
+        flavors={flavors}
+        subflavors={subflavors}
         initialShowDailyAim={showDailyAim}
       />
     </>

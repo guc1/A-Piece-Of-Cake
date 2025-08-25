@@ -16,6 +16,8 @@ function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
     color: row.color ?? '#888888',
     colorPreset: row.colorPreset ?? '',
     ingredientIds: row.ingredientIds ?? [],
+    flavorIds: row.flavorIds ?? [],
+    subflavorIds: row.subflavorIds ?? [],
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -109,6 +111,8 @@ export async function getPlanAt(
       blocks: blocks.map((b) => ({
         ...b,
         ingredientIds: b.ingredientIds ?? [],
+        flavorIds: b.flavorIds ?? [],
+        subflavorIds: b.subflavorIds ?? [],
         colorPreset: b.colorPreset ?? '',
       })),
       dailyAim: payload.dailyAim ?? '',
@@ -169,13 +173,15 @@ export async function savePlan(
         .set({
           start: new Date(blk.start),
           end: new Date(blk.end),
-          title: blk.title.slice(0, 60),
-          description: blk.description.slice(0, 500),
-          color: blk.color,
-          colorPreset: blk.colorPreset || null,
-          ingredientIds: blk.ingredientIds,
-          updatedAt: now,
-        })
+        title: blk.title.slice(0, 60),
+        description: blk.description.slice(0, 500),
+        color: blk.color,
+        colorPreset: blk.colorPreset || null,
+        ingredientIds: blk.ingredientIds,
+        flavorIds: blk.flavorIds,
+        subflavorIds: blk.subflavorIds,
+        updatedAt: now,
+      })
         .where(eq(planBlocks.id, blk.id))
         .returning();
       results.push(toPlanBlock(row));
@@ -189,14 +195,16 @@ export async function savePlan(
           planId: Number(planRow.id),
           start: new Date(blk.start),
           end: new Date(blk.end),
-          title: blk.title.slice(0, 60),
-          description: blk.description.slice(0, 500),
-          color: blk.color,
-          colorPreset: blk.colorPreset || null,
-          ingredientIds: blk.ingredientIds,
-          createdAt: now,
-          updatedAt: now,
-        })
+        title: blk.title.slice(0, 60),
+        description: blk.description.slice(0, 500),
+        color: blk.color,
+        colorPreset: blk.colorPreset || null,
+        ingredientIds: blk.ingredientIds,
+        flavorIds: blk.flavorIds,
+        subflavorIds: blk.subflavorIds,
+        createdAt: now,
+        updatedAt: now,
+      })
         .returning();
       results.push(toPlanBlock(row));
     }

@@ -1,5 +1,5 @@
 import { db } from './db';
-import { flavors } from './db/schema';
+import { flavors, follows } from './db/schema';
 import { eq, and } from 'drizzle-orm';
 import type { Flavor, FlavorInput, Visibility } from '@/types/flavor';
 
@@ -29,6 +29,40 @@ function toFlavor(row: typeof flavors.$inferSelect): Flavor {
   };
 }
 
+async function canView(viewerId: number | null, ownerId: number, vis: Visibility) {
+  if (viewerId === ownerId) return true;
+  switch (vis) {
+    case 'public':
+      return true;
+    case 'followers':
+      if (!viewerId) return false;
+      const [f1] = await db
+        .select()
+        .from(follows)
+        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, ownerId), eq(follows.status, 'accepted')));
+      if (f1) return true;
+      const [f2] = await db
+        .select()
+        .from(follows)
+        .where(and(eq(follows.followerId, ownerId), eq(follows.followingId, viewerId), eq(follows.status, 'accepted')));
+      return !!f2;
+    case 'friends':
+      if (!viewerId) return false;
+      const [ff] = await db
+        .select()
+        .from(follows)
+        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, ownerId), eq(follows.status, 'accepted')));
+      if (!ff) return false;
+      const [rf] = await db
+        .select()
+        .from(follows)
+        .where(and(eq(follows.followerId, ownerId), eq(follows.followingId, viewerId), eq(follows.status, 'accepted')));
+      return !!rf;
+    default:
+      return false;
+  }
+}
+
 export async function listFlavors(userId: string): Promise<Flavor[]> {
   const id = Number(userId);
   if (Number.isNaN(id)) return [];
@@ -36,12 +70,19 @@ export async function listFlavors(userId: string): Promise<Flavor[]> {
   return sortFlavors(rows.map(toFlavor));
 }
 
-export async function getFlavor(userId: string, id: string): Promise<Flavor | null> {
+export async function getFlavor(
+  userId: string,
+  id: string,
+  viewerId: number | null = null,
+): Promise<Flavor | null> {
   const [row] = await db
     .select()
     .from(flavors)
     .where(and(eq(flavors.userId, Number(userId)), eq(flavors.id, id)));
-  return row ? toFlavor(row) : null;
+  if (!row) return null;
+  if (!(await canView(viewerId, row.userId ?? 0, (row.visibility as Visibility) ?? 'private')))
+    return null;
+  return toFlavor(row);
 }
 
 export async function createFlavor(userId: string, input: FlavorInput): Promise<Flavor> {

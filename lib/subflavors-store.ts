@@ -1,5 +1,5 @@
 import { db } from './db';
-import { subflavors } from './db/schema';
+import { subflavors, follows } from './db/schema';
 import { eq, and } from 'drizzle-orm';
 import type { Subflavor, SubflavorInput, Visibility } from '@/types/subflavor';
 
@@ -30,6 +30,40 @@ function toSubflavor(row: typeof subflavors.$inferSelect): Subflavor {
   };
 }
 
+async function canView(viewerId: number | null, ownerId: number, vis: Visibility) {
+  if (viewerId === ownerId) return true;
+  switch (vis) {
+    case 'public':
+      return true;
+    case 'followers':
+      if (!viewerId) return false;
+      const [f1] = await db
+        .select()
+        .from(follows)
+        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, ownerId), eq(follows.status, 'accepted')));
+      if (f1) return true;
+      const [f2] = await db
+        .select()
+        .from(follows)
+        .where(and(eq(follows.followerId, ownerId), eq(follows.followingId, viewerId), eq(follows.status, 'accepted')));
+      return !!f2;
+    case 'friends':
+      if (!viewerId) return false;
+      const [ff] = await db
+        .select()
+        .from(follows)
+        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, ownerId), eq(follows.status, 'accepted')));
+      if (!ff) return false;
+      const [rf] = await db
+        .select()
+        .from(follows)
+        .where(and(eq(follows.followerId, ownerId), eq(follows.followingId, viewerId), eq(follows.status, 'accepted')));
+      return !!rf;
+    default:
+      return false;
+  }
+}
+
 export async function listSubflavors(
   userId: string,
   flavorId: string,
@@ -43,15 +77,26 @@ export async function listSubflavors(
   return sortSubflavors(rows.map(toSubflavor));
 }
 
+export async function listAllSubflavors(userId: string): Promise<Subflavor[]> {
+  const id = Number(userId);
+  if (Number.isNaN(id)) return [];
+  const rows = await db.select().from(subflavors).where(eq(subflavors.userId, id));
+  return sortSubflavors(rows.map(toSubflavor));
+}
+
 export async function getSubflavor(
   userId: string,
   id: string,
+  viewerId: number | null = null,
 ): Promise<Subflavor | null> {
   const [row] = await db
     .select()
     .from(subflavors)
     .where(and(eq(subflavors.userId, Number(userId)), eq(subflavors.id, id)));
-  return row ? toSubflavor(row) : null;
+  if (!row) return null;
+  if (!(await canView(viewerId, row.userId ?? 0, (row.visibility as Visibility) ?? 'private')))
+    return null;
+  return toSubflavor(row);
 }
 
 export async function createSubflavor(

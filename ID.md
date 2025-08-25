@@ -104,6 +104,8 @@ Modal form IDs:
 - `p1an-meta-igrd-add-{blockId}-{ownerId}` → add ingredient button.
 - `p1an-meta-igrd-review-{blockId}-{ownerId}` → toggle ingredient feedback.
 - `p1an-meta-igrd-none-{blockId}-{ownerId}` → ingredient empty state text.
+- `p1an-meta-flav-{blockId}-{ownerId}` → flavor tags container.
+- `p1an-meta-flav-add-{blockId}-{ownerId}` → reasoning behind activity button.
 - `p1an-daily-aim-{ownerId}` → open Daily Aim modal.
 - `p1an-day-aim-{ownerId}` → Daily Aim textarea.
 - `p1an-day-feedback-{ownerId}` → overall day feedback textarea.
@@ -173,6 +175,8 @@ Modal form IDs:
 - `igrd-plan-list-back-{ownerId}` → ingredient picker back button.
 - `igrd-plan-back-{ingredientId}-{ownerId}` → ingredient detail back button.
 - `igrd-plan-none-{ownerId}` → empty state text when no ingredients exist.
+- `f7av-plan-back-{flavorId}-{ownerId}` → flavor detail back button.
+- `s7ub-plan-back-{subflavorId}-{ownerId}` → subflavor detail back button.
 
 ## History Pages
 
