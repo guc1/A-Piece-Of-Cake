@@ -178,3 +178,4 @@
 - 2025-10-26: Corrected live-mode preset copying to always use the viewer's ID and alert anonymous users.
 - 2025-10-26: Generated fresh IDs when copying foreign color presets so they appear in My presets.
 - 2025-10-26: Merged copied presets into the viewer's library so they show up in My presets immediately.
+- 2025-10-26: Stored copied color presets under the viewer's ID in live view mode so they appear in My presets.
