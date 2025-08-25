@@ -69,8 +69,14 @@ export default function EditorClient({
   review = false,
   initialShowDailyAim = false,
 }: Props) {
-  const { editable, viewId, viewerId, mode: viewMode, snapshotDate, ownerId } =
-    useViewContext();
+  const {
+    editable,
+    viewId,
+    viewerId,
+    mode: viewMode,
+    snapshotDate,
+    ownerId,
+  } = useViewContext();
   // Viewer id is null when editing own plan; otherwise it represents the
   // currently logged-in user. Some browsers may provide `undefined` before the
   // context hydrates, so fall back to the owner id only when a viewer id is not
@@ -190,6 +196,15 @@ export default function EditorClient({
   });
   const [showPresetPicker, setShowPresetPicker] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [metaPinned, setMetaPinned] = useState(false);
+  const openMeta = useCallback((id: string) => {
+    setSelectedId(id);
+    setMetaPinned(true);
+  }, []);
+  const closeMeta = useCallback(() => {
+    setSelectedId(null);
+    setMetaPinned(false);
+  }, []);
   const selected = useMemo(
     () => blocks.find((b) => b.id === selectedId) || null,
     [blocks, selectedId],
@@ -223,6 +238,19 @@ export default function EditorClient({
     const reviewed = reviews['day']?.ingredients || {};
     return dailyIngredientIds.filter((iid) => !(iid in reviewed));
   }, [dailyIngredientIds, reviews]);
+  useEffect(() => {
+    const handler = () => closeMeta();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', handler);
+      window.addEventListener('beforeunload', handler);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('pagehide', handler);
+        window.removeEventListener('beforeunload', handler);
+      }
+    };
+  }, [closeMeta]);
   const draggingRef = useRef(false);
   const [startMinute, setStartMinute] = useState(DEFAULT_START);
   const [endMinute, setEndMinute] = useState(DEFAULT_END);
@@ -491,7 +519,7 @@ export default function EditorClient({
       updatedAt: new Date().toISOString(),
     };
     setBlocks((b) => [...b, newBlock]);
-    setSelectedId(id);
+    openMeta(id);
   }
 
   const lastSaved = useRef(
@@ -749,6 +777,7 @@ export default function EditorClient({
     function onUp() {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      dragRef.current = false;
     }
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -798,10 +827,10 @@ export default function EditorClient({
   }, [liveBlocks, minutesFromIso]);
 
   useEffect(() => {
-    if (!live) return;
+    if (!live || metaPinned) return;
     if (currentBlock) setSelectedId(currentBlock.id);
     else setSelectedId(null);
-  }, [live, currentBlock]);
+  }, [live, currentBlock, metaPinned]);
 
   const lineColor = useMemo(() => {
     if (!live) return '#FF0000';
@@ -819,7 +848,6 @@ export default function EditorClient({
         <div
           className={`relative overflow-y-hidden ${selected ? 'w-1/2' : 'w-full'}`}
           id={`p1an-timecol-${userId}`}
-          onPointerDown={() => setSelectedId(null)}
         >
           <div
             className="sticky top-0 z-10 flex flex-wrap items-end gap-2 bg-gray-100 p-2 text-sm"
@@ -1037,7 +1065,7 @@ export default function EditorClient({
                       if (draggingRef.current) return;
                       if (review && live && nowMinute < minutesFromIso(b.end))
                         return;
-                      setSelectedId(b.id);
+                      openMeta(b.id);
                     }}
                   >
                     <span className="pointer-events-none block truncate">
@@ -1313,7 +1341,7 @@ export default function EditorClient({
                   <Button
                     variant="outline"
                     id={`p1an-meta-close-${userId}`}
-                    onClick={() => setSelectedId(null)}
+                    onClick={closeMeta}
                   >
                     X
                   </Button>
@@ -1556,9 +1584,7 @@ export default function EditorClient({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium">
-                    Flavors
-                  </label>
+                  <label className="block text-sm font-medium">Flavors</label>
                   <div
                     id={`p1an-meta-flav-${selected.id}-${userId}`}
                     className="mb-2 flex flex-wrap gap-2"
@@ -1702,7 +1728,7 @@ export default function EditorClient({
                         setBlocks((prev) =>
                           prev.filter((blk) => blk.id !== selected.id),
                         );
-                        setSelectedId(null);
+                        closeMeta();
                       }}
                     >
                       Delete
@@ -1721,7 +1747,7 @@ export default function EditorClient({
                   <Button
                     variant="outline"
                     id={`p1an-meta-close-${userId}`}
-                    onClick={() => setSelectedId(null)}
+                    onClick={closeMeta}
                   >
                     X
                   </Button>
@@ -2182,10 +2208,16 @@ export default function EditorClient({
                   onClick={() => {
                     updateBlock(selected.id, {
                       flavorIds: Array.from(
-                        new Set([...(selected.flavorIds || []), ...tempFlavors]),
+                        new Set([
+                          ...(selected.flavorIds || []),
+                          ...tempFlavors,
+                        ]),
                       ),
                       subflavorIds: Array.from(
-                        new Set([...(selected.subflavorIds || []), ...tempSubs]),
+                        new Set([
+                          ...(selected.subflavorIds || []),
+                          ...tempSubs,
+                        ]),
                       ),
                     });
                     setSelectFlavor(false);
