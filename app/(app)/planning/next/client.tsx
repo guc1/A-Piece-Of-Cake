@@ -42,6 +42,22 @@ const DEFAULT_START = 5 * 60; // 05:00
 const DEFAULT_END = 22 * 60; // 22:00
 const Z_BASE = 10000;
 
+function getTextColor(hex: string) {
+  if (!hex.startsWith('#') || (hex.length !== 7 && hex.length !== 4)) {
+    return '#000000';
+  }
+  // Expand shorthand form (#abc) to full form (#aabbcc)
+  const normalized =
+    hex.length === 4
+      ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+      : hex;
+  const r = parseInt(normalized.slice(1, 3), 16);
+  const g = parseInt(normalized.slice(3, 5), 16);
+  const b = parseInt(normalized.slice(5, 7), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness < 128 ? '#FFFFFF' : '#000000';
+}
+
 interface Props {
   userId: string;
   date: string; // plan date YYYY-MM-DD
@@ -612,41 +628,42 @@ export default function EditorClient({
         subflavorIds: b.subflavorIds,
       }));
       const presetsSnapshot = getUserColorPresets(userId);
-        savePlanAction(
-          date,
-          payload,
-          dailyAim,
-          dailyIngredientIds,
-          presetsSnapshot,
-        ).then((plan) => {
-          const prevSelected =
-            metaPinned && selectedId
-              ? blocksRef.current.find((b) => b.id === selectedId)
-              : null;
-          setBlocks(plan.blocks);
-          setDailyAim(plan.dailyAim);
-          setDailyIngredientIds(plan.dailyIngredientIds);
-          if (prevSelected) {
-            const match =
-              plan.blocks.find((b) => b.id === prevSelected.id) ??
-              plan.blocks.find(
-                (b) => b.start === prevSelected.start && b.end === prevSelected.end,
-              );
-            if (match) setSelectedId(match.id);
-            else closeMeta();
-          }
-          const ser = JSON.stringify({
-            blocks: plan.blocks,
-            dailyAim: plan.dailyAim,
-            dailyIngredientIds: plan.dailyIngredientIds,
-          });
-          lastSaved.current = ser;
-          try {
-            window.localStorage.setItem(storageKey, ser);
-          } catch {
-            // ignore write errors
-          }
+      savePlanAction(
+        date,
+        payload,
+        dailyAim,
+        dailyIngredientIds,
+        presetsSnapshot,
+      ).then((plan) => {
+        const prevSelected =
+          metaPinned && selectedId
+            ? blocksRef.current.find((b) => b.id === selectedId)
+            : null;
+        setBlocks(plan.blocks);
+        setDailyAim(plan.dailyAim);
+        setDailyIngredientIds(plan.dailyIngredientIds);
+        if (prevSelected) {
+          const match =
+            plan.blocks.find((b) => b.id === prevSelected.id) ??
+            plan.blocks.find(
+              (b) =>
+                b.start === prevSelected.start && b.end === prevSelected.end,
+            );
+          if (match) setSelectedId(match.id);
+          else closeMeta();
+        }
+        const ser = JSON.stringify({
+          blocks: plan.blocks,
+          dailyAim: plan.dailyAim,
+          dailyIngredientIds: plan.dailyIngredientIds,
         });
+        lastSaved.current = ser;
+        try {
+          window.localStorage.setItem(storageKey, ser);
+        } catch {
+          // ignore write errors
+        }
+      });
       saveTimer.current = null;
     }, 500);
   }, [
@@ -1024,14 +1041,15 @@ export default function EditorClient({
                   (Math.min(bEnd, endMinute) - Math.max(bStart, startMinute)) *
                   PIXELS_PER_MINUTE;
                 const z = (blockDepth[b.id] || 0) * Z_BASE + (Z_BASE - bStart);
-                const textColor = '#000000';
+                const textColor = getTextColor(b.color);
+                const fontSize = Math.min(20, Math.max(12, height / 2));
                 return (
                   <div
                     key={b.id}
                     id={`p1an-blk-${b.id}-${userId}`}
                     data-selected={selectedId === b.id ? 'true' : 'false'}
                     aria-label={`${b.title}, ${b.start} to ${b.end}`}
-                    className="absolute left-1 right-1 rounded p-1 text-xs"
+                    className="absolute left-1 right-1 rounded p-1"
                     style={{
                       top,
                       height,
@@ -1084,7 +1102,10 @@ export default function EditorClient({
                       openMeta(b.id);
                     }}
                   >
-                    <span className="pointer-events-none block truncate">
+                    <span
+                      className="pointer-events-none block truncate font-bold"
+                      style={{ fontSize }}
+                    >
                       {b.title}
                     </span>
                   </div>
