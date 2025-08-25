@@ -549,24 +549,22 @@ export default function EditorClient({
         dailyAim,
         dailyIngredientIds,
         presetsSnapshot,
-      ).then(
-        (plan) => {
-          setBlocks(plan.blocks);
-          setDailyAim(plan.dailyAim);
-          setDailyIngredientIds(plan.dailyIngredientIds);
-          const ser = JSON.stringify({
-            blocks: plan.blocks,
-            dailyAim: plan.dailyAim,
-            dailyIngredientIds: plan.dailyIngredientIds,
-          });
-          lastSaved.current = ser;
-          try {
-            window.localStorage.setItem(storageKey, ser);
-          } catch {
-            // ignore write errors
-          }
-        },
-      );
+      ).then((plan) => {
+        setBlocks(plan.blocks);
+        setDailyAim(plan.dailyAim);
+        setDailyIngredientIds(plan.dailyIngredientIds);
+        const ser = JSON.stringify({
+          blocks: plan.blocks,
+          dailyAim: plan.dailyAim,
+          dailyIngredientIds: plan.dailyIngredientIds,
+        });
+        lastSaved.current = ser;
+        try {
+          window.localStorage.setItem(storageKey, ser);
+        } catch {
+          // ignore write errors
+        }
+      });
       saveTimer.current = null;
     }, 500);
   }, [
@@ -1379,15 +1377,16 @@ export default function EditorClient({
                               colorPreset: name,
                             });
                           } else {
-                            const targetId =
-                              viewerId != null ? String(viewerId) : userId;
                             if (viewerId == null) {
+                              // Viewer isn't signed in, so copying would save to
+                              // the plan owner's library. Block the action and
+                              // prompt them to log in first.
                               alert('Please sign in to copy presets.');
                             } else if (window.confirm('Copy to own presets?')) {
-                              // Generate a fresh ID to avoid clashes with the
-                              // original owner's preset and ensure it appears
-                              // in the viewer's library.
-                              addUserColorPreset(targetId, {
+                              // Save the preset under the viewer's ID so it
+                              // appears in their personal library regardless
+                              // of which plan/date they copied it from.
+                              addUserColorPreset(currentUserId, {
                                 name,
                                 colors: [color],
                               });
