@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import IconPicker from '@/components/icon-picker';
 import type {
@@ -97,6 +97,19 @@ export default function IngredientsClient({
     'choice',
   );
   const [peopleSearch, setPeopleSearch] = useState('');
+  const [recommendOpen, setRecommendOpen] = useState(false);
+  type ChatMessage = { role: 'user' | 'assistant'; content: string };
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      role: 'assistant',
+      content: 'What kind of ingredient would you like to create?',
+    },
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, recommendOpen]);
   const [form, setForm] = useState({
     title: '',
     shortDescription: '',
@@ -185,6 +198,59 @@ export default function IngredientsClient({
     if (n >= 70) return 'bg-green-200';
     if (n >= 40) return 'bg-yellow-200';
     return 'bg-gray-200';
+  }
+
+  function buildIngredientContext(list: Ingredient[]) {
+    return sortIngredients(list)
+      .map(
+        (i) =>
+          `Title\n${i.title}\nShort description\n${i.shortDescription}\nUsefulness (${i.usefulness})\nWhat it is\n${i.description}\nWhy used\n${i.whyUsed}\nWhen used / situations\n${i.whenUsed}\nTips\n${i.tips}`,
+      )
+      .join('\n\n');
+  }
+
+  async function sendChat() {
+    if (!chatInput.trim()) return;
+    const isFirst =
+      chatMessages.length === 1 && chatMessages[0].role === 'assistant';
+    const userContent = isFirst
+      ? `${chatInput}\n\nHere is the context of the ingredients the user currently has:\n<${buildIngredientContext(ingredients)}>`
+      : chatInput;
+    const newMessages: ChatMessage[] = [
+      ...chatMessages,
+      { role: 'user', content: userContent },
+    ];
+    setChatMessages(newMessages);
+    setChatInput('');
+    const payload = [
+      {
+        role: 'system',
+        content:
+          'You are a helpful assistant in the Cake framework, a life-planning platform where users build a cake of goals with ingredients—habits or protocols that support their flavors. Recommend an ingredient to the user, grounding suggestions in cutting-edge science. Compare ideas with existing ingredients and, if the user is unsure, suggest one they may be missing. Always end responses with: "Should I create that ingredient for you?" If they agree, explain the tool calls needed, including title, short description, usefulness score, description, why used, when used, and tips.',
+      },
+      ...newMessages,
+    ];
+    try {
+      console.log('recommend request', payload);
+      const res = await fetch('/api/ingredients/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: payload }),
+      });
+      const data = await res.json();
+      console.log('recommend response', data);
+      if (data.response) {
+        setChatMessages([
+          ...newMessages,
+          { role: 'assistant', content: data.response as string },
+        ]);
+      }
+    } catch {
+      setChatMessages([
+        ...newMessages,
+        { role: 'assistant', content: 'Sorry, something went wrong.' },
+      ]);
+    }
   }
 
   async function importPreset(p: IngredientInput) {
@@ -297,6 +363,16 @@ export default function IngredientsClient({
               >
                 Import ingredient
               </button>
+              <button
+                id={`1ngred-add-recommend-${userId}`}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+                onClick={() => {
+                  setChoiceOpen(false);
+                  setRecommendOpen(true);
+                }}
+              >
+                Recommend ingredient
+              </button>
             </div>
             <div className="mt-4 flex justify-end">
               <button
@@ -305,6 +381,68 @@ export default function IngredientsClient({
                 onClick={() => setChoiceOpen(false)}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {recommendOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex w-[90%] max-w-2xl max-h-[90vh] flex-col rounded bg-white p-6 shadow-lg">
+            <div className="mb-4 flex-1 overflow-y-auto space-y-2">
+              {chatMessages.map((m, i) => (
+                <div
+                  key={i}
+                  className={m.role === 'user' ? 'text-right' : 'text-left'}
+                >
+                  <span
+                    className={
+                      m.role === 'user'
+                        ? 'inline-block rounded bg-orange-100 px-2 py-1'
+                        : 'inline-block rounded bg-gray-200 px-2 py-1'
+                    }
+                  >
+                    {m.content}
+                  </span>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') sendChat();
+                }}
+                placeholder="Type your answer..."
+                className="flex-1 rounded border px-2 py-1"
+              />
+              <button
+                onClick={sendChat}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+              >
+                Send
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={() => {
+                  setRecommendOpen(false);
+                  setChatMessages([
+                    {
+                      role: 'assistant',
+                      content:
+                        'What kind of ingredient would you like to create?',
+                    },
+                  ]);
+                  setChatInput('');
+                }}
+              >
+                Close
               </button>
             </div>
           </div>
@@ -465,9 +603,7 @@ export default function IngredientsClient({
               </h2>
               <button onClick={() => setOpen(false)}>✕</button>
             </div>
-            <div
-              className="mb-4"
-            >
+            <div className="mb-4">
               <label className="block text-sm font-medium">Icon</label>
               <IconPicker
                 value={form.icon}
