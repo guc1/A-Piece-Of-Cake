@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useViewContext } from '@/lib/view-context';
 
-export function SideCalendar({ snapshotDates }: { snapshotDates: string[] }) {
+export function SideCalendar({
+  snapshotDates,
+  reportDates = [],
+}: {
+  snapshotDates: string[];
+  reportDates?: string[];
+}) {
   const [open, setOpen] = useState(false);
   const [monthOffset, setMonthOffset] = useState(0);
   const router = useRouter();
@@ -77,6 +83,7 @@ export function SideCalendar({ snapshotDates }: { snapshotDates: string[] }) {
               const isToday = date.toDateString() === today.toDateString();
               const iso = date.toLocaleDateString('en-CA');
               const hasSnap = snapshotDates.includes(iso);
+              const hasReport = reportDates.includes(iso);
               return (
                 <button
                   key={date.toISOString()}
@@ -96,7 +103,10 @@ export function SideCalendar({ snapshotDates }: { snapshotDates: string[] }) {
                     hasSnap
                       ? 'cursor-pointer hover:bg-orange-100'
                       : 'text-zinc-400 cursor-default',
-                    isToday && 'bg-orange-500 text-white font-bold',
+                    hasReport && 'bg-green-500 text-white font-bold',
+                    isToday &&
+                      !hasReport &&
+                      'bg-orange-500 text-white font-bold',
                   )}
                 >
                   {date.getDate()}

@@ -212,6 +212,26 @@ export const planRevisions = pgTable('plan_revisions', {
   snapshotAt: timestamp('snapshot_at').defaultNow(),
 });
 
+export const dailyReports = pgTable(
+  'daily_reports',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    date: date('date').notNull(),
+    report: jsonb('report').notNull(),
+    score: integer('score').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserDate: uniqueIndex('daily_reports_user_date_unique').on(
+      table.userId,
+      table.date,
+    ),
+  }),
+);
+
 export const profileSnapshots = pgTable(
   'profile_snapshots',
   {

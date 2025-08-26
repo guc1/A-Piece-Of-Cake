@@ -197,3 +197,4 @@
 - 2025-10-27: Let recommendation agent auto-create ingredients via tool calls, skipped empty fields in context, and kept chat state until refresh.
 - 2025-10-27: Added resettable ingredient recommendation chat persisted in local storage and confirmed AI-created ingredients before saving.
 - 2025-10-27: Removed ingredient revisions on delete to prevent foreign key errors and added test coverage.
+- 2025-10-28: Introduced Progress section with daily report generation, overview pages, navigation link, and calendar highlight.
