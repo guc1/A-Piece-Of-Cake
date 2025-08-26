@@ -98,23 +98,45 @@ export default function IngredientsClient({
   );
   const [peopleSearch, setPeopleSearch] = useState('');
   const [recommendOpen, setRecommendOpen] = useState(false);
+  const CHAT_STORAGE_KEY = 'ingredient-recommend-chat';
   type ChatMessage = { role: 'user' | 'assistant'; content: string };
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+  const initialChat: ChatMessage[] = [
     {
       role: 'assistant',
       content: 'What kind of ingredient would you like to create?',
     },
-  ]);
+  ];
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat);
   const [chatInput, setChatInput] = useState('');
   const chatIdRef = useRef<string>(
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2),
   );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.chatId) chatIdRef.current = parsed.chatId;
+        if (parsed.messages) setChatMessages(parsed.messages);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
   const chatEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, recommendOpen]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(
+      CHAT_STORAGE_KEY,
+      JSON.stringify({ chatId: chatIdRef.current, messages: chatMessages }),
+    );
+  }, [chatMessages]);
   const [form, setForm] = useState({
     title: '',
     shortDescription: '',
@@ -209,7 +231,8 @@ export default function IngredientsClient({
     return sortIngredients(list)
       .map((i) => {
         const parts = [`Title\n${i.title}`];
-        if (i.shortDescription) parts.push(`Short description\n${i.shortDescription}`);
+        if (i.shortDescription)
+          parts.push(`Short description\n${i.shortDescription}`);
         parts.push(`Usefulness (${i.usefulness})`);
         if (i.description) parts.push(`What it is\n${i.description}`);
         if (i.whyUsed) parts.push(`Why used\n${i.whyUsed}`);
@@ -218,6 +241,29 @@ export default function IngredientsClient({
         return parts.join('\n');
       })
       .join('\n\n');
+  }
+
+  function parseIngredient(str: string): Partial<IngredientInput> | null {
+    try {
+      return JSON.parse(str);
+    } catch {
+      try {
+        const m = str.match(/```json\s*([\s\S]*?)\s*```/i);
+        if (m) return JSON.parse(m[1]);
+      } catch {
+        return null;
+      }
+      return null;
+    }
+  }
+
+  function resetChat() {
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+    chatIdRef.current = id;
+    setChatMessages(initialChat);
   }
 
   async function sendChat() {
@@ -237,7 +283,7 @@ export default function IngredientsClient({
       {
         role: 'system',
         content:
-          'You are a helpful assistant in the Cake framework, a life-planning platform where users build a cake of goals with ingredients—habits or protocols that support their flavors. Recommend an ingredient to the user, grounding suggestions in cutting-edge science. Compare ideas with existing ingredients and, if the user is unsure, suggest one they may be missing. Always end responses with: "Should I create that ingredient for you?" If the user agrees, call the create_ingredient tool with the ingredient details (title, short description, usefulness score, what it is, why used, when used / situations, tips).',
+          'You are a helpful assistant in the Cake framework, a life-planning platform where users build a cake of goals with ingredients—habits or protocols that support their flavors. Recommend an ingredient to the user, grounding suggestions in cutting-edge science. Compare ideas with existing ingredients and, if the user is unsure, suggest one they may be missing. Always end responses with: "Should I create that ingredient for you?" If the user agrees, respond ONLY with a JSON object containing the fields title, shortDescription, usefulness, description, whyUsed, whenUsed, tips. Do not include any other text.',
       },
       ...newMessages,
     ];
@@ -251,15 +297,40 @@ export default function IngredientsClient({
       const data = await res.json();
       console.log('recommend response', data);
       if (data.response) {
-        setChatMessages([
-          ...newMessages,
-          { role: 'assistant', content: data.response as string },
-        ]);
-      }
-      if (data.ingredient) {
-        setIngredients((prev) =>
-          sortIngredients([...prev, data.ingredient as Ingredient]),
-        );
+        const parsed = parseIngredient(data.response as string);
+        if (parsed && parsed.title) {
+          const ok = confirm(
+            `Do you want to add this ingredient (${parsed.title})?`,
+          );
+          if (ok) {
+            const fd = new FormData();
+            Object.entries(parsed).forEach(([k, v]) => {
+              if (v !== null && v !== undefined) {
+                fd.append(k, String(v));
+              }
+            });
+            fd.append('icon', '🤖');
+            const created = await createMine(fd);
+            setIngredients((prev) => sortIngredients([...prev, created]));
+            setChatMessages([
+              ...newMessages,
+              {
+                role: 'assistant',
+                content: `Added ingredient "${created.title}".`,
+              },
+            ]);
+          } else {
+            setChatMessages([
+              ...newMessages,
+              { role: 'assistant', content: 'Okay, not adding it.' },
+            ]);
+          }
+        } else {
+          setChatMessages([
+            ...newMessages,
+            { role: 'assistant', content: data.response as string },
+          ]);
+        }
       }
     } catch {
       setChatMessages([
@@ -442,7 +513,14 @@ export default function IngredientsClient({
                 Send
               </button>
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex justify-between">
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={resetChat}
+              >
+                Reset
+              </button>
               <button
                 type="button"
                 className="rounded border px-3 py-1"
