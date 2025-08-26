@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 interface LogEntry {
   request: string;
@@ -18,19 +18,19 @@ const LogsContext = createContext<LogsContextType | undefined>(undefined);
 
 export function LogsProvider({ children }: { children: React.ReactNode }) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [unlocked, setUnlocked] = useState<boolean>(
-    () =>
-      typeof window !== 'undefined' &&
-      localStorage.getItem('logsUnlocked') === 'true',
-  );
+  const [unlocked, setUnlocked] = useState(false);
+
+  useEffect(() => {
+    if (localStorage.getItem('logsUnlocked') === 'true') {
+      setUnlocked(true);
+    }
+  }, []);
 
   const addLog = (entry: LogEntry) => setLogs((prev) => [...prev, entry]);
 
   const unlock = () => {
     setUnlocked(true);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('logsUnlocked', 'true');
-    }
+    localStorage.setItem('logsUnlocked', 'true');
   };
 
   return (
