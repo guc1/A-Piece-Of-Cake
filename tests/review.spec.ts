@@ -27,6 +27,14 @@ test('owner review page loads', async ({ page }) => {
   await left.evaluate((el) => el.scrollTo(0, el.scrollHeight));
   const rightTop = await right.evaluate((el) => el.scrollTop);
   expect(rightTop).toBe(0);
+
+  // text persists after reload
+  const tasks = page.locator('textarea');
+  await tasks.first().fill('rational text');
+  await tasks.nth(1).fill('guilty text');
+  await page.reload();
+  await expect(tasks.first()).toHaveValue('rational text');
+  await expect(tasks.nth(1)).toHaveValue('guilty text');
 });
 
 test('viewer review page is read-only', async ({ page }) => {
