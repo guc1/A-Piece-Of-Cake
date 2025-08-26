@@ -187,3 +187,4 @@
 - 2025-10-27: Kept planner metadata open during autosave by matching blocks by id or time so typing doesn't close panels.
 - 2025-10-27: Improved planning block title visibility with contrast-based text color and responsive font sizing.
 - 2025-10-27: Added LLM integration guide (LLM.md) and updated Agents guidelines to reference it.
+- 2025-10-27: Added progress test chat with mock LLM, hidden logs viewer unlock via repeated logo click, and global AI request logging.
