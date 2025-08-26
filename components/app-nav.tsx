@@ -14,6 +14,7 @@ const labels: Record<Section, string> = {
   review: 'Review',
   people: 'People',
   visibility: 'Visibility',
+  progress: 'Progress',
 };
 
 export function AppNav() {
@@ -30,6 +31,7 @@ export function AppNav() {
           'review',
           'people',
           'visibility',
+          'progress',
         ];
 
   return (
