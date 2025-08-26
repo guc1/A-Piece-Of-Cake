@@ -78,6 +78,7 @@
 - 2025-10-02: Relocated general day vibe action to planner toolbar, removed add timeslot in review, and ensured modal blurs background.
 - 2025-10-02: Highlighted general day vibe button and raised vibe modal above planner blocks.
 - 2025-10-03: Restricted new planning blocks to selected time range and ensured timeline hour labels are fully visible.
+- 2025-10-03: Refined daily report prompt, accepted explicit dates, and structured context with detailed aims, activities, and reviews.
 - 2025-10-05: Separated next-day and live planning dates so next-day always targets tomorrow while live and review load today's plan.
 - 2025-10-05: Auto-reload planning pages when system date changes to keep next-day and live planning in sync.
 - 2025-10-06: Persisted TimeMachine overrides across navigation and displayed current date/time in header for debugging.
@@ -197,3 +198,7 @@
 - 2025-10-27: Let recommendation agent auto-create ingredients via tool calls, skipped empty fields in context, and kept chat state until refresh.
 - 2025-10-27: Added resettable ingredient recommendation chat persisted in local storage and confirmed AI-created ingredients before saving.
 - 2025-10-27: Removed ingredient revisions on delete to prevent foreign key errors and added test coverage.
+- 2025-10-27: Added progress overview with daily report generation, navigation link, and calendar highlighting of completed reports.
+- 2025-10-27: Improved daily report agent with richer context, site-time handling, and replaceable report generation for testing.
+- 2025-10-27: Structured daily report input with ethos, daily aim, activities, and reviews; logged LLM requests and responses.
+- 2025-10-27: Aligned daily report prompt formatting to the exact required structure for ethos, aim, activities, and reviews.
