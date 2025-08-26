@@ -7,6 +7,7 @@ import { getFlavor } from '@/lib/flavors-store';
 import { getSubflavor } from '@/lib/subflavors-store';
 import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { DEFAULT_LLM_SETUP } from '@/lib/llm/config';
+import { parseDailyReport } from '@/lib/report-parse';
 
 // Assessment agent prompt distilled from user instructions
 const SYSTEM_PROMPT = `You are the Daily Assessment agent for the Piece of Cake framework. Flavors are life domains and ingredients are the habits that add them. The user's Cake—their ethos—guides direction without a fixed destination.
@@ -196,6 +197,33 @@ export async function POST(req: NextRequest) {
 
   const context = lines.join('\n');
 
+  if (body.report) {
+    try {
+      const raw =
+        typeof body.report === 'string'
+          ? body.report
+          : JSON.stringify(body.report);
+      const parsed = parseDailyReport(raw);
+      const score = parsed.score;
+      const content = JSON.stringify(parsed, null, 0);
+      try {
+        await createDailyReport(userId, targetDate, content, score);
+      } catch (e) {
+        console.error('failed to save daily report', e);
+        return NextResponse.json(
+          { error: 'Failed to save daily report' },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json({ report: parsed, score });
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid report format' },
+        { status: 400 },
+      );
+    }
+  }
+
   const setup = DEFAULT_LLM_SETUP;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -232,18 +260,28 @@ export async function POST(req: NextRequest) {
     }
     const data = JSON.parse(raw);
     const msg = data.choices?.[0]?.message?.content ?? '{}';
-    let parsed: any = {};
+    const parsed = parseDailyReport(msg);
+    const score = parsed.score;
+    const content = JSON.stringify(parsed, null, 0);
     try {
-      parsed = JSON.parse(msg);
-    } catch {
-      parsed = { summary: msg, good: [], bad: [], observations: [], score: 0 };
+      await createDailyReport(userId, targetDate, content, score);
+    } catch (e) {
+      console.error('failed to save daily report', e);
+      return NextResponse.json(
+        { error: 'Failed to save daily report' },
+        { status: 500 },
+      );
     }
-    const score = Number(parsed.score) || 0;
-    await createDailyReport(userId, targetDate, JSON.stringify(parsed), score);
-    return NextResponse.json({ report: parsed, score, context });
+    return NextResponse.json({ report: parsed, score });
   } catch (e: any) {
+    if (e.message?.startsWith('invalid')) {
+      return NextResponse.json(
+        { error: 'Invalid report format' },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
-      { error: e.message || 'LLM request failed', context },
+      { error: 'LLM request failed' },
       { status: 500 },
     );
   }
