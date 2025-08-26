@@ -187,3 +187,5 @@
 - 2025-10-27: Kept planner metadata open during autosave by matching blocks by id or time so typing doesn't close panels.
 - 2025-10-27: Improved planning block title visibility with contrast-based text color and responsive font sizing.
 - 2025-10-27: Added LLM integration guide (LLM.md) and updated Agents guidelines to reference it.
+- 2025-10-27: Added progress page with test chat and hidden logs overlay unlocked via marketing page.
+- 2025-10-27: Enabled logs unlock from sign-in page and wired test chat to GPT-4.1 with user-supplied API key.
