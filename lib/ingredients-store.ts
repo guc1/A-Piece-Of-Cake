@@ -208,11 +208,21 @@ export async function deleteIngredient(
   userId: string,
   id: number,
 ): Promise<boolean> {
-  const rows = await db
-    .delete(ingredients)
-    .where(and(eq(ingredients.userId, Number(userId)), eq(ingredients.id, id)))
-    .returning();
-  return rows.length > 0;
+  return db.transaction(async (tx) => {
+    const [exists] = await tx
+      .select({ id: ingredients.id })
+      .from(ingredients)
+      .where(and(eq(ingredients.userId, Number(userId)), eq(ingredients.id, id)))
+      .limit(1);
+    if (!exists) return false;
+    await tx
+      .delete(ingredientRevisions)
+      .where(eq(ingredientRevisions.ingredientId, id));
+    await tx
+      .delete(ingredients)
+      .where(and(eq(ingredients.userId, Number(userId)), eq(ingredients.id, id)));
+    return true;
+  });
 }
 
 function clamp(n: number) {
