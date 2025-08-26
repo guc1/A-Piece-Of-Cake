@@ -1,5 +1,7 @@
 import './globals.css';
 import { cookies } from 'next/headers';
+import { LogsProvider } from '@/components/dev/logs-provider';
+import { LogsButton } from '@/components/dev/logs-button';
 
 export default async function RootLayout({
   children,
@@ -70,7 +72,12 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <LogsProvider>
+          {children}
+          <LogsButton />
+        </LogsProvider>
+      </body>
     </html>
   );
 }
