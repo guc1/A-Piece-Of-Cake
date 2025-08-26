@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
+import { useLogs } from '@/components/dev/logs-provider';
 
 function GearIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -25,6 +26,7 @@ export function SettingsButton() {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const [followers, setFollowers] = useState(0);
+  const { unlock, unlocked } = useLogs();
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('color-mode');
@@ -87,6 +89,19 @@ export function SettingsButton() {
           >
             Account settings
           </Link>
+          {!unlocked && (
+            <button
+              className="mb-2 w-full rounded bg-[var(--surface)] px-3 py-1 text-center hover:bg-[var(--accent)] hover:text-white"
+              onClick={() => {
+                const code = window.prompt('Enter code');
+                if (code === '123Yergush123') {
+                  unlock();
+                }
+              }}
+            >
+              LLM-logs
+            </button>
+          )}
           <button
             className="mt-2 w-full rounded bg-[var(--accent)] px-3 py-1 text-white hover:opacity-90"
             onClick={() => signOut()}
