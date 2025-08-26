@@ -197,3 +197,9 @@
 - 2025-10-27: Let recommendation agent auto-create ingredients via tool calls, skipped empty fields in context, and kept chat state until refresh.
 - 2025-10-27: Added resettable ingredient recommendation chat persisted in local storage and confirmed AI-created ingredients before saving.
 - 2025-10-27: Removed ingredient revisions on delete to prevent foreign key errors and added test coverage.
+- 2025-10-27: Added progress overview with daily report generation, navigation link, and calendar highlighting of completed reports.
+- 2025-10-27: Improved daily report agent with richer context, site-time handling, and replaceable report generation for testing.
+- 2025-10-27: Structured daily report input with ethos, daily aim, activities, and reviews; logged LLM requests and responses.
+- 2025-10-27: Aligned daily report prompt formatting to the exact required structure for ethos, aim, activities, and reviews.
+- 2025-10-27: Refined daily report agent to honor provided dates, always return prompt context on errors, hide the generator once a report exists, and tightened system instructions.
+- 2025-10-27: Filled daily report context with plan data, ingredient/flavor IDs, and local plan fallback.
