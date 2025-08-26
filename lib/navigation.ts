@@ -7,7 +7,8 @@ export type Section =
   | 'ingredients'
   | 'review'
   | 'people'
-  | 'visibility';
+  | 'visibility'
+  | 'progress';
 
 /**
  * Compute an href for a navigation target. Accepts either a known section name
@@ -56,6 +57,8 @@ export function hrefFor(
         return `${base}/people`;
       case 'visibility':
         return base; // no visibility route for viewers/historical
+      case 'progress':
+        return base; // progress hidden in viewer/historical
     }
   }
   switch (sectionOrPath) {
@@ -74,5 +77,7 @@ export function hrefFor(
       return '/people';
     case 'visibility':
       return '/visibility';
+    case 'progress':
+      return '/progress';
   }
 }
