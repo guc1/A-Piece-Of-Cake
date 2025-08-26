@@ -190,3 +190,4 @@
 - 2025-10-27: Added progress page with test chat and hidden logs overlay unlocked via marketing page.
 - 2025-10-27: Enabled logs unlock from sign-in page and wired test chat to GPT-4.1 with user-supplied API key.
 - 2025-10-27: Moved logs unlock to Settings with code prompt, removed secret "O" triggers, and switched test chat to env-based OpenAI key.
+- 2025-10-27: Logged raw OpenAI request and response in test chat route for debugging.
