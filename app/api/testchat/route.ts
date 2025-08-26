@@ -10,22 +10,33 @@ export async function POST(req: NextRequest) {
     );
   }
   try {
+    const requestBody = {
+      model: 'gpt-4.1',
+      messages: [{ role: 'user', content: message }],
+    };
+
+    console.log('LLM raw request:', JSON.stringify(requestBody));
+
     const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: 'gpt-4.1',
-        messages: [{ role: 'user', content: message }],
-      }),
+      body: JSON.stringify(requestBody),
     });
+
+    const rawResponse = await aiRes.text();
+    console.log('LLM raw response:', rawResponse);
+
     if (!aiRes.ok) {
-      const err = await aiRes.text();
-      return NextResponse.json({ error: err }, { status: aiRes.status });
+      return NextResponse.json(
+        { error: rawResponse },
+        { status: aiRes.status },
+      );
     }
-    const data = await aiRes.json();
+
+    const data = JSON.parse(rawResponse);
     const response = data.choices?.[0]?.message?.content ?? '';
     return NextResponse.json({ response });
   } catch (e: any) {
