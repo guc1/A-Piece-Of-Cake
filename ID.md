@@ -192,3 +192,7 @@ Modal form IDs:
 - `hist-cake-{ownerId}-{date}` → historical cake page.
 - `hist-flav-{ownerId}-{date}` → historical flavors page.
 - `hist-subflav-{ownerId}-{flavorId}-{date}` → historical subflavors page.
+
+## Progress
+
+- `pr0g-gen-{ownerId}` → generate daily report button.
