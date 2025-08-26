@@ -192,3 +192,4 @@
 - 2025-10-27: Moved logs unlock to Settings with code prompt, removed secret "O" triggers, and switched test chat to env-based OpenAI key.
 - 2025-10-27: Logged raw OpenAI request and response in test chat route for debugging.
 - 2025-10-27: Fixed logs overlay hydration mismatch by loading unlock state on the client.
+- 2025-10-27: Added ingredient recommendation agent with chat modal in add ingredient flow.
