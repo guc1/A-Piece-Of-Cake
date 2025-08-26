@@ -27,7 +27,7 @@ Payments: Stripe (for any premium features, subscriptions if asked for)
 Observability: OpenTelemetry (@vercel/otel) for monitoring
 
 
-AI Integration: Vercel AI SDK 
+AI Integration: Vercel AI SDK (see LLM.md for integration practices)
 
 
 Project Philosophy and Features 
