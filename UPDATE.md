@@ -204,3 +204,5 @@
 - 2025-10-27: Refined daily report agent to honor provided dates, always return prompt context on errors, hide the generator once a report exists, and tightened system instructions.
 - 2025-10-27: Filled daily report context with plan data, ingredient/flavor IDs, and local plan fallback.
 - 2025-10-27: Persisted review notes in local storage so rational and guilty pleasure text survives reloads.
+- 2025-10-27: Stored AI-generated daily reports in the database and surfaced summary, positives, negatives, and score on the daily overview page.
+- 2025-10-27: Passed parsed report data directly to the database layer to ensure daily reports save correctly.
