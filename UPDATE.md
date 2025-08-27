@@ -219,3 +219,4 @@
 - 2025-10-27: Explicitly cast daily report content column to JSON for schema push compatibility.
 - 2025-10-27: Reverted daily report content column to text and added safe JSON parsing to avoid push casting errors.
 - 2025-10-27: Reverted users.view_id column to text to avoid UUID cast errors during schema pushes.
+- 2025-10-27: Replaced raw SQL upsert with Drizzle builder for daily reports and showed observations on daily overview page.

@@ -41,6 +41,7 @@ export async function listDailyReports(userId: number): Promise<
     summary: string;
     good: string[];
     bad: string[];
+    observations: string[];
   }>
 > {
   const rows = await db
@@ -62,6 +63,7 @@ export async function listDailyReports(userId: number): Promise<
       summary: parsed.summary ?? '',
       good: parsed.good ?? [],
       bad: parsed.bad ?? [],
+      observations: parsed.observations ?? [],
     };
   });
 }
@@ -92,16 +94,19 @@ export async function createDailyReport(
   content: Record<string, unknown>,
   score: number,
 ) {
-  // Use a raw SQL upsert to guarantee the report is stored for the
-  // caller-provided date. This avoids issues with parameter ordering when
-  // the server and client have differing conceptions of "today" due to
-  // overridden site time.
-  await db.execute(sql`
-    insert into daily_reports (user_id, date, content, score)
-    values (${userId}, ${date}::date, ${JSON.stringify(content)}, ${score})
-    on conflict (user_id, date) do update
-      set content = excluded.content,
-          score = excluded.score,
-          created_at = now();
-  `);
+  // Use Drizzle's query builder to perform an UPSERT. This avoids raw SQL
+  // issues and ensures parameters are bound correctly regardless of the
+  // environment's timezone or Postgres settings.
+  const serialized = JSON.stringify(content);
+  await db
+    .insert(dailyReports)
+    .values({ userId, date, content: serialized, score })
+    .onConflictDoUpdate({
+      target: [dailyReports.userId, dailyReports.date],
+      set: {
+        content: serialized,
+        score,
+        createdAt: sql`now()`,
+      },
+    });
 }
