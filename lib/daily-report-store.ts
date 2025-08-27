@@ -24,6 +24,15 @@ export async function listDailyReportDates(userId: number): Promise<string[]> {
   return rows.map((r) => r.date?.toString().slice(0, 10) ?? '');
 }
 
+function parseReportContent(raw: unknown): ReportContent {
+  if (!raw) return {} as ReportContent;
+  try {
+    return JSON.parse(String(raw)) as ReportContent;
+  } catch {
+    return {} as ReportContent;
+  }
+}
+
 export async function listDailyReports(userId: number): Promise<
   Array<{
     date: string;
@@ -45,7 +54,7 @@ export async function listDailyReports(userId: number): Promise<
     .orderBy(asc(dailyReports.date));
   return rows.map((r) => {
     const ymd = r.date?.toString().slice(0, 10) ?? '';
-    const parsed = (r.content as ReportContent) || {};
+    const parsed = parseReportContent(r.content);
     return {
       date: ymd,
       slug: slugFromDate(ymd),
@@ -71,7 +80,7 @@ export async function getDailyReport(
     id: row.id,
     userId: row.userId ?? 0,
     date,
-    content: (row.content as ReportContent) ?? ({} as ReportContent),
+    content: parseReportContent(row.content),
     score: row.score ?? 0,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -89,7 +98,7 @@ export async function createDailyReport(
   // overridden site time.
   await db.execute(sql`
     insert into daily_reports (user_id, date, content, score)
-    values (${userId}, ${date}::date, ${JSON.stringify(content)}::json, ${score})
+    values (${userId}, ${date}::date, ${JSON.stringify(content)}, ${score})
     on conflict (user_id, date) do update
       set content = excluded.content,
           score = excluded.score,
