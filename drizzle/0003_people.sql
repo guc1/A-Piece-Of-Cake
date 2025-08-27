@@ -1,17 +1,26 @@
 -- Account visibility enum
-CREATE TYPE "account_visibility" AS ENUM ('open','closed','private');
+DO $$ BEGIN
+  CREATE TYPE "account_visibility" AS ENUM ('open','closed','private');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-ALTER TABLE "users" ADD COLUMN "handle" varchar(50) NOT NULL;
-ALTER TABLE "users" ADD COLUMN "display_name" text;
-ALTER TABLE "users" ADD COLUMN "avatar_url" text;
-ALTER TABLE "users" ADD COLUMN "account_visibility" "account_visibility" NOT NULL DEFAULT 'open';
-ALTER TABLE "users" ADD COLUMN "updated_at" timestamp DEFAULT now();
-ALTER TABLE "users" ADD CONSTRAINT "users_handle_unique" UNIQUE("handle");
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "handle" varchar(50) NOT NULL;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "display_name" text;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "avatar_url" text;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "account_visibility" "account_visibility" NOT NULL DEFAULT 'open';
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT now();
+DO $$ BEGIN
+  ALTER TABLE "users" ADD CONSTRAINT "users_handle_unique" UNIQUE("handle");
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Follow status enum
-CREATE TYPE "follow_status" AS ENUM ('pending','accepted');
+DO $$ BEGIN
+  CREATE TYPE "follow_status" AS ENUM ('pending','accepted');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE "follows" (
+CREATE TABLE IF NOT EXISTS "follows" (
   "id" serial PRIMARY KEY,
   "follower_id" integer NOT NULL REFERENCES "users"("id"),
   "following_id" integer NOT NULL REFERENCES "users"("id"),
@@ -22,9 +31,12 @@ CREATE TABLE "follows" (
 );
 
 -- Notification type enum
-CREATE TYPE "notification_type" AS ENUM ('follow_request','follow_accepted');
+DO $$ BEGIN
+  CREATE TYPE "notification_type" AS ENUM ('follow_request','follow_accepted');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE "notifications" (
+CREATE TABLE IF NOT EXISTS "notifications" (
   "id" serial PRIMARY KEY,
   "to_user_id" integer NOT NULL REFERENCES "users"("id"),
   "from_user_id" integer NOT NULL REFERENCES "users"("id"),

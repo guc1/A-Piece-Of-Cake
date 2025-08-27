@@ -43,7 +43,7 @@ export default async function DailyReportsPage() {
               </div>
             )}
             <Link
-              href={`/progress/overview/daily/${r.date}`}
+              href={`/progress/overview/daily/${r.slug}`}
               className="mt-2 block text-sm text-orange-600 hover:underline"
             >
               View details
