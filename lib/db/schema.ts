@@ -9,7 +9,9 @@ import {
   pgEnum,
   uniqueIndex,
   jsonb,
+  uuid,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const accountVisibilityEnum = pgEnum('account_visibility', [
   'open',
@@ -34,7 +36,10 @@ export const users = pgTable('users', {
   handle: varchar('handle', { length: 50 }).notNull().unique(),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
-  viewId: text('view_id').notNull().unique(),
+  viewId: uuid('view_id')
+    .default(sql`gen_random_uuid()`)
+    .notNull()
+    .unique(),
   accountVisibility: accountVisibilityEnum('account_visibility')
     .notNull()
     .default('open'),
