@@ -36,8 +36,9 @@
 - 2025-08-27: Auto-created missing user records during follow to avoid "User not found" errors.
 - 2025-08-27: Reconciled session users with DB via email, preventing duplicate records and hiding self on People page.
 - 2025-08-28: Enabled class-based dark mode toggle, added account visibility API route, and sent inbox notifications for auto-accepted follows.
-- 2025-08-30: Added followers API, updated settings menu with live follower count, dark mode toggle fix, and link to new account settings page for visibility changes.
+ - 2025-08-30: Added followers API, updated settings menu with live follower count, dark mode toggle fix, and link to new account settings page for visibility changes.
 - 2025-08-30: Fixed follow visibility and notifications; renamed People page section to "Following" so followed users remain discoverable.
+- 2025-08-31: Replaced failing daily report upsert with manual insert/update so assessment summaries store and render reliably.
 - 2025-08-30: Kept closed-account follows visible, added unfollow notifications, and surfaced them in the inbox.
 - 2025-08-30: Enabled follow-back after accepting requests, added decline notifications, and ensured closed accounts appear in Discover.
 - 2025-08-30: Fixed profile route params handling and ensured inbox shows follow requests/notifications for all users.
@@ -204,3 +205,5 @@
 - 2025-10-27: Refined daily report agent to honor provided dates, always return prompt context on errors, hide the generator once a report exists, and tightened system instructions.
 - 2025-10-27: Filled daily report context with plan data, ingredient/flavor IDs, and local plan fallback.
 - 2025-10-27: Persisted review notes in local storage so rational and guilty pleasure text survives reloads.
+- 2025-10-27: Stored AI-generated daily reports in the database and surfaced summary, positives, negatives, and score on the daily overview page.
+- 2025-10-27: Fixed daily report upsert by issuing a direct SQL insert/update so reports save and display correctly.
