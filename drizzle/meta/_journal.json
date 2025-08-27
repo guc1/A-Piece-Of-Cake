@@ -170,6 +170,13 @@
       "when": 1756284819556,
       "tag": "0023_revert_users_view_id_text",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1756284819557,
+      "tag": "0024_add_daily_report_version",
+      "breakpoints": true
     }
   ]
 }

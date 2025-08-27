@@ -7,10 +7,8 @@ import { useRouter } from 'next/navigation';
 
 export function GenerateDailyReportButton({
   userId,
-  hasReport = false,
 }: {
   userId: number;
-  hasReport?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
   const { addLog } = useLogs();
@@ -76,15 +74,10 @@ export function GenerateDailyReportButton({
     return <p className="mt-4 text-sm">{message}</p>;
   }
 
-  if (hasReport) {
-    return <p className="mt-4 text-sm">Daily report already created.</p>;
-  }
-
   return (
     <Button
       onClick={onClick}
       disabled={loading}
-      title="You can only generate once per day"
       className="mt-4 flex items-center gap-2"
     >
       {loading && (

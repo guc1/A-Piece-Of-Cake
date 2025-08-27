@@ -219,3 +219,7 @@
 - 2025-10-27: Explicitly cast daily report content column to JSON for schema push compatibility.
 - 2025-10-27: Reverted daily report content column to text and added safe JSON parsing to avoid push casting errors.
 - 2025-10-27: Reverted users.view_id column to text to avoid UUID cast errors during schema pushes.
+- 2025-10-27: Cast daily report content to text to fix insert failure and display observations on daily overview.
+- 2025-10-27: Stringified daily report content before upsert to resolve insert errors.
+- 2025-10-27: Added versioned daily reports so multiple saves per date keep unique IDs and display in the overview.
+- 2025-10-27: Restored JSONB storage for daily reports and saved structured content directly so generator inserts succeed.
