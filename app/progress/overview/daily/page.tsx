@@ -42,6 +42,16 @@ export default async function DailyReportsPage() {
                 </ul>
               </div>
             )}
+            {r.observations.length > 0 && (
+              <div className="mt-2">
+                <h3 className="font-semibold">Observations</h3>
+                <ul className="list-disc pl-4">
+                  {r.observations.map((o, i) => (
+                    <li key={i}>{o}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <Link
               href={`/progress/overview/daily/${r.slug}`}
               className="mt-2 block text-sm text-orange-600 hover:underline"

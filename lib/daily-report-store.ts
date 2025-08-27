@@ -41,6 +41,7 @@ export async function listDailyReports(userId: number): Promise<
     summary: string;
     good: string[];
     bad: string[];
+    observations: string[];
   }>
 > {
   const rows = await db
@@ -62,6 +63,7 @@ export async function listDailyReports(userId: number): Promise<
       summary: parsed.summary ?? '',
       good: parsed.good ?? [],
       bad: parsed.bad ?? [],
+      observations: parsed.observations ?? [],
     };
   });
 }
@@ -96,9 +98,10 @@ export async function createDailyReport(
   // caller-provided date. This avoids issues with parameter ordering when
   // the server and client have differing conceptions of "today" due to
   // overridden site time.
+  const raw = JSON.stringify(content);
   await db.execute(sql`
     insert into daily_reports (user_id, date, content, score)
-    values (${userId}, ${date}::date, ${JSON.stringify(content)}, ${score})
+    values (${userId}, ${date}::date, ${raw}, ${score})
     on conflict (user_id, date) do update
       set content = excluded.content,
           score = excluded.score,
