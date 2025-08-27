@@ -1,9 +1,19 @@
+export interface ReportLine {
+  id: string;
+  text: string;
+}
+
+export interface ReportScore {
+  id: string;
+  value: number;
+}
+
 export interface ReportContent {
-  summary: string;
-  good: string[];
-  bad: string[];
-  observations: string[];
-  score: number;
+  summary: ReportLine;
+  good: ReportLine[];
+  bad: ReportLine[];
+  observations: ReportLine[];
+  score: ReportScore;
 }
 
 export interface DailyReport {

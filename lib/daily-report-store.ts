@@ -1,15 +1,15 @@
 import { db } from './db';
 import { dailyReports } from './db/schema';
 import { eq, and, asc, sql } from 'drizzle-orm';
-import type { DailyReport, ReportContent } from '@/types/report';
+import type { DailyReport, ReportContent, ReportLine } from '@/types/report';
 
-function slugFromDate(ymd: string, version = 1): string {
+export function slugFromDate(ymd: string, version = 1): string {
   const [y, m, d] = ymd.split('-');
   const base = `${d}${m}${y}`;
   return version > 1 ? `${base}V${version}` : base;
 }
 
-function parseSlug(slug: string): { date: string; version: number } {
+export function parseSlug(slug: string): { date: string; version: number } {
   const match = /^([0-9]{2})([0-9]{2})([0-9]{4})(?:V(\d+))?$/.exec(slug);
   if (!match) return { date: slug, version: 1 };
   const [, d, m, y, v] = match;
@@ -27,11 +27,35 @@ export async function listDailyReportDates(userId: number): Promise<string[]> {
 }
 
 function parseReportContent(raw: unknown): ReportContent {
-  if (!raw) return {} as ReportContent;
   try {
-    return JSON.parse(String(raw)) as ReportContent;
+    const parsed = JSON.parse(String(raw || '{}'));
+    const wrap = (value: any, fallback = ''): ReportLine =>
+      typeof value === 'object' && value !== null
+        ? { id: String(value.id || ''), text: String(value.text || '') }
+        : { id: '', text: String(value || fallback) };
+    const arr = (value: any[]): ReportLine[] =>
+      Array.isArray(value) ? value.map((v) => wrap(v)) : [];
+    return {
+      summary: wrap(parsed.summary),
+      good: arr(parsed.good),
+      bad: arr(parsed.bad),
+      observations: arr(parsed.observations),
+      score:
+        typeof parsed.score === 'object'
+          ? {
+              id: String(parsed.score.id || ''),
+              value: Number(parsed.score.value || 0),
+            }
+          : { id: '', value: Number(parsed.score || 0) },
+    };
   } catch {
-    return {} as ReportContent;
+    return {
+      summary: { id: '', text: '' },
+      good: [],
+      bad: [],
+      observations: [],
+      score: { id: '', value: 0 },
+    };
   }
 }
 
@@ -65,11 +89,11 @@ export async function listDailyReports(userId: number): Promise<
       date: ymd,
       slug: slugFromDate(ymd, version),
       version,
-      score: r.score ?? 0,
-      summary: parsed.summary ?? '',
-      good: parsed.good ?? [],
-      bad: parsed.bad ?? [],
-      observations: parsed.observations ?? [],
+      score: parsed.score.value ?? r.score ?? 0,
+      summary: parsed.summary.text,
+      good: parsed.good.map((g) => g.text),
+      bad: parsed.bad.map((b) => b.text),
+      observations: parsed.observations.map((o) => o.text),
     };
   });
 }
@@ -101,23 +125,32 @@ export async function getDailyReport(
   };
 }
 
+export async function getNextDailyReportVersion(
+  userId: number,
+  date: string,
+): Promise<number> {
+  const [{ maxVersion }] = await db
+    .select({
+      maxVersion: sql<number>`coalesce(max(${dailyReports.version}),0)`,
+    })
+    .from(dailyReports)
+    .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, date)));
+  return (maxVersion ?? 0) + 1;
+}
+
 export async function createDailyReport(
   userId: number,
   date: string,
   content: Record<string, unknown>,
   score: number,
+  version: number,
 ) {
   const raw = JSON.stringify(content);
-  const [{ maxVersion }] = await db
-    .select({ maxVersion: sql<number>`coalesce(max(${dailyReports.version}),0)` })
-    .from(dailyReports)
-    .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, date)));
-  const nextVersion = (maxVersion ?? 0) + 1;
   await db.insert(dailyReports).values({
     userId,
     date,
     content: raw,
     score,
-    version: nextVersion,
+    version,
   });
 }
