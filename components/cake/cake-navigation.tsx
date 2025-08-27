@@ -8,6 +8,7 @@ import { SettingsButton } from './settings-button';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor, type Section } from '@/lib/navigation';
 import TimeMachine from '@/components/dev/time-machine';
+import { GenerateDailyReportButton } from '@/components/progress/generate-daily-report-button';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -134,7 +135,12 @@ export function CakeNavigation() {
           userId={userId}
         />
       </div>
-      <div className="grid w-full place-items-center">
+      <div className="grid w-full place-items-center relative">
+        {ctx.editable && (
+          <div className="absolute left-1/2 -translate-x-1/2 -top-12">
+            <GenerateDailyReportButton userId={ctx.ownerId} />
+          </div>
+        )}
         <nav
           className="grid grid-cols-2 place-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6"
           style={{
