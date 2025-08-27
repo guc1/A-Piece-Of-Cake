@@ -192,3 +192,14 @@ Modal form IDs:
 - `hist-cake-{ownerId}-{date}` → historical cake page.
 - `hist-flav-{ownerId}-{date}` → historical flavors page.
 - `hist-subflav-{ownerId}-{flavorId}-{date}` → historical subflavors page.
+
+## Daily Reports
+
+- `d41lyr3p-{slug}-{ownerId}` → daily report entry in overview list.
+- `d41lyr3p-title-{slug}-{ownerId}` → daily report title.
+- `d41lyr3p-sum-{slug}-{ownerId}` → report summary text.
+- `d41lyr3p-good-{slug}-{ownerId}` → container for good items.
+- `d41lyr3p-good{index}-{slug}-{ownerId}` → individual good item.
+- `d41lyr3p-bad-{slug}-{ownerId}` → container for bad items.
+- `d41lyr3p-bad{index}-{slug}-{ownerId}` → individual bad item.
+- `d41lyr3p-score-{slug}-{ownerId}` → score/grade element.

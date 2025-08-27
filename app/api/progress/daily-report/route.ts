@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { createDailyReport } from '@/lib/daily-report-store';
+import {
+  createDailyReport,
+  getNextDailyReportVersion,
+  slugFromDate,
+} from '@/lib/daily-report-store';
 import { getPlanStrict } from '@/lib/plans-store';
 import { getIngredient } from '@/lib/ingredients-store';
 import { getFlavor } from '@/lib/flavors-store';
@@ -245,8 +249,34 @@ export async function POST(req: NextRequest) {
       parsed = { summary: msg, good: [], bad: [], observations: [], score: 0 };
     }
     const score = Number(parsed.score) || 0;
-    await createDailyReport(userId, targetDate, parsed, score);
-    return NextResponse.json({ report: parsed, score, context });
+    const safe = {
+      summary: String(parsed.summary || ''),
+      good: Array.isArray(parsed.good) ? parsed.good.map(String) : [],
+      bad: Array.isArray(parsed.bad) ? parsed.bad.map(String) : [],
+      observations: Array.isArray(parsed.observations)
+        ? parsed.observations.map(String)
+        : [],
+    };
+    const version = await getNextDailyReportVersion(userId, targetDate);
+    const slug = slugFromDate(targetDate, version);
+    const content = {
+      summary: { id: `d41lyr3p-sum-${slug}-${userId}`, text: safe.summary },
+      good: safe.good.map((g: string, i: number) => ({
+        id: `d41lyr3p-good${i}-${slug}-${userId}`,
+        text: g,
+      })),
+      bad: safe.bad.map((b: string, i: number) => ({
+        id: `d41lyr3p-bad${i}-${slug}-${userId}`,
+        text: b,
+      })),
+      observations: safe.observations.map((o: string, i: number) => ({
+        id: `d41lyr3p-obs${i}-${slug}-${userId}`,
+        text: o,
+      })),
+      score: { id: `d41lyr3p-score-${slug}-${userId}`, value: score },
+    };
+    await createDailyReport(userId, targetDate, content, score, version);
+    return NextResponse.json({ report: content, score, context });
   } catch (e: any) {
     return NextResponse.json(
       { error: e.message || 'LLM request failed', context },
