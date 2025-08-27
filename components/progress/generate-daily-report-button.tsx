@@ -1,22 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { useLogs } from '@/components/dev/logs-provider';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 export function GenerateDailyReportButton({
   userId,
+  className,
 }: {
   userId: number;
+  className?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const { addLog } = useLogs();
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
+  const [needsCode, setNeedsCode] = useState(false);
 
-  const onClick = async () => {
-    setLoading(true);
+  const currentDate = useCallback(() => {
     const params = new URLSearchParams(window.location.search);
     params.set('userId', String(userId));
     const dateParam = params.get('apoc_date');
@@ -29,6 +32,25 @@ export function GenerateDailyReportButton({
       }
       if (!date) date = new Date().toISOString().slice(0, 10);
     }
+    return { date, params };
+  }, [userId]);
+
+  useEffect(() => {
+    const { date } = currentDate();
+    const key = `daily-report-generated-${userId}-${date}`;
+    setNeedsCode(window.localStorage.getItem(key) === 'true');
+  }, [currentDate, userId]);
+
+  const onClick = async () => {
+    const { date, params } = currentDate();
+    if (needsCode) {
+      const code = window.prompt('Enter code to generate a new daily report');
+      if (code !== 'cake') {
+        setMessage('Incorrect code');
+        return;
+      }
+    }
+    setLoading(true);
     const reviewKey = `review-${userId}-${date}`;
     const planKey = `live-plan-${userId}-${date}`;
     let reviews: Record<string, any> = {};
@@ -65,6 +87,9 @@ export function GenerateDailyReportButton({
       setMessage(
         `Daily report is created. Your score for today is: ${data.score}`,
       );
+      const key = `daily-report-generated-${userId}-${date}`;
+      window.localStorage.setItem(key, 'true');
+      setNeedsCode(true);
       router.refresh();
     }
   };
@@ -77,7 +102,11 @@ export function GenerateDailyReportButton({
     <Button
       onClick={onClick}
       disabled={loading}
-      className="mt-4 flex items-center gap-2"
+      className={cn(
+        'flex items-center gap-2',
+        needsCode && 'bg-white text-black hover:bg-white',
+        className,
+      )}
     >
       {loading && (
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

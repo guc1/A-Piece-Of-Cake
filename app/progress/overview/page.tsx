@@ -1,4 +1,7 @@
+'use client';
 import Link from 'next/link';
+import { useViewContext } from '@/lib/view-context';
+import { hrefFor } from '@/lib/navigation';
 
 const items = [
   { href: '/progress/overview/daily', label: 'Daily' },
@@ -7,14 +10,15 @@ const items = [
   { href: '/progress/overview/yearly', label: 'Yearly' },
 ];
 
-export default function ProgressOverviewPage() {
+export function ProgressOverviewHome() {
+  const ctx = useViewContext();
   return (
     <main className="p-6">
       <ul className="space-y-2">
         {items.map((i) => (
           <li key={i.href}>
             <Link
-              href={i.href}
+              href={hrefFor(i.href, ctx)}
               className="block rounded border p-4 hover:bg-orange-50"
             >
               {i.label}
@@ -24,4 +28,8 @@ export default function ProgressOverviewPage() {
       </ul>
     </main>
   );
+}
+
+export default function ProgressOverviewPage() {
+  return <ProgressOverviewHome />;
 }

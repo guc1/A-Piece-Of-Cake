@@ -58,7 +58,7 @@ export function hrefFor(
       case 'visibility':
         return base; // no visibility route for viewers/historical
       case 'progress':
-        return base; // progress hidden in viewer/historical
+        return ctx.mode === 'viewer' ? `${base}/progress` : base;
     }
   }
   switch (sectionOrPath) {
