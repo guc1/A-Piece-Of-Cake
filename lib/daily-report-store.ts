@@ -83,20 +83,16 @@ export async function createDailyReport(
   content: Record<string, unknown>,
   score: number,
 ) {
-  await db
-    .insert(dailyReports)
-    .values({
-      userId,
-      date: sql`${date}::date`,
-      content,
-      score,
-    })
-    .onConflictDoUpdate({
-      target: [dailyReports.userId, dailyReports.date],
-      set: {
-        content,
-        score,
-        createdAt: sql`now()`,
-      },
-    });
+  // Use a raw SQL upsert to guarantee the report is stored for the
+  // caller-provided date. This avoids issues with parameter ordering when
+  // the server and client have differing conceptions of "today" due to
+  // overridden site time.
+  await db.execute(sql`
+    insert into daily_reports (user_id, date, content, score)
+    values (${userId}, ${date}::date, ${JSON.stringify(content)}::jsonb, ${score})
+    on conflict (user_id, date) do update
+      set content = excluded.content,
+          score = excluded.score,
+          created_at = now();
+  `);
 }
