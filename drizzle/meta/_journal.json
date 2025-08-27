@@ -139,7 +139,7 @@
       "idx": 19,
       "version": "7",
       "when": 1756278255851,
-      "tag": "0019_alter_daily_reports_content_jsonb",
+      "tag": "0019_alter_daily_reports_content_json",
       "breakpoints": true
     },
     {
