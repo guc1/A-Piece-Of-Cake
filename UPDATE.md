@@ -222,3 +222,4 @@
 - 2025-10-27: Cast daily report content to text to fix insert failure and display observations on daily overview.
 - 2025-10-27: Stringified daily report content before upsert to resolve insert errors.
 - 2025-10-27: Added versioned daily reports so multiple saves per date keep unique IDs and display in the overview.
+- 2025-10-27: Canonicalized daily report dates, allowed multiple versions per day, and added IDs for summary, good, bad, and score displays.
