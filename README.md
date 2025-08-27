@@ -11,7 +11,7 @@
    - `DATABASE_URL` – PostgreSQL connection string
 3. Apply database migrations
    ```sh
-   pnpm drizzle-kit push
+   pnpm drizzle-kit migrate
    ```
 4. Start the dev server on port 3001
    ```sh

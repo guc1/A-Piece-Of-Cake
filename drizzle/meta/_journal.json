@@ -1,0 +1,146 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1756278255832,
+      "tag": "0000_init",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1756278255833,
+      "tag": "0001_add_slug_column",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756278255834,
+      "tag": "0002_create_subflavors",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1756278255835,
+      "tag": "0003_people",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1756278255836,
+      "tag": "0004_add_unfollow_notification",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1756278255837,
+      "tag": "0005_add_follow_declined_notification",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1756278255838,
+      "tag": "0006_add_view_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1756278255839,
+      "tag": "0007_add_plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1756278255840,
+      "tag": "0008_create_ingredients",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1756278255841,
+      "tag": "0009_expand_icon_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1756278255842,
+      "tag": "0010_create_user_icons",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1756278255843,
+      "tag": "0011_add_ingredient_icon",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1756278255844,
+      "tag": "0012_drop_user_icons_unique_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1756278255845,
+      "tag": "0013_create_plan_revisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1756278255846,
+      "tag": "0014_add_plan_block_ingredients",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1756278255847,
+      "tag": "0015_add_plan_daily_aim",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1756278255848,
+      "tag": "0016_add_plan_block_color_preset",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1756278255849,
+      "tag": "0017_add_plan_block_flavors",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1756278255850,
+      "tag": "0018_create_daily_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1756278255851,
+      "tag": "0019_alter_daily_reports_content_jsonb",
+      "breakpoints": true
+    }
+  ]
+}
