@@ -192,3 +192,20 @@ Modal form IDs:
 - `hist-cake-{ownerId}-{date}` → historical cake page.
 - `hist-flav-{ownerId}-{date}` → historical flavors page.
 - `hist-subflav-{ownerId}-{flavorId}-{date}` → historical subflavors page.
+
+## Daily Reports
+
+- `d41lyrep-list-{ownerId}` → daily reports list container.
+- `d41lyrep-item-{slug}-{ownerId}` → single daily report entry in list.
+- `d41lyrep-date-{slug}-{ownerId}` → date heading in list entry.
+- `d41lyrep-score-{slug}-{ownerId}` → score badge in list entry.
+- `d41lyrep-sum-{slug}-{ownerId}` → summary text snippet in list entry.
+- `d41lyrep-good-{index}-{slug}-{ownerId}` → good item in list entry.
+- `d41lyrep-bad-{index}-{slug}-{ownerId}` → bad item in list entry.
+- `d41lyrep-link-{slug}-{ownerId}` → details link in list entry.
+- `d41lyrep-title-{reportId}-{ownerId}` → detail page title.
+- `d41lyrep-score-{reportId}-{ownerId}` → score on detail page.
+- `d41lyrep-sum-{reportId}-{ownerId}` → summary on detail page.
+- `d41lyrep-good-{index}-{reportId}-{ownerId}` → good item on detail page.
+- `d41lyrep-bad-{index}-{reportId}-{ownerId}` → bad item on detail page.
+- `d41lyrep-obs-{index}-{reportId}-{ownerId}` → observation item on detail page.

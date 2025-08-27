@@ -106,18 +106,39 @@ export async function createDailyReport(
   date: string,
   content: Record<string, unknown>,
   score: number,
-) {
-  const raw = JSON.stringify(content);
-  const [{ maxVersion }] = await db
-    .select({ maxVersion: sql<number>`coalesce(max(${dailyReports.version}),0)` })
-    .from(dailyReports)
-    .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, date)));
-  const nextVersion = (maxVersion ?? 0) + 1;
-  await db.insert(dailyReports).values({
-    userId,
-    date,
-    content: raw,
-    score,
-    version: nextVersion,
-  });
+): Promise<void> {
+  const { score: _ignored, ...rest } = content as any;
+  const raw = JSON.stringify(rest);
+  const ymd = new Date(date).toISOString().slice(0, 10);
+  try {
+    const [{ maxVersion }] = await db
+      .select({
+        maxVersion: sql<number>`coalesce(max(${dailyReports.version}),0)`,
+      })
+      .from(dailyReports)
+      .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, ymd)));
+    const nextVersion = (maxVersion ?? 0) + 1;
+    await db.insert(dailyReports).values({
+      userId,
+      date: ymd,
+      content: raw,
+      score,
+      version: nextVersion,
+    });
+    console.log('createDailyReport inserted', {
+      userId,
+      date: ymd,
+      version: nextVersion,
+      score,
+    });
+  } catch (error) {
+    console.error('createDailyReport failed', {
+      userId,
+      date: ymd,
+      score,
+      content: rest,
+      error,
+    });
+    throw error;
+  }
 }

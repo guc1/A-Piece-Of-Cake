@@ -245,11 +245,18 @@ export async function POST(req: NextRequest) {
       parsed = { summary: msg, good: [], bad: [], observations: [], score: 0 };
     }
     const score = Number(parsed.score) || 0;
-    await createDailyReport(userId, targetDate, parsed, score);
+    const { score: _s, ...content } = parsed;
+    await createDailyReport(userId, targetDate, content, score);
+    console.log('daily report saved', { userId, date: targetDate, score });
     return NextResponse.json({ report: parsed, score, context });
   } catch (e: any) {
+    console.error('daily-report generation failed', e);
     return NextResponse.json(
-      { error: e.message || 'LLM request failed', context },
+      {
+        error: e.message || 'LLM request failed',
+        cause: e?.cause?.message,
+        context,
+      },
       { status: 500 },
     );
   }
