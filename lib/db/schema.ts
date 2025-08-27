@@ -10,7 +10,6 @@ import {
   uniqueIndex,
   json,
   jsonb,
-  uuid,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -37,8 +36,9 @@ export const users = pgTable('users', {
   handle: varchar('handle', { length: 50 }).notNull().unique(),
   displayName: text('display_name'),
   avatarUrl: text('avatar_url'),
-  viewId: uuid('view_id')
-    .default(sql`gen_random_uuid()`)
+  // Store view IDs as text to avoid casting issues; values remain UUID strings
+  viewId: text('view_id')
+    .default(sql`gen_random_uuid()::text`)
     .notNull()
     .unique(),
   accountVisibility: accountVisibilityEnum('account_visibility')
@@ -245,7 +245,9 @@ export const dailyReports = pgTable(
       .references(() => users.id)
       .notNull(),
     date: date('date').notNull(),
-    content: json('content').notNull(),
+    // Store report content as plain text to avoid JSON casting issues during
+    // schema pushes. Consumers should parse the JSON string manually.
+    content: text('content').notNull(),
     score: integer('score').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
   },

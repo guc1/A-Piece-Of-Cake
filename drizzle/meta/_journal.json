@@ -156,5 +156,20 @@
       "tag": "0021_force_daily_reports_content_json",
       "breakpoints": true
     }
+    ,
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1756284819555,
+      "tag": "0022_revert_daily_reports_content_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1756284819556,
+      "tag": "0023_revert_users_view_id_text",
+      "breakpoints": true
+    }
   ]
 }
