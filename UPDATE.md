@@ -211,3 +211,5 @@
 - 2025-10-27: Coerced legacy daily report text into JSONB and documented `drizzle-kit migrate` in the README.
 - 2025-10-27: Added migration journal so `pnpm drizzle-kit migrate` can run without errors.
 - 2025-10-27: Made people migration idempotent to avoid enum duplication errors when rerunning migrations.
+- 2025-10-27: Hardened handle unique constraint migration to reuse existing index and allow clean schema pushes.
+- 2025-10-27: Guarded notification type enum migrations so reruns skip existing values and jsonb schema pushes succeed.

@@ -9,9 +9,22 @@ ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "display_name" text;
 ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "avatar_url" text;
 ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "account_visibility" "account_visibility" NOT NULL DEFAULT 'open';
 ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT now();
-DO $$ BEGIN
-  ALTER TABLE "users" ADD CONSTRAINT "users_handle_unique" UNIQUE("handle");
-EXCEPTION WHEN duplicate_object THEN NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'users_handle_unique'
+  ) THEN
+    IF EXISTS (
+      SELECT 1 FROM pg_indexes
+      WHERE schemaname = 'public'
+        AND indexname = 'users_handle_unique'
+    ) THEN
+      ALTER TABLE "users"
+        ADD CONSTRAINT "users_handle_unique" UNIQUE USING INDEX "users_handle_unique";
+    ELSE
+      ALTER TABLE "users" ADD CONSTRAINT "users_handle_unique" UNIQUE ("handle");
+    END IF;
+  END IF;
 END $$;
 
 -- Follow status enum

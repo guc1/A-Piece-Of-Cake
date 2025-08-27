@@ -1,1 +1,12 @@
-ALTER TYPE "notification_type" ADD VALUE 'unfollow';
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_enum e
+    JOIN pg_type t ON e.enumtypid = t.oid
+    WHERE t.typname = 'notification_type'
+      AND e.enumlabel = 'unfollow'
+  ) THEN
+    ALTER TYPE "notification_type" ADD VALUE 'unfollow';
+  END IF;
+END $$;
