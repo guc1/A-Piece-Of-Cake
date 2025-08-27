@@ -239,7 +239,7 @@ export const dailyReports = pgTable(
       .references(() => users.id)
       .notNull(),
     date: date('date').notNull(),
-    content: text('content').notNull(),
+    content: jsonb('content').notNull(),
     score: integer('score').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
   },
