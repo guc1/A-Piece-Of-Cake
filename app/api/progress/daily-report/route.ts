@@ -17,7 +17,8 @@ Respond ONLY with JSON of the form {"summary":string,"good":string[],"bad":strin
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  const userId = Number(session?.user?.id);
+  const paramUserId = Number(req.nextUrl.searchParams.get('userId'));
+  const userId = paramUserId || Number(session?.user?.id);
   if (!userId)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   let body: any = {};
@@ -245,11 +246,25 @@ export async function POST(req: NextRequest) {
       parsed = { summary: msg, good: [], bad: [], observations: [], score: 0 };
     }
     const score = Number(parsed.score) || 0;
-    await createDailyReport(userId, targetDate, parsed, score);
+    const content = {
+      summary: parsed.summary || '',
+      good: Array.isArray(parsed.good) ? parsed.good : [],
+      bad: Array.isArray(parsed.bad) ? parsed.bad : [],
+      observations: Array.isArray(parsed.observations)
+        ? parsed.observations
+        : [],
+    };
+    await createDailyReport(userId, targetDate, content, score);
+    console.log('daily report saved', { userId, date: targetDate, score });
     return NextResponse.json({ report: parsed, score, context });
   } catch (e: any) {
+    console.error('daily-report generation failed', e);
     return NextResponse.json(
-      { error: e.message || 'LLM request failed', context },
+      {
+        error: e.message || 'LLM request failed',
+        cause: e?.cause?.message,
+        context,
+      },
       { status: 500 },
     );
   }

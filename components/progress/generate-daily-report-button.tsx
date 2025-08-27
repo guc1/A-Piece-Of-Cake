@@ -18,6 +18,7 @@ export function GenerateDailyReportButton({
   const onClick = async () => {
     setLoading(true);
     const params = new URLSearchParams(window.location.search);
+    params.set('userId', String(userId));
     const dateParam = params.get('apoc_date');
     let date = dateParam || '';
     if (!date) {
@@ -46,9 +47,7 @@ export function GenerateDailyReportButton({
     }
     const ethos = window.localStorage.getItem('review-rational') || '';
     const body = { date, reviews, ethos, plan };
-    const url = `/api/progress/daily-report${
-      params.toString() ? `?${params.toString()}` : ''
-    }`;
+    const url = `/api/progress/daily-report?${params.toString()}`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
