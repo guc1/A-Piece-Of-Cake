@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
       parsed = { summary: msg, good: [], bad: [], observations: [], score: 0 };
     }
     const score = Number(parsed.score) || 0;
-    await createDailyReport(userId, targetDate, JSON.stringify(parsed), score);
+    await createDailyReport(userId, targetDate, parsed, score);
     return NextResponse.json({ report: parsed, score, context });
   } catch (e: any) {
     return NextResponse.json(

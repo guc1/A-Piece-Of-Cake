@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
 import { redirect } from 'next/navigation';
 import { listDailyReports } from '@/lib/daily-report-store';
+import { toDmy } from '@/lib/date-format';
 
 export default async function DailyReportsPage() {
   const session = await auth();
@@ -43,7 +44,7 @@ export default async function DailyReportsPage() {
               </div>
             )}
             <Link
-              href={`/progress/overview/daily/${r.date}`}
+              href={`/progress/overview/daily/${toDmy(r.date)}`}
               className="mt-2 block text-sm text-orange-600 hover:underline"
             >
               View details
