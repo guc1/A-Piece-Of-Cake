@@ -41,6 +41,7 @@ export async function listDailyReports(userId: number): Promise<
     summary: string;
     good: string[];
     bad: string[];
+    observations: string[];
   }>
 > {
   const rows = await db
@@ -62,6 +63,7 @@ export async function listDailyReports(userId: number): Promise<
       summary: parsed.summary ?? '',
       good: parsed.good ?? [],
       bad: parsed.bad ?? [],
+      observations: parsed.observations ?? [],
     };
   });
 }
@@ -98,7 +100,7 @@ export async function createDailyReport(
   // overridden site time.
   await db.execute(sql`
     insert into daily_reports (user_id, date, content, score)
-    values (${userId}, ${date}::date, ${JSON.stringify(content)}, ${score})
+    values (${userId}, ${date}::date, ${JSON.stringify(content)}::text, ${score})
     on conflict (user_id, date) do update
       set content = excluded.content,
           score = excluded.score,
