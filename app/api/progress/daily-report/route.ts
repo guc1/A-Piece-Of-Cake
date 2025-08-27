@@ -29,13 +29,13 @@ export async function POST(req: NextRequest) {
   const reviews = body.reviews || {};
   const ethos = body.ethos || body.rational || '';
 
-  const { date: dateObj, tz } = resolvePlanDate(
-    'live',
-    session?.user as any,
-    { cookies: req.cookies, searchParams: Object.fromEntries(req.nextUrl.searchParams) },
-  );
+  const { date: dateObj, tz } = resolvePlanDate('live', session?.user as any, {
+    cookies: req.cookies,
+    searchParams: Object.fromEntries(req.nextUrl.searchParams),
+  });
   const today = toYMD(dateObj, tz);
-  const targetDate = typeof body.date === 'string' && body.date ? body.date : today;
+  const targetDate =
+    typeof body.date === 'string' && body.date ? body.date : today;
 
   const plan = body.plan
     ? {
@@ -60,7 +60,9 @@ export async function POST(req: NextRequest) {
   );
 
   const activities = [] as any[];
-  const sorted = [...plan.blocks].sort((a, b) => a.start.localeCompare(b.start));
+  const sorted = [...plan.blocks].sort((a, b) =>
+    a.start.localeCompare(b.start),
+  );
   for (const blk of sorted) {
     const ings = await Promise.all(
       blk.ingredientIds.map((id: number) => loadIngredient(id)),
@@ -152,8 +154,12 @@ export async function POST(req: NextRequest) {
     "in this part the review of the user are provided: start by the review of the daily aim, and the review of the ingredients (if filled in, if not filled in it will say everywhere, user didn't leave feedback)",
   );
   lines.push('review of the daily aim:');
-  lines.push(`- what went good: ${dailyAimReview.good || 'user did not leave feedback'}`);
-  lines.push(`- what went bad: ${dailyAimReview.bad || 'user did not leave feedback'}`);
+  lines.push(
+    `- what went good: ${dailyAimReview.good || 'user did not leave feedback'}`,
+  );
+  lines.push(
+    `- what went bad: ${dailyAimReview.bad || 'user did not leave feedback'}`,
+  );
   lines.push('- ingredient feedback:');
   const aimIngReviews = dailyAimReview.ingredients || {};
   if (Object.keys(aimIngReviews).length === 0) {
@@ -239,7 +245,7 @@ export async function POST(req: NextRequest) {
       parsed = { summary: msg, good: [], bad: [], observations: [], score: 0 };
     }
     const score = Number(parsed.score) || 0;
-    await createDailyReport(userId, targetDate, JSON.stringify(parsed), score);
+    await createDailyReport(userId, targetDate, parsed, score);
     return NextResponse.json({ report: parsed, score, context });
   } catch (e: any) {
     return NextResponse.json(
