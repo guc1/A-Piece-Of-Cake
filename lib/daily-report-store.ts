@@ -11,18 +11,39 @@ export async function listDailyReportDates(userId: number): Promise<string[]> {
   return rows.map((r) => r.date?.toString().slice(0, 10) ?? '');
 }
 
-export async function listDailyReports(
-  userId: number,
-): Promise<Array<{ date: string; score: number }>> {
+export async function listDailyReports(userId: number): Promise<
+  Array<{
+    date: string;
+    score: number;
+    summary: string;
+    good: string[];
+    bad: string[];
+  }>
+> {
   const rows = await db
-    .select({ date: dailyReports.date, score: dailyReports.score })
+    .select({
+      date: dailyReports.date,
+      score: dailyReports.score,
+      content: dailyReports.content,
+    })
     .from(dailyReports)
     .where(eq(dailyReports.userId, userId))
     .orderBy(asc(dailyReports.date));
-  return rows.map((r) => ({
-    date: r.date?.toString().slice(0, 10) ?? '',
-    score: r.score ?? 0,
-  }));
+  return rows.map((r) => {
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(r.content ?? '{}');
+    } catch {
+      parsed = {};
+    }
+    return {
+      date: r.date?.toString().slice(0, 10) ?? '',
+      score: r.score ?? 0,
+      summary: parsed.summary ?? '',
+      good: parsed.good ?? [],
+      bad: parsed.bad ?? [],
+    };
+  });
 }
 
 export async function getDailyReport(
@@ -47,14 +68,15 @@ export async function getDailyReport(
 export async function createDailyReport(
   userId: number,
   date: string,
-  content: string,
+  content: string | Record<string, unknown>,
   score: number,
 ) {
-  await db
-    .insert(dailyReports)
-    .values({ userId, date, content, score })
-    .onConflictDoUpdate({
-      target: [dailyReports.userId, dailyReports.date],
-      set: { content, score, createdAt: sql`now()` },
-    });
+  const contentStr =
+    typeof content === 'string' ? content : JSON.stringify(content);
+  await db.execute(sql`
+    insert into daily_reports (user_id, date, content, score)
+    values (${userId}, ${date}, ${contentStr}, ${score})
+    on conflict (user_id, date) do update
+    set content = ${contentStr}, score = ${score}, created_at = now()
+  `);
 }
