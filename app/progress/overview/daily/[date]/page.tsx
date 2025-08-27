@@ -16,38 +16,59 @@ export default async function DailyReportDetail({
   const parsed = report.content;
   return (
     <main className="p-6">
-      <h1 className="mb-4 text-2xl font-bold">
+      <h1
+        className="mb-4 text-2xl font-bold"
+        id={`d41lyrep-title-${report.id}-${me.id}`}
+      >
         Report for {report.date}
-        {report.version > 1 && <span className="ml-1">(v{report.version})</span>}
+        {report.version > 1 && (
+          <span className="ml-1">(v{report.version})</span>
+        )}
       </h1>
-      <p className="mb-4 font-semibold">Score: {report.score}</p>
-      <pre className="whitespace-pre-wrap">{parsed.summary ?? ''}</pre>
-      {parsed.good && (
-        <div className="mt-4">
+      <p
+        className="mb-4 font-semibold"
+        id={`d41lyrep-score-${report.id}-${me.id}`}
+      >
+        Score: {report.score}
+      </p>
+      <pre
+        className="whitespace-pre-wrap"
+        id={`d41lyrep-sum-${report.id}-${me.id}`}
+      >
+        {parsed.summary ?? ''}
+      </pre>
+      {Array.isArray(parsed.good) && parsed.good.length > 0 && (
+        <div className="mt-4" id={`d41lyrep-good-${report.id}-${me.id}`}>
           <h2 className="font-semibold">What went well</h2>
           <ul className="list-disc pl-4">
             {parsed.good.map((g: string, i: number) => (
-              <li key={i}>{g}</li>
+              <li key={i} id={`d41lyrep-good-${i}-${report.id}-${me.id}`}>
+                {g}
+              </li>
             ))}
           </ul>
         </div>
       )}
-      {parsed.bad && (
-        <div className="mt-4">
+      {Array.isArray(parsed.bad) && parsed.bad.length > 0 && (
+        <div className="mt-4" id={`d41lyrep-bad-${report.id}-${me.id}`}>
           <h2 className="font-semibold">What went bad</h2>
           <ul className="list-disc pl-4">
             {parsed.bad.map((g: string, i: number) => (
-              <li key={i}>{g}</li>
+              <li key={i} id={`d41lyrep-bad-${i}-${report.id}-${me.id}`}>
+                {g}
+              </li>
             ))}
           </ul>
         </div>
       )}
-      {parsed.observations && (
-        <div className="mt-4">
+      {Array.isArray(parsed.observations) && parsed.observations.length > 0 && (
+        <div className="mt-4" id={`d41lyrep-obs-${report.id}-${me.id}`}>
           <h2 className="font-semibold">Observations</h2>
           <ul className="list-disc pl-4">
             {parsed.observations.map((g: string, i: number) => (
-              <li key={i}>{g}</li>
+              <li key={i} id={`d41lyrep-obs-${i}-${report.id}-${me.id}`}>
+                {g}
+              </li>
             ))}
           </ul>
         </div>
