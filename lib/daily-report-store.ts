@@ -1,6 +1,6 @@
 import { db } from './db';
 import { dailyReports } from './db/schema';
-import { eq, and, asc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import type { DailyReport, ReportContent } from '@/types/report';
 
 function slugFromDate(ymd: string, version = 1): string {
@@ -60,7 +60,7 @@ export async function listDailyReports(userId: number): Promise<
     })
     .from(dailyReports)
     .where(eq(dailyReports.userId, userId))
-    .orderBy(asc(dailyReports.date), asc(dailyReports.version));
+    .orderBy(desc(dailyReports.date), desc(dailyReports.version));
   return rows.map((r) => {
     const ymd = r.date?.toString().slice(0, 10) ?? '';
     const version = r.version ?? 1;

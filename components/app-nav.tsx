@@ -22,17 +22,19 @@ export function AppNav() {
   const pathname = usePathname();
   const sections: Section[] =
     ctx.mode === 'viewer'
-      ? ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people']
-      : [
-          'cake',
-          'planning',
-          'flavors',
-          'ingredients',
-          'review',
-          'people',
-          'visibility',
-          'progress',
-        ];
+      ? ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people', 'progress']
+      : ctx.mode === 'historical'
+        ? ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people', 'visibility']
+        : [
+            'cake',
+            'planning',
+            'flavors',
+            'ingredients',
+            'review',
+            'people',
+            'visibility',
+            'progress',
+          ];
 
   return (
     <nav className="flex items-center justify-between border-b p-4">

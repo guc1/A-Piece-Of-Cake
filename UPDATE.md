@@ -225,3 +225,5 @@
 - 2025-10-27: Canonicalized daily report dates, allowed multiple versions per day, and added IDs for summary, good, bad, and score displays.
 - 2025-10-27: Added detailed logging for daily report inserts and stripped score from stored content to fix query failures.
 - 2025-10-27: Split daily report fields into separate columns, switched detail view IDs to slug-based patterns, and passed userId in report generation requests.
+- 2025-10-27: Added viewer progress routes, daily report regeneration code check, calendar highlight, and sorted daily reports descending with per-day generation limit.
+- 2025-10-27: Raised daily report button between cake and navigation, turned green-to-orange with code "cake2025" for repeat generation, and hid it for viewers.
