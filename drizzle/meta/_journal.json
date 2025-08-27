@@ -148,6 +148,13 @@
       "when": 1756281136991,
       "tag": "0020_repair_users_view_id",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1756281136992,
+      "tag": "0021_force_daily_reports_content_jsonb",
+      "breakpoints": true
     }
   ]
 }
