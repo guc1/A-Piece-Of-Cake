@@ -108,7 +108,7 @@ export function GenerateDailyReportButton({
         {loading && (
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
         )}
-        {loading ? 'Generating…' : 'Generate daily report'}
+        {loading ? 'Generating…' : 'Generate daily rapport'}
       </Button>
       {message && <p className="mt-2 text-sm">{message}</p>}
     </div>
