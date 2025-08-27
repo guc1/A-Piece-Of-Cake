@@ -207,3 +207,5 @@
 - 2025-10-27: Stored AI-generated daily reports in the database and surfaced summary, positives, negatives, and score on the daily overview page.
 - 2025-10-27: Fixed daily report upsert by issuing a direct SQL insert/update so reports save and display correctly.
 - 2025-10-27: Resolved daily report insert errors by upserting via Drizzle with date casting and JSON string content.
+- 2025-10-27: Converted daily report content to JSONB, saved raw LLM output, and used ddmmyyyy slugs for report detail routes.
+- 2025-10-27: Coerced legacy daily report text into JSONB and documented `drizzle-kit migrate` in the README.
