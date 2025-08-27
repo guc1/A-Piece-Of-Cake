@@ -108,14 +108,17 @@ export async function createDailyReport(
   score: number,
 ) {
   const raw = JSON.stringify(content);
+  const ymd = new Date(date).toISOString().slice(0, 10);
   const [{ maxVersion }] = await db
-    .select({ maxVersion: sql<number>`coalesce(max(${dailyReports.version}),0)` })
+    .select({
+      maxVersion: sql<number>`coalesce(max(${dailyReports.version}),0)`,
+    })
     .from(dailyReports)
-    .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, date)));
+    .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, ymd)));
   const nextVersion = (maxVersion ?? 0) + 1;
   await db.insert(dailyReports).values({
     userId,
-    date,
+    date: ymd,
     content: raw,
     score,
     version: nextVersion,
