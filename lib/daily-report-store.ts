@@ -26,12 +26,13 @@ export async function listDailyReportDates(userId: number): Promise<string[]> {
   return Array.from(set);
 }
 
-function parseReportContent(raw: unknown): ReportContent {
-  if (!raw) return {} as ReportContent;
+function parseList(raw: unknown): string[] {
+  if (!raw) return [];
   try {
-    return JSON.parse(String(raw)) as ReportContent;
+    const arr = JSON.parse(String(raw));
+    return Array.isArray(arr) ? arr.map((v) => String(v)) : [];
   } catch {
-    return {} as ReportContent;
+    return [];
   }
 }
 
@@ -51,7 +52,10 @@ export async function listDailyReports(userId: number): Promise<
     .select({
       date: dailyReports.date,
       score: dailyReports.score,
-      content: dailyReports.content,
+      summary: dailyReports.summary,
+      good: dailyReports.good,
+      bad: dailyReports.bad,
+      observations: dailyReports.observations,
       version: dailyReports.version,
     })
     .from(dailyReports)
@@ -59,17 +63,16 @@ export async function listDailyReports(userId: number): Promise<
     .orderBy(asc(dailyReports.date), asc(dailyReports.version));
   return rows.map((r) => {
     const ymd = r.date?.toString().slice(0, 10) ?? '';
-    const parsed = parseReportContent(r.content);
     const version = r.version ?? 1;
     return {
       date: ymd,
       slug: slugFromDate(ymd, version),
       version,
       score: r.score ?? 0,
-      summary: parsed.summary ?? '',
-      good: parsed.good ?? [],
-      bad: parsed.bad ?? [],
-      observations: parsed.observations ?? [],
+      summary: r.summary ?? '',
+      good: parseList(r.good),
+      bad: parseList(r.bad),
+      observations: parseList(r.observations),
     };
   });
 }
@@ -95,7 +98,10 @@ export async function getDailyReport(
     userId: row.userId ?? 0,
     date,
     version: row.version ?? 1,
-    content: parseReportContent(row.content),
+    summary: row.summary ?? '',
+    good: parseList(row.good),
+    bad: parseList(row.bad),
+    observations: parseList(row.observations),
     score: row.score ?? 0,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -104,20 +110,42 @@ export async function getDailyReport(
 export async function createDailyReport(
   userId: number,
   date: string,
-  content: Record<string, unknown>,
+  content: ReportContent,
   score: number,
-) {
-  const raw = JSON.stringify(content);
-  const [{ maxVersion }] = await db
-    .select({ maxVersion: sql<number>`coalesce(max(${dailyReports.version}),0)` })
-    .from(dailyReports)
-    .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, date)));
-  const nextVersion = (maxVersion ?? 0) + 1;
-  await db.insert(dailyReports).values({
-    userId,
-    date,
-    content: raw,
-    score,
-    version: nextVersion,
-  });
+): Promise<void> {
+  const ymd = new Date(date).toISOString().slice(0, 10);
+  try {
+    const [{ maxVersion }] = await db
+      .select({
+        maxVersion: sql<number>`coalesce(max(${dailyReports.version}),0)`,
+      })
+      .from(dailyReports)
+      .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, ymd)));
+    const nextVersion = (maxVersion ?? 0) + 1;
+    await db.insert(dailyReports).values({
+      userId,
+      date: ymd,
+      summary: content.summary ?? '',
+      good: JSON.stringify(content.good ?? []),
+      bad: JSON.stringify(content.bad ?? []),
+      observations: JSON.stringify(content.observations ?? []),
+      score,
+      version: nextVersion,
+    });
+    console.log('createDailyReport inserted', {
+      userId,
+      date: ymd,
+      version: nextVersion,
+      score,
+    });
+  } catch (error) {
+    console.error('createDailyReport failed', {
+      userId,
+      date: ymd,
+      score,
+      content,
+      error,
+    });
+    throw error;
+  }
 }

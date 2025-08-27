@@ -3,7 +3,6 @@ export interface ReportContent {
   good: string[];
   bad: string[];
   observations: string[];
-  score: number;
 }
 
 export interface DailyReport {
@@ -11,7 +10,10 @@ export interface DailyReport {
   userId: number;
   date: string; // YYYY-MM-DD
   version: number;
-  content: ReportContent; // raw JSON of report
+  summary: string;
+  good: string[];
+  bad: string[];
+  observations: string[];
   score: number;
   createdAt: string;
 }
