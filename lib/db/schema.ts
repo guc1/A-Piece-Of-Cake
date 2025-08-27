@@ -249,12 +249,12 @@ export const dailyReports = pgTable(
     // schema pushes. Consumers should parse the JSON string manually.
     content: text('content').notNull(),
     score: integer('score').notNull(),
+    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at').defaultNow(),
   },
   (table) => ({
-    uniqueUserDate: uniqueIndex('daily_reports_user_date_unique').on(
-      table.userId,
-      table.date,
-    ),
+    uniqueUserDateVersion: uniqueIndex(
+      'daily_reports_user_date_version_unique',
+    ).on(table.userId, table.date, table.version),
   }),
 );
