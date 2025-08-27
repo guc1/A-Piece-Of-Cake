@@ -14,9 +14,12 @@ export default async function DailyReportsPage() {
       <h1 className="mb-4 text-2xl font-bold">Daily Reports</h1>
       <ul className="space-y-4">
         {reports.map((r) => (
-          <li key={r.date} className="rounded border p-4">
+          <li key={r.slug} className="rounded border p-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">{r.date}</h2>
+              <h2 className="font-semibold">
+                {r.date}
+                {r.version > 1 && <span className="ml-1">(v{r.version})</span>}
+              </h2>
               <span className="font-semibold">{r.score}</span>
             </div>
             {r.summary && (
@@ -38,6 +41,16 @@ export default async function DailyReportsPage() {
                 <ul className="list-disc pl-4">
                   {r.bad.map((b, i) => (
                     <li key={i}>{b}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {r.observations.length > 0 && (
+              <div className="mt-2">
+                <h3 className="font-semibold">Observations</h3>
+                <ul className="list-disc pl-4">
+                  {r.observations.map((o, i) => (
+                    <li key={i}>{o}</li>
                   ))}
                 </ul>
               </div>

@@ -16,7 +16,10 @@ export default async function DailyReportDetail({
   const parsed = report.content;
   return (
     <main className="p-6">
-      <h1 className="mb-4 text-2xl font-bold">Report for {report.date}</h1>
+      <h1 className="mb-4 text-2xl font-bold">
+        Report for {report.date}
+        {report.version > 1 && <span className="ml-1">(v{report.version})</span>}
+      </h1>
       <p className="mb-4 font-semibold">Score: {report.score}</p>
       <pre className="whitespace-pre-wrap">{parsed.summary ?? ''}</pre>
       {parsed.good && (
