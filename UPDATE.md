@@ -227,3 +227,4 @@
 - 2025-10-27: Split daily report fields into separate columns, switched detail view IDs to slug-based patterns, and passed userId in report generation requests.
 - 2025-10-27: Added viewer progress routes, daily report regeneration code check, calendar highlight, and sorted daily reports descending with per-day generation limit.
 - 2025-10-27: Raised daily report button between cake and navigation, turned green-to-orange with code "cake2025" for repeat generation, and hid it for viewers.
+- 2025-10-27: Positioned "Generate daily rapport" button centered between cake and navigation with fixed spacing.

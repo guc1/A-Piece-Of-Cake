@@ -137,7 +137,10 @@ export function CakeNavigation() {
       </div>
       <div className="grid w-full place-items-center relative">
         {ctx.editable && (
-          <div className="absolute left-1/2 -translate-x-1/2 -top-12">
+          <div
+            className="absolute left-1/2 -translate-x-1/2"
+            style={{ top: '-66px' }}
+          >
             <GenerateDailyReportButton userId={ctx.ownerId} />
           </div>
         )}
