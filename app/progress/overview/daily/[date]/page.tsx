@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
 import { getDailyReport } from '@/lib/daily-report-store';
+import { fromDmy } from '@/lib/date-format';
 import { redirect, notFound } from 'next/navigation';
 
 export default async function DailyReportDetail({
@@ -11,17 +12,13 @@ export default async function DailyReportDetail({
   const session = await auth();
   if (!session) redirect('/signin');
   const me = await ensureUser(session);
-  const report = await getDailyReport(me.id, params.date);
+  const ymd = fromDmy(params.date);
+  const report = await getDailyReport(me.id, ymd);
   if (!report) notFound();
-  let parsed: any = {};
-  try {
-    parsed = JSON.parse(report.content);
-  } catch {
-    parsed.summary = report.content;
-  }
+  const parsed: any = report.content;
   return (
     <main className="p-6">
-      <h1 className="mb-4 text-2xl font-bold">Report for {params.date}</h1>
+      <h1 className="mb-4 text-2xl font-bold">Report for {ymd}</h1>
       <p className="mb-4 font-semibold">Score: {report.score}</p>
       <pre className="whitespace-pre-wrap">{parsed.summary ?? ''}</pre>
       {parsed.good && (

@@ -2,7 +2,7 @@ export interface DailyReport {
   id: number;
   userId: number;
   date: string; // YYYY-MM-DD
-  content: string; // JSON string of report
+  content: Record<string, unknown>; // raw LLM output JSON
   score: number;
   createdAt: string;
 }

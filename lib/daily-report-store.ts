@@ -30,12 +30,7 @@ export async function listDailyReports(userId: number): Promise<
     .where(eq(dailyReports.userId, userId))
     .orderBy(asc(dailyReports.date));
   return rows.map((r) => {
-    let parsed: any = {};
-    try {
-      parsed = JSON.parse(r.content ?? '{}');
-    } catch {
-      parsed = {};
-    }
+    const parsed: any = r.content ?? {};
     return {
       date: r.date?.toString().slice(0, 10) ?? '',
       score: r.score ?? 0,
@@ -59,7 +54,7 @@ export async function getDailyReport(
     id: row.id,
     userId: row.userId ?? 0,
     date: row.date?.toString().slice(0, 10) ?? date,
-    content: row.content ?? '',
+    content: (row.content as any) ?? {},
     score: row.score ?? 0,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -68,23 +63,21 @@ export async function getDailyReport(
 export async function createDailyReport(
   userId: number,
   date: string,
-  content: string | Record<string, unknown>,
+  content: Record<string, unknown>,
   score: number,
 ) {
-  const contentStr =
-    typeof content === 'string' ? content : JSON.stringify(content);
   await db
     .insert(dailyReports)
     .values({
       userId,
       date: sql`${date}::date`,
-      content: contentStr,
+      content,
       score,
     })
     .onConflictDoUpdate({
       target: [dailyReports.userId, dailyReports.date],
       set: {
-        content: contentStr,
+        content,
         score,
         createdAt: sql`now()`,
       },
