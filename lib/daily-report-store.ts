@@ -3,17 +3,17 @@ import { dailyReports } from './db/schema';
 import { eq, and, asc, sql } from 'drizzle-orm';
 import type { DailyReport, ReportContent } from '@/types/report';
 
-function slugFromDate(ymd: string): string {
+function slugFromDate(ymd: string, version = 1): string {
   const [y, m, d] = ymd.split('-');
-  return `${d}${m}${y}`;
+  const base = `${d}${m}${y}`;
+  return version > 1 ? `${base}V${version}` : base;
 }
 
-function dateFromSlug(slug: string): string {
-  if (slug.length !== 8) return slug;
-  const d = slug.slice(0, 2);
-  const m = slug.slice(2, 4);
-  const y = slug.slice(4);
-  return `${y}-${m}-${d}`;
+function parseSlug(slug: string): { date: string; version: number } {
+  const match = /^([0-9]{2})([0-9]{2})([0-9]{4})(?:V(\d+))?$/.exec(slug);
+  if (!match) return { date: slug, version: 1 };
+  const [, d, m, y, v] = match;
+  return { date: `${y}-${m}-${d}`, version: v ? Number(v) : 1 };
 }
 
 export async function listDailyReportDates(userId: number): Promise<string[]> {
@@ -21,11 +21,14 @@ export async function listDailyReportDates(userId: number): Promise<string[]> {
     .select({ date: dailyReports.date })
     .from(dailyReports)
     .where(eq(dailyReports.userId, userId));
-  return rows.map((r) => r.date?.toString().slice(0, 10) ?? '');
+  const set = new Set<string>();
+  for (const r of rows) set.add(r.date?.toString().slice(0, 10) ?? '');
+  return Array.from(set);
 }
 
 function parseReportContent(raw: unknown): ReportContent {
   if (!raw) return {} as ReportContent;
+  if (typeof raw === 'object') return raw as ReportContent;
   try {
     return JSON.parse(String(raw)) as ReportContent;
   } catch {
@@ -37,10 +40,12 @@ export async function listDailyReports(userId: number): Promise<
   Array<{
     date: string;
     slug: string;
+    version: number;
     score: number;
     summary: string;
     good: string[];
     bad: string[];
+    observations: string[];
   }>
 > {
   const rows = await db
@@ -48,20 +53,24 @@ export async function listDailyReports(userId: number): Promise<
       date: dailyReports.date,
       score: dailyReports.score,
       content: dailyReports.content,
+      version: dailyReports.version,
     })
     .from(dailyReports)
     .where(eq(dailyReports.userId, userId))
-    .orderBy(asc(dailyReports.date));
+    .orderBy(asc(dailyReports.date), asc(dailyReports.version));
   return rows.map((r) => {
     const ymd = r.date?.toString().slice(0, 10) ?? '';
     const parsed = parseReportContent(r.content);
+    const version = r.version ?? 1;
     return {
       date: ymd,
-      slug: slugFromDate(ymd),
+      slug: slugFromDate(ymd, version),
+      version,
       score: r.score ?? 0,
       summary: parsed.summary ?? '',
       good: parsed.good ?? [],
       bad: parsed.bad ?? [],
+      observations: parsed.observations ?? [],
     };
   });
 }
@@ -70,16 +79,23 @@ export async function getDailyReport(
   userId: number,
   slug: string,
 ): Promise<DailyReport | null> {
-  const date = dateFromSlug(slug);
+  const { date, version } = parseSlug(slug);
   const [row] = await db
     .select()
     .from(dailyReports)
-    .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, date)));
+    .where(
+      and(
+        eq(dailyReports.userId, userId),
+        eq(dailyReports.date, date),
+        eq(dailyReports.version, version),
+      ),
+    );
   if (!row) return null;
   return {
     id: row.id,
     userId: row.userId ?? 0,
     date,
+    version: row.version ?? 1,
     content: parseReportContent(row.content),
     score: row.score ?? 0,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
@@ -89,19 +105,19 @@ export async function getDailyReport(
 export async function createDailyReport(
   userId: number,
   date: string,
-  content: Record<string, unknown>,
+  content: ReportContent,
   score: number,
 ) {
-  // Use a raw SQL upsert to guarantee the report is stored for the
-  // caller-provided date. This avoids issues with parameter ordering when
-  // the server and client have differing conceptions of "today" due to
-  // overridden site time.
-  await db.execute(sql`
-    insert into daily_reports (user_id, date, content, score)
-    values (${userId}, ${date}::date, ${JSON.stringify(content)}, ${score})
-    on conflict (user_id, date) do update
-      set content = excluded.content,
-          score = excluded.score,
-          created_at = now();
-  `);
+  const [{ maxVersion }] = await db
+    .select({ maxVersion: sql<number>`coalesce(max(${dailyReports.version}),0)` })
+    .from(dailyReports)
+    .where(and(eq(dailyReports.userId, userId), eq(dailyReports.date, date)));
+  const nextVersion = (maxVersion ?? 0) + 1;
+  await db.insert(dailyReports).values({
+    userId,
+    date,
+    content,
+    score,
+    version: nextVersion,
+  });
 }
