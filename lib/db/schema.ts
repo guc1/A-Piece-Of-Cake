@@ -245,7 +245,9 @@ export const dailyReports = pgTable(
       .references(() => users.id)
       .notNull(),
     date: date('date').notNull(),
-    content: json('content').notNull(),
+    // Store report content as plain text to avoid JSON casting issues during
+    // schema pushes. Consumers should parse the JSON string manually.
+    content: text('content').notNull(),
     score: integer('score').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
   },

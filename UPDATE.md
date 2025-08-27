@@ -217,3 +217,4 @@
 - 2025-10-27: Stabilized daily report storage using raw SQL upsert and added JSONB migration for schema push compatibility.
 - 2025-10-27: Switched daily report content column to JSON for easier schema pushes.
 - 2025-10-27: Explicitly cast daily report content column to JSON for schema push compatibility.
+- 2025-10-27: Reverted daily report content column to text and added safe JSON parsing to avoid push casting errors.
