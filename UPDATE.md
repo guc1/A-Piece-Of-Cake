@@ -214,3 +214,4 @@
 - 2025-10-27: Hardened handle unique constraint migration to reuse existing index and allow clean schema pushes.
 - 2025-10-27: Guarded notification type enum migrations so reruns skip existing values and jsonb schema pushes succeed.
 - 2025-10-27: Repaired users.view_id column with idempotent migration and switched to uuid type.
+- 2025-08-27: Allowed clock override with only date parameter and simplified daily report JSONB migration for push.

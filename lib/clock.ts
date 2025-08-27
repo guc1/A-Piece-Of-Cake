@@ -54,9 +54,9 @@ export function getNow(
 
   const dateParam = first(req?.searchParams?.['apoc_date']);
   const timeParam = first(req?.searchParams?.['apoc_time']);
-  if (dateParam && timeParam) {
+  if (dateParam) {
     const [y, m, d] = dateParam.split('-').map(Number);
-    const [hh, mm] = timeParam.split(':').map(Number);
+    const [hh, mm] = timeParam ? timeParam.split(':').map(Number) : [0, 0];
     const dateUTC = Date.UTC(y, m - 1, d, hh, mm);
     const offset = getOffset(new Date(dateUTC), tz);
     result = new Date(dateUTC - offset);
