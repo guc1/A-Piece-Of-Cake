@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   uniqueIndex,
+  json,
   jsonb,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -244,7 +245,7 @@ export const dailyReports = pgTable(
       .references(() => users.id)
       .notNull(),
     date: date('date').notNull(),
-    content: jsonb('content').notNull(),
+    content: json('content').notNull(),
     score: integer('score').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
   },
