@@ -1,7 +1,20 @@
 import { db } from './db';
 import { dailyReports } from './db/schema';
 import { eq, and, asc, sql } from 'drizzle-orm';
-import type { DailyReport } from '@/types/report';
+import type { DailyReport, ReportContent } from '@/types/report';
+
+function slugFromDate(ymd: string): string {
+  const [y, m, d] = ymd.split('-');
+  return `${d}${m}${y}`;
+}
+
+function dateFromSlug(slug: string): string {
+  if (slug.length !== 8) return slug;
+  const d = slug.slice(0, 2);
+  const m = slug.slice(2, 4);
+  const y = slug.slice(4);
+  return `${y}-${m}-${d}`;
+}
 
 export async function listDailyReportDates(userId: number): Promise<string[]> {
   const rows = await db
@@ -14,6 +27,7 @@ export async function listDailyReportDates(userId: number): Promise<string[]> {
 export async function listDailyReports(userId: number): Promise<
   Array<{
     date: string;
+    slug: string;
     score: number;
     summary: string;
     good: string[];
@@ -30,14 +44,11 @@ export async function listDailyReports(userId: number): Promise<
     .where(eq(dailyReports.userId, userId))
     .orderBy(asc(dailyReports.date));
   return rows.map((r) => {
-    let parsed: any = {};
-    try {
-      parsed = JSON.parse(r.content ?? '{}');
-    } catch {
-      parsed = {};
-    }
+    const ymd = r.date?.toString().slice(0, 10) ?? '';
+    const parsed = (r.content as ReportContent) || {};
     return {
-      date: r.date?.toString().slice(0, 10) ?? '',
+      date: ymd,
+      slug: slugFromDate(ymd),
       score: r.score ?? 0,
       summary: parsed.summary ?? '',
       good: parsed.good ?? [],
@@ -48,8 +59,9 @@ export async function listDailyReports(userId: number): Promise<
 
 export async function getDailyReport(
   userId: number,
-  date: string,
+  slug: string,
 ): Promise<DailyReport | null> {
+  const date = dateFromSlug(slug);
   const [row] = await db
     .select()
     .from(dailyReports)
@@ -58,8 +70,8 @@ export async function getDailyReport(
   return {
     id: row.id,
     userId: row.userId ?? 0,
-    date: row.date?.toString().slice(0, 10) ?? date,
-    content: row.content ?? '',
+    date,
+    content: (row.content as ReportContent) ?? ({} as ReportContent),
     score: row.score ?? 0,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -68,23 +80,21 @@ export async function getDailyReport(
 export async function createDailyReport(
   userId: number,
   date: string,
-  content: string | Record<string, unknown>,
+  content: Record<string, unknown>,
   score: number,
 ) {
-  const contentStr =
-    typeof content === 'string' ? content : JSON.stringify(content);
   await db
     .insert(dailyReports)
     .values({
       userId,
       date: sql`${date}::date`,
-      content: contentStr,
+      content,
       score,
     })
     .onConflictDoUpdate({
       target: [dailyReports.userId, dailyReports.date],
       set: {
-        content: contentStr,
+        content,
         score,
         createdAt: sql`now()`,
       },
