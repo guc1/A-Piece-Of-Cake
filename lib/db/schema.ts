@@ -12,6 +12,7 @@ import {
   jsonb,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import type { ReportContent } from '@/types/report';
 
 export const accountVisibilityEnum = pgEnum('account_visibility', [
   'open',
@@ -245,16 +246,14 @@ export const dailyReports = pgTable(
       .references(() => users.id)
       .notNull(),
     date: date('date').notNull(),
-    // Store report content as plain text to avoid JSON casting issues during
-    // schema pushes. Consumers should parse the JSON string manually.
-    content: text('content').notNull(),
+    content: jsonb('content').$type<ReportContent>().notNull(),
     score: integer('score').notNull(),
+    version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at').defaultNow(),
   },
   (table) => ({
-    uniqueUserDate: uniqueIndex('daily_reports_user_date_unique').on(
-      table.userId,
-      table.date,
-    ),
+    uniqueUserDateVersion: uniqueIndex(
+      'daily_reports_user_date_version_unique',
+    ).on(table.userId, table.date, table.version),
   }),
 );

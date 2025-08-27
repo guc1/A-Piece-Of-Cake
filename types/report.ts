@@ -10,6 +10,7 @@ export interface DailyReport {
   id: number;
   userId: number;
   date: string; // YYYY-MM-DD
+  version: number;
   content: ReportContent; // raw JSON of report
   score: number;
   createdAt: string;

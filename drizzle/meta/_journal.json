@@ -155,8 +155,7 @@
       "when": 1756284819554,
       "tag": "0021_force_daily_reports_content_json",
       "breakpoints": true
-    }
-    ,
+    },
     {
       "idx": 22,
       "version": "7",
@@ -169,6 +168,20 @@
       "version": "7",
       "when": 1756284819556,
       "tag": "0023_revert_users_view_id_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1756284819557,
+      "tag": "0024_add_daily_report_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1756284819558,
+      "tag": "0025_alter_daily_reports_content_jsonb",
       "breakpoints": true
     }
   ]
