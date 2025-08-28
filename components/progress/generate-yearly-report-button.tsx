@@ -13,9 +13,13 @@ function toYMD(d: Date): string {
 export function GenerateYearlyReportButton({
   userId,
   className,
+  onStatusChange,
+  buttonClassName,
 }: {
   userId: number;
   className?: string;
+  onStatusChange?: (status: { visible: boolean; pending: boolean }) => void;
+  buttonClassName?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const { addLog } = useLogs();
@@ -67,9 +71,11 @@ export function GenerateYearlyReportButton({
     const endStr = `${year}-12-31`;
     setRange({ start: startStr, end: endStr });
     const key = `yearly-report-generated-${userId}-${startStr}`;
-    setNeedsCode(window.localStorage.getItem(key) === 'true');
+    const generated = window.localStorage.getItem(key) === 'true';
+    setNeedsCode(generated);
     setVisible(show);
-  }, [currentDate, userId]);
+    onStatusChange?.({ visible: show, pending: show && !generated });
+  }, [currentDate, userId, onStatusChange]);
 
   if (!visible || !range) return null;
 
@@ -105,6 +111,7 @@ export function GenerateYearlyReportButton({
       const key = `yearly-report-generated-${userId}-${range.start}`;
       window.localStorage.setItem(key, 'true');
       setNeedsCode(true);
+      onStatusChange?.({ visible: true, pending: false });
       router.refresh();
     }
   };
@@ -115,8 +122,11 @@ export function GenerateYearlyReportButton({
         onClick={onClick}
         disabled={loading}
         className={cn(
-          'flex items-center gap-2 text-white',
-          needsCode ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600',
+          'flex w-full items-center justify-center gap-2 text-white',
+          needsCode
+            ? 'bg-orange-500 hover:bg-orange-600'
+            : 'bg-green-500 hover:bg-green-600',
+          buttonClassName,
         )}
       >
         {loading && (
@@ -126,7 +136,9 @@ export function GenerateYearlyReportButton({
           ? 'Generating…'
           : `Generate yearly rapport for ${range.start} - ${range.end}`}
       </Button>
-      {message && <p className="mt-2 text-sm">{message}</p>}
+      {message && (
+        <p className="mt-4 text-center text-lg">{message}</p>
+      )}
     </div>
   );
 }

@@ -13,9 +13,13 @@ function toYMD(d: Date): string {
 export function GenerateWeeklyReportButton({
   userId,
   className,
+  onStatusChange,
+  buttonClassName,
 }: {
   userId: number;
   className?: string;
+  onStatusChange?: (status: { visible: boolean; pending: boolean }) => void;
+  buttonClassName?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const { addLog } = useLogs();
@@ -55,14 +59,16 @@ export function GenerateWeeklyReportButton({
     const endStr = toYMD(end);
     setRange({ start: startStr, end: endStr });
     const key = `weekly-report-generated-${userId}-${startStr}`;
-    setNeedsCode(window.localStorage.getItem(key) === 'true');
+    const generated = window.localStorage.getItem(key) === 'true';
+    setNeedsCode(generated);
+    let show = true;
     if (day === 0) {
       const dailyKey = `daily-report-generated-${userId}-${date}`;
-      setVisible(window.localStorage.getItem(dailyKey) === 'true');
-    } else {
-      setVisible(true);
+      show = window.localStorage.getItem(dailyKey) === 'true';
     }
-  }, [currentDate, userId]);
+    setVisible(show);
+    onStatusChange?.({ visible: show, pending: show && !generated });
+  }, [currentDate, userId, onStatusChange]);
 
   if (!visible || !range) return null;
 
@@ -98,6 +104,7 @@ export function GenerateWeeklyReportButton({
       const key = `weekly-report-generated-${userId}-${range.start}`;
       window.localStorage.setItem(key, 'true');
       setNeedsCode(true);
+      onStatusChange?.({ visible: true, pending: false });
       router.refresh();
     }
   };
@@ -108,10 +115,11 @@ export function GenerateWeeklyReportButton({
         onClick={onClick}
         disabled={loading}
         className={cn(
-          'flex items-center gap-2 text-white',
+          'flex w-full items-center justify-center gap-2 text-white',
           needsCode
             ? 'bg-orange-500 hover:bg-orange-600'
             : 'bg-green-500 hover:bg-green-600',
+          buttonClassName,
         )}
       >
         {loading && (
@@ -121,7 +129,9 @@ export function GenerateWeeklyReportButton({
           ? 'Generating…'
           : `Generate weekly rapport for ${range.start} - ${range.end}`}
       </Button>
-      {message && <p className="mt-2 text-sm">{message}</p>}
+      {message && (
+        <p className="mt-4 text-center text-lg">{message}</p>
+      )}
     </div>
   );
 }
