@@ -239,3 +239,4 @@
 - 2025-10-27: Prefixed weekly report prompts with user's rational, marked pre-account days, and ensured weeks run Monday–Sunday.
 - 2025-10-27: Displayed missing weekly assessment notice for weeks without reports after the allowed generation window.
 - 2025-10-27: Added monthly assessment agent with generation button, API route, database storage, overview pages for owners and viewers, and difficulty labels.
+- 2025-10-27: Added yearly assessment agent with generation button, API route, database storage, overview pages, and difficulty labels.
