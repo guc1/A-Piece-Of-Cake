@@ -13,14 +13,17 @@ function toYMD(d: Date): string {
 export function GenerateWeeklyReportButton({
   userId,
   className,
+  onStatusChange,
+  onComplete,
 }: {
   userId: number;
   className?: string;
+  onStatusChange?: (status: { visible: boolean; pending: boolean }) => void;
+  onComplete?: (message: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const { addLog } = useLogs();
   const router = useRouter();
-  const [message, setMessage] = useState<string | null>(null);
   const [needsCode, setNeedsCode] = useState(false);
   const [visible, setVisible] = useState(false);
   const [range, setRange] = useState<{ start: string; end: string } | null>(
@@ -55,14 +58,16 @@ export function GenerateWeeklyReportButton({
     const endStr = toYMD(end);
     setRange({ start: startStr, end: endStr });
     const key = `weekly-report-generated-${userId}-${startStr}`;
-    setNeedsCode(window.localStorage.getItem(key) === 'true');
+    const generated = window.localStorage.getItem(key) === 'true';
+    setNeedsCode(generated);
+    let show = true;
     if (day === 0) {
       const dailyKey = `daily-report-generated-${userId}-${date}`;
-      setVisible(window.localStorage.getItem(dailyKey) === 'true');
-    } else {
-      setVisible(true);
+      show = window.localStorage.getItem(dailyKey) === 'true';
     }
-  }, [currentDate, userId]);
+    setVisible(show);
+    onStatusChange?.({ visible: show, pending: show && !generated });
+  }, [currentDate, userId, onStatusChange]);
 
   if (!visible || !range) return null;
 
@@ -90,38 +95,36 @@ export function GenerateWeeklyReportButton({
     });
     setLoading(false);
     if (data.error) {
-      setMessage(data.error);
+      onComplete?.(data.error);
     } else {
-      setMessage(
-        `Weekly rapport is created. Your score for this week is: ${data.score}`,
-      );
+      const msg = `Weekly rapport is created. Your score for this week is: ${data.score}`;
+      onComplete?.(msg);
       const key = `weekly-report-generated-${userId}-${range.start}`;
       window.localStorage.setItem(key, 'true');
       setNeedsCode(true);
+      onStatusChange?.({ visible: true, pending: false });
       router.refresh();
     }
   };
 
   return (
-    <div className={cn('flex flex-col items-center', className)}>
-      <Button
-        onClick={onClick}
-        disabled={loading}
-        className={cn(
-          'flex items-center gap-2 text-white',
-          needsCode
-            ? 'bg-orange-500 hover:bg-orange-600'
-            : 'bg-green-500 hover:bg-green-600',
-        )}
-      >
-        {loading && (
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-        )}
-        {loading
-          ? 'Generating…'
-          : `Generate weekly rapport for ${range.start} - ${range.end}`}
-      </Button>
-      {message && <p className="mt-2 text-sm">{message}</p>}
-    </div>
+    <Button
+      onClick={onClick}
+      disabled={loading}
+      className={cn(
+        'flex h-auto items-center justify-center gap-2 whitespace-normal text-center text-white',
+        needsCode
+          ? 'bg-orange-500 hover:bg-orange-600'
+          : 'bg-green-500 hover:bg-green-600',
+        className,
+      )}
+    >
+      {loading && (
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+      )}
+      {loading
+        ? 'Generating…'
+        : `Generate weekly rapport for ${range.start} - ${range.end}`}
+    </Button>
   );
 }
