@@ -8,16 +8,16 @@ export function ProgressHome() {
   return (
     <main className="p-6 space-x-4">
       <Link
-        href={hrefFor('/progress/testchat', ctx)}
-        className="bg-orange-500 text-white px-4 py-2 rounded"
-      >
-        Chat with LLM
-      </Link>
-      <Link
         href={hrefFor('/progress/overview', ctx)}
         className="bg-orange-500 text-white px-4 py-2 rounded"
       >
         Overview
+      </Link>
+      <Link
+        href={hrefFor('/progress/statistics', ctx)}
+        className="bg-orange-500 text-white px-4 py-2 rounded"
+      >
+        Statistics
       </Link>
     </main>
   );
