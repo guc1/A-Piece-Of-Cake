@@ -12,6 +12,7 @@ import { GenerateDailyReportButton } from '@/components/progress/generate-daily-
 import { GenerateWeeklyReportButton } from '@/components/progress/generate-weekly-report-button';
 import { GenerateMonthlyReportButton } from '@/components/progress/generate-monthly-report-button';
 import { GenerateYearlyReportButton } from '@/components/progress/generate-yearly-report-button';
+import { cn } from '@/lib/utils';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -26,6 +27,24 @@ export function CakeNavigation() {
   const secretTimer = useRef<NodeJS.Timeout | null>(null);
   const secretClicks = useRef(0);
   const [timeMachineOpen, setTimeMachineOpen] = useState(false);
+  const [showExtraReports, setShowExtraReports] = useState(false);
+  const [weeklyStatus, setWeeklyStatus] = useState({
+    visible: false,
+    pending: false,
+  });
+  const [monthlyStatus, setMonthlyStatus] = useState({
+    visible: false,
+    pending: false,
+  });
+  const [yearlyStatus, setYearlyStatus] = useState({
+    visible: false,
+    pending: false,
+  });
+
+  const indicatorVisible =
+    weeklyStatus.visible || monthlyStatus.visible || yearlyStatus.visible;
+  const indicatorPending =
+    weeklyStatus.pending || monthlyStatus.pending || yearlyStatus.pending;
 
   useEffect(() => {
     const computeOffset = () => {
@@ -141,16 +160,47 @@ export function CakeNavigation() {
       <div className="grid w-full place-items-center relative">
         {ctx.editable && (
           <div
-            className="absolute -translate-x-1/2 flex gap-2"
-            style={{
-              top: '-66px',
-              left: '50%',
-            }}
+            className="absolute -translate-x-1/2"
+            style={{ top: '-66px', left: '50%' }}
           >
-            <GenerateYearlyReportButton userId={ctx.ownerId} />
-            <GenerateDailyReportButton userId={ctx.ownerId} />
-            <GenerateWeeklyReportButton userId={ctx.ownerId} />
-            <GenerateMonthlyReportButton userId={ctx.ownerId} />
+            <div className="relative flex justify-center">
+              <GenerateDailyReportButton
+                userId={ctx.ownerId}
+                buttonClassName="px-8 py-4 text-lg"
+              />
+              {indicatorVisible && (
+                <button
+                  onClick={() => setShowExtraReports((v) => !v)}
+                  className={cn(
+                    'absolute left-full ml-4 rounded px-3 py-2 text-white',
+                    indicatorPending
+                      ? 'bg-green-500 hover:bg-green-600 animate-bounce'
+                      : 'bg-orange-500 hover:bg-orange-600',
+                  )}
+                >
+                  new
+                </button>
+              )}
+              <div
+                className={cn(
+                  'absolute left-1/2 -translate-x-1/2 mt-4 flex flex-col gap-2',
+                  showExtraReports ? '' : 'hidden',
+                )}
+              >
+                <GenerateWeeklyReportButton
+                  userId={ctx.ownerId}
+                  onStatusChange={setWeeklyStatus}
+                />
+                <GenerateMonthlyReportButton
+                  userId={ctx.ownerId}
+                  onStatusChange={setMonthlyStatus}
+                />
+                <GenerateYearlyReportButton
+                  userId={ctx.ownerId}
+                  onStatusChange={setYearlyStatus}
+                />
+              </div>
+            </div>
           </div>
         )}
         <nav

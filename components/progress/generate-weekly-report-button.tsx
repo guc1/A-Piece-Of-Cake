@@ -13,9 +13,11 @@ function toYMD(d: Date): string {
 export function GenerateWeeklyReportButton({
   userId,
   className,
+  onStatusChange,
 }: {
   userId: number;
   className?: string;
+  onStatusChange?: (status: { visible: boolean; pending: boolean }) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const { addLog } = useLogs();
@@ -55,14 +57,16 @@ export function GenerateWeeklyReportButton({
     const endStr = toYMD(end);
     setRange({ start: startStr, end: endStr });
     const key = `weekly-report-generated-${userId}-${startStr}`;
-    setNeedsCode(window.localStorage.getItem(key) === 'true');
+    const generated = window.localStorage.getItem(key) === 'true';
+    setNeedsCode(generated);
+    let show = true;
     if (day === 0) {
       const dailyKey = `daily-report-generated-${userId}-${date}`;
-      setVisible(window.localStorage.getItem(dailyKey) === 'true');
-    } else {
-      setVisible(true);
+      show = window.localStorage.getItem(dailyKey) === 'true';
     }
-  }, [currentDate, userId]);
+    setVisible(show);
+    onStatusChange?.({ visible: show, pending: show && !generated });
+  }, [currentDate, userId, onStatusChange]);
 
   if (!visible || !range) return null;
 
@@ -98,6 +102,7 @@ export function GenerateWeeklyReportButton({
       const key = `weekly-report-generated-${userId}-${range.start}`;
       window.localStorage.setItem(key, 'true');
       setNeedsCode(true);
+      onStatusChange?.({ visible: true, pending: false });
       router.refresh();
     }
   };

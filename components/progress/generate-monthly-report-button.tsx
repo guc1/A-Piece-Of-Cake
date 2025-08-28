@@ -13,9 +13,11 @@ function toYMD(d: Date): string {
 export function GenerateMonthlyReportButton({
   userId,
   className,
+  onStatusChange,
 }: {
   userId: number;
   className?: string;
+  onStatusChange?: (status: { visible: boolean; pending: boolean }) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const { addLog } = useLogs();
@@ -53,23 +55,25 @@ export function GenerateMonthlyReportButton({
     let end: Date;
     let show = true;
     if (today.getUTCDate() === lastDayCurrent.getUTCDate()) {
-      start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+      start = new Date(
+        Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
+      );
       end = lastDayCurrent;
       const dailyKey = `daily-report-generated-${userId}-${date}`;
       show = window.localStorage.getItem(dailyKey) === 'true';
     } else {
-      end = new Date(
-        Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0),
-      );
+      end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
       start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
     }
     const startStr = toYMD(start);
     const endStr = toYMD(end);
     setRange({ start: startStr, end: endStr });
     const key = `monthly-report-generated-${userId}-${startStr}`;
-    setNeedsCode(window.localStorage.getItem(key) === 'true');
+    const generated = window.localStorage.getItem(key) === 'true';
+    setNeedsCode(generated);
     setVisible(show);
-  }, [currentDate, userId]);
+    onStatusChange?.({ visible: show, pending: show && !generated });
+  }, [currentDate, userId, onStatusChange]);
 
   if (!visible || !range) return null;
 
@@ -105,6 +109,7 @@ export function GenerateMonthlyReportButton({
       const key = `monthly-report-generated-${userId}-${range.start}`;
       window.localStorage.setItem(key, 'true');
       setNeedsCode(true);
+      onStatusChange?.({ visible: true, pending: false });
       router.refresh();
     }
   };
