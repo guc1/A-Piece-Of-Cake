@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useViewContext } from '@/lib/view-context';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -69,8 +70,10 @@ function buildRangeChart(
   avgs: Record<string, Array<number | null>>,
   indexMap: Map<string, number>,
   label: (r: RangeScore) => string,
+  page: number,
 ) {
-  const recent = ranges.slice(0, 7).reverse();
+  const start = page * 7;
+  const recent = ranges.slice(start, start + 7).reverse();
   return recent.map((r) => {
     const item: any = { date: label(r), score: r.score };
     const idx = indexMap.get(r.endDate);
@@ -81,27 +84,40 @@ function buildRangeChart(
   });
 }
 
-export default function StatisticsClient({ daily, weekly, monthly, yearly }: Props) {
+export default function StatisticsClient({
+  daily,
+  weekly,
+  monthly,
+  yearly,
+}: Props) {
+  const ctx = useViewContext();
   const [tab, setTab] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>(
     'daily',
   );
   const [start, setStart] = useState('');
   const [active, setActive] = useState<Record<string, boolean>>({});
+  const [page, setPage] = useState({
+    daily: 0,
+    weekly: 0,
+    monthly: 0,
+    yearly: 0,
+  });
 
   const { days, avgs, startIdx, indexMap } = useMemo(
     () => buildDailyData(daily, start),
     [daily, start],
   );
   const dailyChart = useMemo(() => {
-    const slice = days.slice(-7);
-    const offset = days.length - slice.length;
+    const end = days.length - page.daily * 7;
+    const startIdxLocal = Math.max(startIdx, end - 7);
+    const slice = days.slice(startIdxLocal, end);
     return slice.map((d, i) => {
-      const idx = offset + i;
+      const idx = startIdxLocal + i;
       const item: any = { date: d.date.slice(5), score: d.score };
       for (const win of WINDOWS) item[win.key] = avgs[win.key][idx];
       return item;
     });
-  }, [days, avgs]);
+  }, [days, avgs, page.daily, startIdx]);
 
   const weeklyChart = useMemo(
     () =>
@@ -110,18 +126,31 @@ export default function StatisticsClient({ daily, weekly, monthly, yearly }: Pro
         avgs,
         indexMap,
         (r) => `${r.startDate.slice(5)}-${r.endDate.slice(5)}`,
+        page.weekly,
       ),
-    [weekly, avgs, indexMap],
+    [weekly, avgs, indexMap, page.weekly],
   );
   const monthlyChart = useMemo(
     () =>
-      buildRangeChart(monthly, avgs, indexMap, (r) => r.startDate.slice(0, 7)),
-    [monthly, avgs, indexMap],
+      buildRangeChart(
+        monthly,
+        avgs,
+        indexMap,
+        (r) => r.startDate.slice(0, 7),
+        page.monthly,
+      ),
+    [monthly, avgs, indexMap, page.monthly],
   );
   const yearlyChart = useMemo(
     () =>
-      buildRangeChart(yearly, avgs, indexMap, (r) => r.startDate.slice(0, 4)),
-    [yearly, avgs, indexMap],
+      buildRangeChart(
+        yearly,
+        avgs,
+        indexMap,
+        (r) => r.startDate.slice(0, 4),
+        page.yearly,
+      ),
+    [yearly, avgs, indexMap, page.yearly],
   );
 
   const data =
@@ -135,58 +164,98 @@ export default function StatisticsClient({ daily, weekly, monthly, yearly }: Pro
 
   const availableDays = days.length - startIdx;
 
+  const maxPage = {
+    daily: Math.max(0, Math.floor((availableDays - 1) / 7)),
+    weekly: Math.max(0, Math.floor((weekly.length - 1) / 7)),
+    monthly: Math.max(0, Math.floor((monthly.length - 1) / 7)),
+    yearly: Math.max(0, Math.floor((yearly.length - 1) / 7)),
+  };
+  const hasPrev = page[tab] < maxPage[tab];
+  const hasNext = page[tab] > 0;
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-4">
-        {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((t) => (
-          <button
-            key={t}
-            className={
-              tab === t
-                ? 'border-b-2 border-orange-500 pb-1 font-semibold'
-                : 'pb-1'
-            }
-            onClick={() => setTab(t)}
-          >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
-      <div className="flex items-center gap-2">
-        <label className="text-sm">Average start:</label>
-        <input
-          type="date"
-          value={start}
-          min={days[0].date}
-          max={days[days.length - 1].date}
-          onChange={(e) => setStart(e.target.value)}
-          className="rounded border px-2 py-1"
-        />
-        <button
-          onClick={() => setStart('')}
-          className="text-sm text-orange-600 underline"
-        >
-          All
-        </button>
-      </div>
-      <div className="flex flex-wrap gap-4">
-        {WINDOWS.map((w) => {
-          const disabled = availableDays < w.days;
-          return (
-            <label key={w.key} className="flex items-center gap-1 text-sm">
-              <input
-                type="checkbox"
-                disabled={disabled}
-                checked={!!active[w.key] && !disabled}
-                onChange={() =>
-                  setActive((a) => ({ ...a, [w.key]: !a[w.key] }))
+      {ctx.mode !== 'historical' && (
+        <div className="sticky top-0 z-10 space-y-4 bg-white dark:bg-neutral-900 pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-4">
+              {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((t) => (
+                <button
+                  key={t}
+                  className={
+                    tab === t
+                      ? 'border-b-2 border-orange-500 pb-1 font-semibold'
+                      : 'pb-1'
+                  }
+                  onClick={() => setTab(t)}
+                >
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                aria-label="Previous period"
+                disabled={!hasPrev}
+                onClick={() =>
+                  setPage((p) => ({
+                    ...p,
+                    [tab]: Math.min(maxPage[tab], p[tab] + 1),
+                  }))
                 }
-              />
-              <span>{w.label}</span>
-            </label>
-          );
-        })}
-      </div>
+                className="rounded border px-2 py-1 disabled:opacity-50"
+              >
+                ←
+              </button>
+              <button
+                aria-label="Next period"
+                disabled={!hasNext}
+                onClick={() =>
+                  setPage((p) => ({ ...p, [tab]: Math.max(0, p[tab] - 1) }))
+                }
+                className="rounded border px-2 py-1 disabled:opacity-50"
+              >
+                →
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm">Average start:</label>
+            <input
+              type="date"
+              value={start}
+              min={days[0].date}
+              max={days[days.length - 1].date}
+              onChange={(e) => setStart(e.target.value)}
+              className="rounded border px-2 py-1"
+            />
+            <button
+              onClick={() => setStart('')}
+              className="text-sm text-orange-600 underline"
+            >
+              All
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            {WINDOWS.map((w) => {
+              const disabled = availableDays < w.days;
+              return (
+                <label key={w.key} className="flex items-center gap-1 text-sm">
+                  <input
+                    type="checkbox"
+                    disabled={disabled}
+                    checked={!!active[w.key] && !disabled}
+                    onChange={() =>
+                      setActive((a) => ({ ...a, [w.key]: !a[w.key] }))
+                    }
+                  />
+                  <span>{w.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={data} margin={{ left: 20, right: 20 }}>
           <XAxis dataKey="date" />
