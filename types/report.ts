@@ -48,3 +48,18 @@ export interface MonthlyReport {
   coachTone: string;
   createdAt: string;
 }
+
+export interface YearlyReport {
+  id: number;
+  userId: number;
+  startDate: string; // YYYY-01-01
+  endDate: string; // YYYY-12-31
+  version: number;
+  summary: string;
+  good: string[];
+  bad: string[];
+  observations: string[];
+  score: number;
+  coachTone: string;
+  createdAt: string;
+}
