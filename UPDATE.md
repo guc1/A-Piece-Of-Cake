@@ -247,3 +247,4 @@
 - 2025-10-27: Positioned "new" indicator to the right of the daily report button and shifted the daily button left for balance.
 - 2025-10-27: Added statistics page with daily/weekly/monthly/yearly charts and removed test chat.
 - 2025-10-27: Statistics page now uses weekly/monthly/yearly report grades for corresponding charts.
+- 2025-10-27: Added sticky statistics header with period navigation and hid controls in historical snapshot mode.
