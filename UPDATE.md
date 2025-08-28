@@ -241,3 +241,5 @@
 - 2025-10-27: Added monthly assessment agent with generation button, API route, database storage, overview pages for owners and viewers, and difficulty labels.
 - 2025-10-27: Added yearly assessment agent with generation button, API route, database storage, overview pages, and difficulty labels.
 - 2025-10-27: Moved yearly assessment button to the left of the daily button so it stays visible.
+- 2025-10-27: Redesigned assessment generation with a centered daily button and animated "new" toggle for weekly, monthly, and yearly reports.
+- 2025-10-27: Hid weekly/monthly/yearly report buttons inside a "new" dropdown so only the daily button shows on home.

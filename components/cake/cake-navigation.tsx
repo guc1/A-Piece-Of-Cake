@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { slices } from './slices';
 import { Cake3D } from './cake-3d';
@@ -12,6 +12,7 @@ import { GenerateDailyReportButton } from '@/components/progress/generate-daily-
 import { GenerateWeeklyReportButton } from '@/components/progress/generate-weekly-report-button';
 import { GenerateMonthlyReportButton } from '@/components/progress/generate-monthly-report-button';
 import { GenerateYearlyReportButton } from '@/components/progress/generate-yearly-report-button';
+import { cn } from '@/lib/utils';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -26,6 +27,111 @@ export function CakeNavigation() {
   const secretTimer = useRef<NodeJS.Timeout | null>(null);
   const secretClicks = useRef(0);
   const [timeMachineOpen, setTimeMachineOpen] = useState(false);
+  const [showExtraReports, setShowExtraReports] = useState(false);
+  const [weeklyStatus, setWeeklyStatus] = useState({
+    visible: false,
+    pending: false,
+  });
+  const [monthlyStatus, setMonthlyStatus] = useState({
+    visible: false,
+    pending: false,
+  });
+  const [yearlyStatus, setYearlyStatus] = useState({
+    visible: false,
+    pending: false,
+  });
+
+  const currentDate = useCallback(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('userId', String(ctx.ownerId));
+    const dateParam = params.get('apoc_date');
+    let date = dateParam || '';
+    if (!date) {
+      const match = document.cookie.match(/apoc_clock=([^;]+)/);
+      if (match) {
+        const d = new Date(decodeURIComponent(match[1]));
+        if (!isNaN(d.getTime())) date = d.toISOString().slice(0, 10);
+      }
+      if (!date) date = new Date().toISOString().slice(0, 10);
+    }
+    return { date };
+  }, [ctx.ownerId]);
+
+  const computeWeeklyStatus = useCallback(() => {
+    const { date } = currentDate();
+    const today = new Date(date);
+    const day = today.getUTCDay();
+    const end = new Date(today);
+    if (day !== 0) end.setUTCDate(end.getUTCDate() - day);
+    const start = new Date(end);
+    start.setUTCDate(end.getUTCDate() - 6);
+    const startStr = start.toISOString().slice(0, 10);
+    let show = true;
+    if (day === 0) {
+      const dailyKey = `daily-report-generated-${ctx.ownerId}-${date}`;
+      show = window.localStorage.getItem(dailyKey) === 'true';
+    }
+    const key = `weekly-report-generated-${ctx.ownerId}-${startStr}`;
+    const generated = window.localStorage.getItem(key) === 'true';
+    return { visible: show, pending: show && !generated };
+  }, [currentDate, ctx.ownerId]);
+
+  const computeMonthlyStatus = useCallback(() => {
+    const { date } = currentDate();
+    const today = new Date(date);
+    const lastDayCurrent = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0),
+    );
+    let start: Date;
+    let end: Date;
+    let show = true;
+    if (today.getUTCDate() === lastDayCurrent.getUTCDate()) {
+      start = new Date(
+        Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1),
+      );
+      end = lastDayCurrent;
+      const dailyKey = `daily-report-generated-${ctx.ownerId}-${date}`;
+      show = window.localStorage.getItem(dailyKey) === 'true';
+    } else {
+      end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
+      start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+    }
+    const startStr = start.toISOString().slice(0, 10);
+    const key = `monthly-report-generated-${ctx.ownerId}-${startStr}`;
+    const generated = window.localStorage.getItem(key) === 'true';
+    return { visible: show, pending: show && !generated };
+  }, [currentDate, ctx.ownerId]);
+
+  const computeYearlyStatus = useCallback(() => {
+    const { date } = currentDate();
+    const today = new Date(date);
+    let year = today.getUTCFullYear();
+    const month = today.getUTCMonth();
+    const day = today.getUTCDate();
+    let show = false;
+    if (month === 11 && day === 31) {
+      const decStart = `${year}-12-01`;
+      const dailyKey = `daily-report-generated-${ctx.ownerId}-${date}`;
+      const monthlyKey = `monthly-report-generated-${ctx.ownerId}-${decStart}`;
+      show =
+        window.localStorage.getItem(dailyKey) === 'true' &&
+        window.localStorage.getItem(monthlyKey) === 'true';
+    } else if (month === 0) {
+      year = year - 1;
+      const decStart = `${year}-12-01`;
+      const monthlyKey = `monthly-report-generated-${ctx.ownerId}-${decStart}`;
+      show = window.localStorage.getItem(monthlyKey) === 'true';
+    }
+    const startStr = `${year}-01-01`;
+    const key = `yearly-report-generated-${ctx.ownerId}-${startStr}`;
+    const generated = window.localStorage.getItem(key) === 'true';
+    return { visible: show, pending: show && !generated };
+  }, [currentDate, ctx.ownerId]);
+
+  const indicatorVisible =
+    weeklyStatus.visible || monthlyStatus.visible || yearlyStatus.visible;
+  const indicatorPending =
+    weeklyStatus.pending || monthlyStatus.pending || yearlyStatus.pending;
 
   useEffect(() => {
     const computeOffset = () => {
@@ -60,6 +166,17 @@ export function CakeNavigation() {
     media.addEventListener('change', handler);
     return () => media.removeEventListener('change', handler);
   }, []);
+
+  useEffect(() => {
+    const compute = () => {
+      setWeeklyStatus(computeWeeklyStatus());
+      setMonthlyStatus(computeMonthlyStatus());
+      setYearlyStatus(computeYearlyStatus());
+    };
+    compute();
+    window.addEventListener('storage', compute);
+    return () => window.removeEventListener('storage', compute);
+  }, [computeWeeklyStatus, computeMonthlyStatus, computeYearlyStatus]);
 
   function handleEnter(slug: string) {
     if (clearTimer.current) {
@@ -141,16 +258,46 @@ export function CakeNavigation() {
       <div className="grid w-full place-items-center relative">
         {ctx.editable && (
           <div
-            className="absolute -translate-x-1/2 flex gap-2"
-            style={{
-              top: '-66px',
-              left: '50%',
-            }}
+            className="absolute -translate-x-1/2"
+            style={{ top: '-66px', left: '50%' }}
           >
-            <GenerateYearlyReportButton userId={ctx.ownerId} />
-            <GenerateDailyReportButton userId={ctx.ownerId} />
-            <GenerateWeeklyReportButton userId={ctx.ownerId} />
-            <GenerateMonthlyReportButton userId={ctx.ownerId} />
+            <div className="relative flex justify-center">
+              <GenerateDailyReportButton
+                userId={ctx.ownerId}
+                buttonClassName="px-8 py-4 text-lg"
+              />
+              {indicatorVisible && (
+                <div className="absolute left-full ml-4">
+                  <button
+                    onClick={() => setShowExtraReports((v) => !v)}
+                    className={cn(
+                      'rounded px-3 py-2 text-white',
+                      indicatorPending
+                        ? 'bg-green-500 hover:bg-green-600 animate-bounce'
+                        : 'bg-orange-500 hover:bg-orange-600',
+                    )}
+                  >
+                    new
+                  </button>
+                  {showExtraReports && (
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 flex flex-col gap-2">
+                      <GenerateWeeklyReportButton
+                        userId={ctx.ownerId}
+                        onStatusChange={setWeeklyStatus}
+                      />
+                      <GenerateMonthlyReportButton
+                        userId={ctx.ownerId}
+                        onStatusChange={setMonthlyStatus}
+                      />
+                      <GenerateYearlyReportButton
+                        userId={ctx.ownerId}
+                        onStatusChange={setYearlyStatus}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
         <nav
