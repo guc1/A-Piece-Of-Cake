@@ -105,7 +105,9 @@ export function SideCalendar({
                       : 'text-zinc-400 cursor-default',
                     hasReport
                       ? 'bg-green-500 text-white'
-                      : isToday && 'bg-orange-500 text-white font-bold',
+                      : hasSnap
+                        ? 'bg-red-500 text-white'
+                        : isToday && 'bg-orange-500 text-white font-bold',
                   )}
                 >
                   {date.getDate()}
