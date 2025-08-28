@@ -13,9 +13,11 @@ function toYMD(d: Date): string {
 export function GenerateWeeklyReportButton({
   userId,
   className,
+  onStatusChange,
 }: {
   userId: number;
   className?: string;
+  onStatusChange?: (status: { visible: boolean; needsCode: boolean }) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const { addLog } = useLogs();
@@ -55,14 +57,16 @@ export function GenerateWeeklyReportButton({
     const endStr = toYMD(end);
     setRange({ start: startStr, end: endStr });
     const key = `weekly-report-generated-${userId}-${startStr}`;
-    setNeedsCode(window.localStorage.getItem(key) === 'true');
+    const needs = window.localStorage.getItem(key) === 'true';
+    setNeedsCode(needs);
+    let show = true;
     if (day === 0) {
       const dailyKey = `daily-report-generated-${userId}-${date}`;
-      setVisible(window.localStorage.getItem(dailyKey) === 'true');
-    } else {
-      setVisible(true);
+      show = window.localStorage.getItem(dailyKey) === 'true';
     }
-  }, [currentDate, userId]);
+    setVisible(show);
+    onStatusChange?.({ visible: show, needsCode: needs });
+  }, [currentDate, userId, onStatusChange]);
 
   if (!visible || !range) return null;
 

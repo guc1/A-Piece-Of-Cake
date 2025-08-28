@@ -9,9 +9,7 @@ import { useViewContext } from '@/lib/view-context';
 import { hrefFor, type Section } from '@/lib/navigation';
 import TimeMachine from '@/components/dev/time-machine';
 import { GenerateDailyReportButton } from '@/components/progress/generate-daily-report-button';
-import { GenerateWeeklyReportButton } from '@/components/progress/generate-weekly-report-button';
-import { GenerateMonthlyReportButton } from '@/components/progress/generate-monthly-report-button';
-import { GenerateYearlyReportButton } from '@/components/progress/generate-yearly-report-button';
+import { AdditionalReportButtons } from '@/components/progress/additional-report-buttons';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -141,16 +139,16 @@ export function CakeNavigation() {
       <div className="grid w-full place-items-center relative">
         {ctx.editable && (
           <div
-            className="absolute -translate-x-1/2 flex gap-2"
-            style={{
-              top: '-66px',
-              left: '50%',
-            }}
+            className="absolute left-1/2 -translate-x-1/2"
+            style={{ top: '-66px' }}
           >
-            <GenerateYearlyReportButton userId={ctx.ownerId} />
-            <GenerateDailyReportButton userId={ctx.ownerId} />
-            <GenerateWeeklyReportButton userId={ctx.ownerId} />
-            <GenerateMonthlyReportButton userId={ctx.ownerId} />
+            <div className="relative">
+              <GenerateDailyReportButton
+                userId={ctx.ownerId}
+                className="h-14 px-8 text-lg"
+              />
+              <AdditionalReportButtons userId={ctx.ownerId} />
+            </div>
           </div>
         )}
         <nav
