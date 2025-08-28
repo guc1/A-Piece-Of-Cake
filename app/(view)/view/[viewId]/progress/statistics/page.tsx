@@ -3,9 +3,9 @@ import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { buildViewContext } from '@/lib/profile';
 import { ViewContextProvider } from '@/lib/view-context';
-import TestChatPage from '@/app/progress/testchat/page';
+import { StatisticsHome } from '@/app/progress/statistics/page';
 
-export default async function ViewTestChatPage({
+export default async function ViewStatisticsPage({
   params,
   searchParams,
 }: {
@@ -28,8 +28,8 @@ export default async function ViewTestChatPage({
   });
   return (
     <ViewContextProvider value={ctx}>
-      <section id={`v13w-progress-testchat-${user.id}`}>
-        <TestChatPage />
+      <section id={`v13w-progress-stat-${user.id}`}>
+        <StatisticsHome userId={user.id} />
       </section>
     </ViewContextProvider>
   );
