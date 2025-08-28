@@ -65,16 +65,35 @@ function sortIngredients(list: Ingredient[]) {
   });
 }
 
+type ReportContext = {
+  headingFeedback: string[];
+  daily: { date: string; bad: string[]; observations: string[] }[];
+  weekly: {
+    startDate: string;
+    endDate: string;
+    bad: string[];
+    observations: string[];
+  }[];
+  monthly: {
+    startDate: string;
+    endDate: string;
+    bad: string[];
+    observations: string[];
+  }[];
+};
+
 export default function IngredientsClient({
   userId,
   selfId,
   initialIngredients,
   people,
+  reportContext,
 }: {
   userId: string; // owner id
   selfId?: string; // current viewer id for copy
   initialIngredients: Ingredient[];
   people?: PeopleLists;
+  reportContext?: ReportContext;
 }) {
   const ctx = useViewContext();
   const { editable } = ctx;
@@ -243,6 +262,39 @@ export default function IngredientsClient({
       .join('\n\n');
   }
 
+  function buildImprovementContext(rc?: ReportContext) {
+    if (!rc) return '';
+    const lines: string[] = [];
+    if (rc.headingFeedback.length) {
+      lines.push('Feedback from heading report:');
+      rc.headingFeedback.forEach((f) => lines.push(`- ${f}`));
+    }
+    const add = (
+      label: string,
+      items: {
+        date?: string;
+        startDate?: string;
+        endDate?: string;
+        bad: string[];
+        observations: string[];
+      }[],
+    ) => {
+      if (items.length === 0) return;
+      lines.push(`Last ${items.length} ${label} reports:`);
+      for (const it of items) {
+        const name = it.date ? it.date : `${it.startDate} to ${it.endDate}`;
+        lines.push(name);
+        if (it.bad.length) lines.push(`bad: ${it.bad.join('; ')}`);
+        if (it.observations.length)
+          lines.push(`observations: ${it.observations.join('; ')}`);
+      }
+    };
+    add('daily', rc.daily);
+    add('weekly', rc.weekly);
+    add('monthly', rc.monthly);
+    return lines.join('\n');
+  }
+
   function parseIngredient(str: string): Partial<IngredientInput> | null {
     try {
       return JSON.parse(str);
@@ -270,8 +322,9 @@ export default function IngredientsClient({
     if (!chatInput.trim()) return;
     const isFirst =
       chatMessages.length === 1 && chatMessages[0].role === 'assistant';
+    const improvementCtx = buildImprovementContext(reportContext);
     const userContent = isFirst
-      ? `${chatInput}\n\nHere is the context of the ingredients the user currently has:\n<${buildIngredientContext(ingredients)}>`
+      ? `${chatInput}\n\nHere is the context of the ingredients the user currently has:\n<${buildIngredientContext(ingredients)}>\n\nPoints where the user can improve on according to the rapports:\n<${improvementCtx}>`
       : chatInput;
     const newMessages: ChatMessage[] = [
       ...chatMessages,
@@ -283,7 +336,7 @@ export default function IngredientsClient({
       {
         role: 'system',
         content:
-          'You are a helpful assistant in the Cake framework, a life-planning platform where users build a cake of goals with ingredients—habits or protocols that support their flavors. Recommend an ingredient to the user, grounding suggestions in cutting-edge science. Compare ideas with existing ingredients and, if the user is unsure, suggest one they may be missing. Always end responses with: "Should I create that ingredient for you?" If the user agrees, respond ONLY with a JSON object containing the fields title, shortDescription, usefulness, description, whyUsed, whenUsed, tips. Do not include any other text.',
+          'You are a helpful assistant in the Cake framework, a life-planning platform where users build a cake of goals with ingredients—habits or protocols that support their flavors. Recommend an ingredient to the user, grounding suggestions in cutting-edge science, and on the context of how the user can improve and which habits/protocols could help him, you are going to advise those with argumentation. Compare ideas with existing ingredients and, if the user is unsure, suggest one they may be missing. Always end responses with: "Should I create that ingredient for you?" If the user agrees, respond ONLY with a JSON object containing the fields title, shortDescription, usefulness, description, whyUsed, whenUsed, tips. Do not include any other text.',
       },
       ...newMessages,
     ];
