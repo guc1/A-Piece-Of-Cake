@@ -17,7 +17,7 @@ test('owner review page loads', async ({ page }) => {
   await page.click('text=Sign Up');
   await page.goto('/review');
   await expect(
-    page.getByRole('button', { name: 'Review daily aim' }),
+    page.getByRole('button', { name: 'Generate overview rapport' }),
   ).toBeVisible();
 
   // ensure columns scroll independently
