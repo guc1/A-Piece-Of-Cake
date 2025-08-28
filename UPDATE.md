@@ -254,3 +254,5 @@
 - 2025-08-28: Added Heading Towards agent with overview generation button, API route, database storage, and review page display.
 - 2025-10-27: Fixed heading report generation to return camel-case fields with scores, tightened system prompt, and guarded review page rendering.
   2025-08-28: Expanded ingredient recommendation agent with new system prompt and report-based improvement context.
+- 2025-10-27: Added ingredient improvement chat with AI-assisted updates during editing.
+- 2025-10-27: Closed edit dialog when launching improvement chat and recreate ingredients from AI suggestions to avoid update errors.
