@@ -233,3 +233,4 @@
 - 2025-10-27: Refined daily report system prompt with flavor-cake explanation and user-selectable coach tones.
 - 2025-10-27: Centralized coach tone config, inserted full tone detail into daily report prompt, and logged system prompt.
 - 2025-10-27: Restored coach tone setting with API and schema, defaulting daily report prompts to the user's chosen tone.
+- 2025-10-27: Displayed "No Assessment" placeholders for days without daily reports and highlighted those dates red in the calendar.
