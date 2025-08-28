@@ -270,8 +270,18 @@ export default function IngredientsClient({
     if (!chatInput.trim()) return;
     const isFirst =
       chatMessages.length === 1 && chatMessages[0].role === 'assistant';
+    let reportContext = '';
+    if (isFirst) {
+      try {
+        const res = await fetch('/api/ingredients/recommend/context');
+        const data = await res.json();
+        reportContext = data.context || '';
+      } catch {
+        /* ignore */
+      }
+    }
     const userContent = isFirst
-      ? `${chatInput}\n\nHere is the context of the ingredients the user currently has:\n<${buildIngredientContext(ingredients)}>`
+      ? `${chatInput}\n\nPoints where the user can improve on according to the rapports:\n<${reportContext}>\n\nHere is the context of the ingredients the user currently has:\n<${buildIngredientContext(ingredients)}>`
       : chatInput;
     const newMessages: ChatMessage[] = [
       ...chatMessages,
@@ -283,7 +293,7 @@ export default function IngredientsClient({
       {
         role: 'system',
         content:
-          'You are a helpful assistant in the Cake framework, a life-planning platform where users build a cake of goals with ingredients—habits or protocols that support their flavors. Recommend an ingredient to the user, grounding suggestions in cutting-edge science. Compare ideas with existing ingredients and, if the user is unsure, suggest one they may be missing. Always end responses with: "Should I create that ingredient for you?" If the user agrees, respond ONLY with a JSON object containing the fields title, shortDescription, usefulness, description, whyUsed, whenUsed, tips. Do not include any other text.',
+          'You are a helpful assistant in the Cake framework, a life-planning platform where users build a cake of goals with ingredients—habits or protocols that support their flavors. Recommend an ingredient to the user, grounding suggestions in cutting-edge science, and on the context of how the user can improve and which habits/protocols could help him, you are going to advise those with argumentation. Compare ideas with existing ingredients and, if the user is unsure, suggest one they may be missing. Always end responses with: "Should I create that ingredient for you?" If the user agrees, respond ONLY with a JSON object containing the fields title, shortDescription, usefulness, description, whyUsed, whenUsed, tips. Do not include any other text',
       },
       ...newMessages,
     ];
