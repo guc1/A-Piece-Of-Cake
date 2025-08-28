@@ -31,6 +31,13 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'unfollow',
 ]);
 
+export const coachToneEnum = pgEnum('coach_tone', [
+  'tone_soft',
+  'tone_medium',
+  'tone_hard',
+  'tone_superhard',
+]);
+
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   handle: varchar('handle', { length: 50 }).notNull().unique(),
@@ -44,6 +51,9 @@ export const users = pgTable('users', {
   accountVisibility: accountVisibilityEnum('account_visibility')
     .notNull()
     .default('open'),
+  coachTone: coachToneEnum('coach_tone')
+    .notNull()
+    .default('tone_medium'),
   email: text('email').notNull().unique(),
   name: text('name'),
   passwordHash: text('password_hash').notNull(),
