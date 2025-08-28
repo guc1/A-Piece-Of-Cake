@@ -9,9 +9,11 @@ import { cn } from '@/lib/utils';
 export function GenerateDailyReportButton({
   userId,
   className,
+  buttonClassName,
 }: {
   userId: number;
   className?: string;
+  buttonClassName?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const { addLog } = useLogs();
@@ -103,6 +105,7 @@ export function GenerateDailyReportButton({
           needsCode
             ? 'bg-orange-500 hover:bg-orange-600'
             : 'bg-green-500 hover:bg-green-600',
+          buttonClassName,
         )}
       >
         {loading && (
