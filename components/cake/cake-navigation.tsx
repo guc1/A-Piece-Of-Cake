@@ -11,6 +11,7 @@ import TimeMachine from '@/components/dev/time-machine';
 import { GenerateDailyReportButton } from '@/components/progress/generate-daily-report-button';
 import { GenerateWeeklyReportButton } from '@/components/progress/generate-weekly-report-button';
 import { GenerateMonthlyReportButton } from '@/components/progress/generate-monthly-report-button';
+import { GenerateYearlyReportButton } from '@/components/progress/generate-yearly-report-button';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -146,6 +147,7 @@ export function CakeNavigation() {
               left: '50%',
             }}
           >
+            <GenerateYearlyReportButton userId={ctx.ownerId} />
             <GenerateDailyReportButton userId={ctx.ownerId} />
             <GenerateWeeklyReportButton userId={ctx.ownerId} />
             <GenerateMonthlyReportButton userId={ctx.ownerId} />
