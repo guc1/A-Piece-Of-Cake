@@ -10,6 +10,7 @@ import { hrefFor, type Section } from '@/lib/navigation';
 import TimeMachine from '@/components/dev/time-machine';
 import { GenerateDailyReportButton } from '@/components/progress/generate-daily-report-button';
 import { GenerateWeeklyReportButton } from '@/components/progress/generate-weekly-report-button';
+import { GenerateMonthlyReportButton } from '@/components/progress/generate-monthly-report-button';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -147,6 +148,7 @@ export function CakeNavigation() {
           >
             <GenerateDailyReportButton userId={ctx.ownerId} />
             <GenerateWeeklyReportButton userId={ctx.ownerId} />
+            <GenerateMonthlyReportButton userId={ctx.ownerId} />
           </div>
         )}
         <nav
