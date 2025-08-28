@@ -235,3 +235,5 @@
 - 2025-10-27: Restored coach tone setting with API and schema, defaulting daily report prompts to the user's chosen tone.
 - 2025-10-27: Displayed "No Assessment" placeholders for days without daily reports and highlighted those dates red in the calendar.
 - 2025-10-27: Stored coach tone on daily reports and showed difficulty labels alongside scores in daily progress pages.
+- 2025-10-27: Added weekly assessment agent with generation button, API route, database storage, and overview pages including difficulty labels.
+- 2025-10-27: Prefixed weekly assessment context with the user's rational, skipped days before account creation, and limited weekly generation to Monday–Sunday ranges.
