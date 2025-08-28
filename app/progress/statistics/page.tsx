@@ -6,6 +6,7 @@ import { listWeeklyReports } from '@/lib/weekly-report-store';
 import { listMonthlyReports } from '@/lib/monthly-report-store';
 import { listYearlyReports } from '@/lib/yearly-report-store';
 import StatisticsClient from '@/components/progress/statistics-client';
+import BackButton from '@/components/back-button';
 
 export async function StatisticsHome({ userId }: { userId: number }) {
   const [dailyReports, weeklyReports, monthlyReports, yearlyReports] =
@@ -35,6 +36,7 @@ export async function StatisticsHome({ userId }: { userId: number }) {
 
   return (
     <main className="p-6">
+      <BackButton />
       <h1 className="mb-4 text-2xl font-bold">Statistics</h1>
       <StatisticsClient
         daily={daily}

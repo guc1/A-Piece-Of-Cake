@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor } from '@/lib/navigation';
+import BackButton from '@/components/back-button';
 
 const items = [
   { href: '/progress/overview/daily', label: 'Daily' },
@@ -14,6 +15,7 @@ export function ProgressOverviewHome() {
   const ctx = useViewContext();
   return (
     <main className="p-6">
+      <BackButton />
       <ul className="space-y-2">
         {items.map((i) => (
           <li key={i.href}>
