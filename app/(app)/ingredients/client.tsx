@@ -156,6 +156,26 @@ export default function IngredientsClient({
       JSON.stringify({ chatId: chatIdRef.current, messages: chatMessages }),
     );
   }, [chatMessages]);
+
+  const [improveOpen, setImproveOpen] = useState(false);
+  const initialImproveChat: ChatMessage[] = [
+    {
+      role: 'assistant',
+      content: 'How would you like to improve this ingredient?',
+    },
+  ];
+  const [improveChatMessages, setImproveChatMessages] =
+    useState<ChatMessage[]>(initialImproveChat);
+  const [improveChatInput, setImproveChatInput] = useState('');
+  const improveChatIdRef = useRef<string>(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2),
+  );
+  const improveChatEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    improveChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [improveChatMessages, improveOpen]);
   const [form, setForm] = useState({
     title: '',
     shortDescription: '',
@@ -204,6 +224,18 @@ export default function IngredientsClient({
     setForm(data);
     initialForm.current = data;
     setOpen(true);
+  }
+
+  function openImprove() {
+    if (!editing) return;
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+    improveChatIdRef.current = id;
+    setImproveChatMessages(initialImproveChat);
+    setImproveChatInput('');
+    setImproveOpen(true);
   }
 
   async function save() {
@@ -393,6 +425,111 @@ export default function IngredientsClient({
     }
   }
 
+  async function sendImproveChat() {
+    if (!improveChatInput.trim() || !editing) return;
+    const isFirst =
+      improveChatMessages.length === 1 &&
+      improveChatMessages[0].role === 'assistant';
+    const improvementCtx = buildImprovementContext(reportContext);
+    const currentCtx = buildIngredientContext([editing]);
+    const userContent = isFirst
+      ? `${improveChatInput}\n\nHere is the current info of the ingredient:\n<${currentCtx}>\n\nPoints where the user can improve on according to the rapports:\n<${improvementCtx}>`
+      : improveChatInput;
+    const newMessages: ChatMessage[] = [
+      ...improveChatMessages,
+      { role: 'user', content: userContent },
+    ];
+    setImproveChatMessages(newMessages);
+    setImproveChatInput('');
+    const payload = [
+      {
+        role: 'system',
+        content:
+          'You are a helpful assistant in the Cake framework, a life-planning platform where users build a cake of goals with ingredients—habits or protocols that support their flavors. Recommend an update to the ingredient to the user, grounding suggestions in cutting-edge science, and on the context of how the user can improve and which habits/protocols could help him and the feedback the user gave on the ingredient, you are going to advise those changes to the ingredient with argumentation., if the user is unsure, suggest one they may be missing to the ingredient. Always end responses with: "Should I update that ingredient for you?" If the user agrees, respond ONLY with a JSON object containing the fields title, shortDescription, usefulness, description, whyUsed, whenUsed, tips. Do not include any other text',
+      },
+      ...newMessages,
+    ];
+    try {
+      const res = await fetch('/api/ingredients/improve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatId: improveChatIdRef.current,
+          messages: payload,
+        }),
+      });
+      const data = await res.json();
+      if (data.response) {
+        const parsed = parseIngredient(data.response as string);
+        if (parsed && parsed.title) {
+          const ok = confirm(
+            `Do you want to update this ingredient (${parsed.title})?`,
+          );
+          if (ok) {
+            const merged = { ...form, ...parsed } as any;
+            const fd = new FormData();
+            Object.entries(merged).forEach(([k, v]) => {
+              if (v !== null && v !== undefined) {
+                fd.append(k, String(v));
+              }
+            });
+            const updated = await updateMine(editing.id, fd);
+            if (updated) {
+              setIngredients((prev) =>
+                sortIngredients(
+                  prev.map((p) => (p.id === updated.id ? updated : p)),
+                ),
+              );
+              setEditing(updated);
+              setForm({
+                title: updated.title,
+                shortDescription: updated.shortDescription,
+                usefulness: updated.usefulness,
+                description: updated.description,
+                whyUsed: updated.whyUsed,
+                whenUsed: updated.whenUsed,
+                tips: updated.tips,
+                icon: updated.icon,
+                visibility: updated.visibility,
+              });
+              setImproveChatMessages([
+                ...newMessages,
+                {
+                  role: 'assistant',
+                  content: `Updated ingredient "${updated.title}".`,
+                },
+              ]);
+            }
+          } else {
+            setImproveChatMessages([
+              ...newMessages,
+              { role: 'assistant', content: 'Okay, not updating it.' },
+            ]);
+          }
+        } else {
+          setImproveChatMessages([
+            ...newMessages,
+            { role: 'assistant', content: data.response as string },
+          ]);
+        }
+      }
+    } catch {
+      setImproveChatMessages([
+        ...newMessages,
+        { role: 'assistant', content: 'Sorry, something went wrong.' },
+      ]);
+    }
+  }
+
+  function resetImproveChat() {
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+    improveChatIdRef.current = id;
+    setImproveChatMessages(initialImproveChat);
+  }
+
   async function importPreset(p: IngredientInput) {
     const fd = new FormData();
     Object.entries(p).forEach(([k, v]) => {
@@ -579,6 +716,67 @@ export default function IngredientsClient({
                 className="rounded border px-3 py-1"
                 onClick={() => {
                   setRecommendOpen(false);
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {improveOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex w-[90%] max-w-2xl max-h-[90vh] flex-col rounded bg-white p-6 shadow-lg">
+            <div className="mb-4 flex-1 overflow-y-auto space-y-2">
+              {improveChatMessages.map((m, i) => (
+                <div
+                  key={i}
+                  className={m.role === 'user' ? 'text-right' : 'text-left'}
+                >
+                  <span
+                    className={
+                      m.role === 'user'
+                        ? 'inline-block rounded bg-orange-100 px-2 py-1'
+                        : 'inline-block rounded bg-gray-200 px-2 py-1'
+                    }
+                  >
+                    {m.content}
+                  </span>
+                </div>
+              ))}
+              <div ref={improveChatEndRef} />
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={improveChatInput}
+                onChange={(e) => setImproveChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') sendImproveChat();
+                }}
+                placeholder="Type your answer..."
+                className="flex-1 rounded border px-2 py-1"
+              />
+              <button
+                onClick={sendImproveChat}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+              >
+                Send
+              </button>
+            </div>
+            <div className="mt-4 flex justify-between">
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={resetImproveChat}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={() => {
+                  setImproveOpen(false);
                 }}
               >
                 Close
@@ -874,13 +1072,22 @@ export default function IngredientsClient({
             </select>
             <div className="flex justify-end gap-2">
               {editing && editable && (
-                <button
-                  type="button"
-                  className="rounded bg-red-600 px-3 py-1 text-white"
-                  onClick={() => remove(editing)}
-                >
-                  Delete
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="rounded bg-orange-500 px-3 py-1 text-white"
+                    onClick={openImprove}
+                  >
+                    Improve
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded bg-red-600 px-3 py-1 text-white"
+                    onClick={() => remove(editing)}
+                  >
+                    Delete
+                  </button>
+                </>
               )}
               {editable && (
                 <button
