@@ -15,5 +15,6 @@ export interface DailyReport {
   bad: string[];
   observations: string[];
   score: number;
+  coachTone: string;
   createdAt: string;
 }

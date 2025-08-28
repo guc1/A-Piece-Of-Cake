@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
     .select({ coachTone: users.coachTone })
     .from(users)
     .where(eq(users.id, userId));
-  const toneId = body.toneId || body.tone || userRow?.coachTone || 'tone_medium';
+  const toneId =
+    body.toneId || body.tone || userRow?.coachTone || 'tone_medium';
 
   const { date: dateObj, tz } = resolvePlanDate('live', session?.user as any, {
     cookies: req.cookies,
@@ -269,7 +270,7 @@ export async function POST(req: NextRequest) {
         ? parsed.observations
         : [],
     };
-    await createDailyReport(userId, targetDate, content, score);
+    await createDailyReport(userId, targetDate, content, score, toneId);
     console.log('daily report saved', { userId, date: targetDate, score });
     return NextResponse.json({ report: parsed, score, context });
   } catch (e: any) {
