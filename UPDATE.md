@@ -245,3 +245,4 @@
 - 2025-10-27: Hid weekly/monthly/yearly report buttons inside a "new" dropdown so only the daily button shows on home.
 - 2025-10-27: Enlarged extra report menu into a full-screen overlay with blurred background, big buttons, and post-generation message display until closed.
 - 2025-10-27: Positioned "new" indicator to the right of the daily report button and shifted the daily button left for balance.
+- 2025-10-27: Added statistics page with daily/weekly/monthly/yearly charts and removed test chat.
