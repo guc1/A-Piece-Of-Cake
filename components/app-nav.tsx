@@ -22,9 +22,25 @@ export function AppNav() {
   const pathname = usePathname();
   const sections: Section[] =
     ctx.mode === 'viewer'
-      ? ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people', 'progress']
+      ? [
+          'cake',
+          'planning',
+          'flavors',
+          'ingredients',
+          'review',
+          'people',
+          'progress',
+        ]
       : ctx.mode === 'historical'
-        ? ['cake', 'planning', 'flavors', 'ingredients', 'review', 'people', 'visibility']
+        ? [
+            'cake',
+            'planning',
+            'flavors',
+            'ingredients',
+            'review',
+            'people',
+            'visibility',
+          ]
         : [
             'cake',
             'planning',
@@ -37,7 +53,7 @@ export function AppNav() {
           ];
 
   return (
-    <nav className="sticky top-0 z-50 flex items-center justify-between border-b bg-[var(--bg)] p-4">
+    <nav className="flex items-center justify-between border-b bg-[var(--bg)] p-4">
       <ul className="flex gap-4">
         {sections.map((sec) => {
           const href = hrefFor(sec, ctx);

@@ -250,3 +250,4 @@
 - 2025-10-27: Added sticky statistics header with period navigation and hid controls in historical snapshot mode.
 - 2025-10-27: Made top navigation sticky, added back buttons across progress pages, and removed white statistics header.
 - 2025-10-27: Added home back button on progress landing and let BackButton navigate to explicit routes.
+- 2025-10-27: Removed sticky top navigation and added shared layout for progress pages to display the header without stickiness.
