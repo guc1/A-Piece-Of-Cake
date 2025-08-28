@@ -26,3 +26,14 @@
    ```sh
    pnpm test
    ```
+
+## Coach Tones
+
+Users can adjust how firm the AI coach should be. Four tone IDs are available:
+
+- `tone_soft` — supportive ramp-up for beginners.
+- `tone_medium` — balanced guidance to keep momentum.
+- `tone_hard` — high accountability without fluff.
+- `tone_superhard` — elite performance mode with tight loops.
+
+Pick a tone in **Settings → Account** using the slider; the choice influences future AI feedback.

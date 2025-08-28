@@ -230,3 +230,4 @@
 - 2025-10-27: Positioned "Generate daily rapport" button centered between cake and navigation with fixed spacing.
 - 2025-10-27: Shifted "Generate daily rapport" button 60px left of center while keeping cake and navigation stationary.
 - 2025-10-27: Moved "Generate daily rapport" button ~30px further left (about 90px total) to center under the cake without moving other elements.
+- 2025-10-27: Added coach tone settings with soft, medium, hard, and superhard options and API support.

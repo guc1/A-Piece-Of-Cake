@@ -3,6 +3,7 @@ import { users } from './db/schema';
 import { eq } from 'drizzle-orm';
 import { randomBytes, scryptSync, timingSafeEqual, randomUUID } from 'crypto';
 import type { Session } from 'next-auth';
+import type { CoachToneId } from './ai/coach-tone';
 
 export interface NewUser {
   email: string;
@@ -11,6 +12,7 @@ export interface NewUser {
   displayName?: string;
   avatarUrl?: string;
   accountVisibility?: 'open' | 'closed' | 'private';
+  coachTone?: CoachToneId;
   name?: string;
 }
 
@@ -37,6 +39,7 @@ export async function createUser(input: NewUser) {
       displayName: input.displayName ?? input.name,
       avatarUrl: input.avatarUrl,
       accountVisibility: input.accountVisibility ?? 'open',
+      coachTone: input.coachTone ?? 'tone_medium',
       name: input.name,
       passwordHash,
       viewId: randomUUID(),
