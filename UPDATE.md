@@ -251,3 +251,4 @@
 - 2025-10-27: Made top navigation sticky, added back buttons across progress pages, and removed white statistics header.
 - 2025-10-27: Added home back button on progress landing and let BackButton navigate to explicit routes.
 - 2025-10-27: Removed sticky top navigation and added shared layout for progress pages to display the header without stickiness.
+- 2025-10-27: Added heading towards agent with overview report generation, storage, and review page display with regeneration code.

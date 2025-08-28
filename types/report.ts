@@ -63,3 +63,18 @@ export interface YearlyReport {
   coachTone: string;
   createdAt: string;
 }
+
+export interface OverviewReport {
+  id: number;
+  userId: number;
+  date: string; // YYYY-MM-DD
+  version: number;
+  overview: string;
+  shortTerm: string[];
+  longTerm: string[];
+  feedback: string[];
+  scoreProgress: number;
+  scoreProbability: number;
+  coachTone: string;
+  createdAt: string;
+}

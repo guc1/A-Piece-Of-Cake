@@ -336,3 +336,28 @@ export const yearlyReports = pgTable(
     ).on(table.userId, table.startDate, table.version),
   }),
 );
+
+export const overviewReports = pgTable(
+  'overview_reports',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    date: date('date').notNull(),
+    overview: text('overview').notNull().default(''),
+    shortTerm: text('short_term').notNull().default('[]'),
+    longTerm: text('long_term').notNull().default('[]'),
+    feedback: text('feedback').notNull().default('[]'),
+    coachTone: text('coach_tone').notNull().default('tone_medium'),
+    scoreProgress: integer('score_progress').notNull(),
+    scoreProbability: integer('score_probability').notNull(),
+    version: integer('version').notNull().default(1),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserDateVersion: uniqueIndex(
+      'overview_reports_user_date_version_unique',
+    ).on(table.userId, table.date, table.version),
+  }),
+);
