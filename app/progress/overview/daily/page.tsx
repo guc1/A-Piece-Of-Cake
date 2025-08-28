@@ -6,6 +6,7 @@ import { listDailyReports } from '@/lib/daily-report-store';
 import { getCoachTone } from '@/lib/ai/coach-tone';
 import { getDifficultyLabel } from '@/lib/ai/difficulty';
 import { listProfileSnapshotDates } from '@/lib/profile-snapshots';
+import BackButton from '@/components/back-button';
 
 export async function DailyReportsHome({ userId }: { userId: number }) {
   const [reports, snapshots] = await Promise.all([
@@ -24,6 +25,7 @@ export async function DailyReportsHome({ userId }: { userId: number }) {
   );
   return (
     <main className="p-6">
+      <BackButton />
       <h1 className="mb-4 text-2xl font-bold">Daily Reports</h1>
       <ul className="space-y-4" id={`d41lyrep-list-${userId}`}>
         {items.map((r) =>

@@ -37,7 +37,7 @@ export function AppNav() {
           ];
 
   return (
-    <nav className="flex items-center justify-between border-b p-4">
+    <nav className="sticky top-0 z-50 flex items-center justify-between border-b bg-[var(--bg)] p-4">
       <ul className="flex gap-4">
         {sections.map((sec) => {
           const href = hrefFor(sec, ctx);

@@ -8,6 +8,7 @@ import { listWeeklyReports } from '@/lib/weekly-report-store';
 import { listDailyReportDates } from '@/lib/daily-report-store';
 import { getCoachTone } from '@/lib/ai/coach-tone';
 import { getDifficultyLabel } from '@/lib/ai/difficulty';
+import BackButton from '@/components/back-button';
 
 function slugFromRange(start: string, end: string): string {
   const [ys, ms, ds] = start.split('-');
@@ -32,6 +33,7 @@ export async function YearlyReportsHome({ userId }: { userId: number }) {
   if (years.length === 0)
     return (
       <main className="p-6">
+        <BackButton />
         <h1 className="mb-4 text-2xl font-bold">Yearly Reports</h1>
         <p>No yearly data yet.</p>
       </main>
@@ -49,6 +51,7 @@ export async function YearlyReportsHome({ userId }: { userId: number }) {
 
   return (
     <main className="p-6">
+      <BackButton />
       <h1 className="mb-4 text-2xl font-bold">Yearly Reports</h1>
       <ul className="space-y-4" id={`y3arlyrep-list-${userId}`}>
         {list.map((y) => {

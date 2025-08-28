@@ -6,6 +6,7 @@ import { listWeeklyReports } from '@/lib/weekly-report-store';
 import { listDailyReportDates } from '@/lib/daily-report-store';
 import { getCoachTone } from '@/lib/ai/coach-tone';
 import { getDifficultyLabel } from '@/lib/ai/difficulty';
+import BackButton from '@/components/back-button';
 
 function slugFromRange(start: string, end: string): string {
   const [ys, ms, ds] = start.split('-');
@@ -28,6 +29,7 @@ export async function WeeklyReportsHome({ userId }: { userId: number }) {
   if (allDates.length === 0)
     return (
       <main className="p-6">
+        <BackButton />
         <h1 className="mb-4 text-2xl font-bold">Weekly Reports</h1>
         <p>No weekly data yet.</p>
       </main>
@@ -63,6 +65,7 @@ export async function WeeklyReportsHome({ userId }: { userId: number }) {
 
   return (
     <main className="p-6">
+      <BackButton />
       <h1 className="mb-4 text-2xl font-bold">Weekly Reports</h1>
       <ul className="space-y-4" id={`w33klyrep-list-${userId}`}>
         {weeks.map((w) => {
