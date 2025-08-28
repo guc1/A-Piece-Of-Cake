@@ -4,6 +4,7 @@ import { ensureUser } from '@/lib/users';
 import { redirect } from 'next/navigation';
 import { listDailyReports } from '@/lib/daily-report-store';
 import { getCoachTone } from '@/lib/ai/coach-tone';
+import { getDifficultyLabel } from '@/lib/ai/difficulty';
 import { listProfileSnapshotDates } from '@/lib/profile-snapshots';
 
 export async function DailyReportsHome({ userId }: { userId: number }) {
@@ -70,6 +71,12 @@ export async function DailyReportsHome({ userId }: { userId: number }) {
                     id={`d41lyrep-score-${r.slug}-${userId}`}
                   >
                     {r.score}
+                  </span>
+                  <span
+                    className="ml-1 text-sm text-zinc-600"
+                    id={`d41lyrep-diff-${r.slug}-${userId}`}
+                  >
+                    {getDifficultyLabel(r.score)}
                   </span>
                 </div>
               </div>
