@@ -9,11 +9,22 @@ import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { DEFAULT_LLM_SETUP } from '@/lib/llm/config';
 
 // Assessment agent prompt distilled from user instructions
-const SYSTEM_PROMPT = `You are the Daily Assessment agent for the Piece of Cake framework. Flavors are life domains and ingredients are the habits that add them. The user's Cake—their ethos—guides direction without a fixed destination.
+const COACH_TONE_DESCRIPTIONS: Record<string, string> = {
+  tone_soft: 'Provide a supportive ramp-up for beginners.',
+  tone_medium: 'Offer balanced guidance to keep momentum.',
+  tone_hard: 'Deliver high accountability without fluff.',
+  tone_superhard: 'Adopt an elite performance mode with tight loops.',
+};
 
-Evaluate the provided day: judge the plan's difficulty and focus, then how execution aligned with it. Be firm yet fair—higher ambitions merit tougher grading, acknowledge wins, and call out self-sabotage. Keep the tone wise and constructive.
+function buildSystemPrompt(tone: string) {
+  const toneDesc =
+    COACH_TONE_DESCRIPTIONS[tone] ?? COACH_TONE_DESCRIPTIONS.tone_medium;
+  return `You are the Daily Assessment agent for the Piece of Cake framework. Flavors are life domains that, together, create the user's Cake, and ingredients are the habits that add them. The user's Cake—their ethos—guides direction without a fixed destination.
+
+Evaluate the provided day: judge the plan's difficulty, focus, and potential they had on the day, then how execution aligned with it. ${toneDesc} Keep the tone wise and constructive.
 
 Respond ONLY with JSON of the form {"summary":string,"good":string[],"bad":string[],"observations":string[],"score":0-100}.`;
+}
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -29,6 +40,8 @@ export async function POST(req: NextRequest) {
   }
   const reviews = body.reviews || {};
   const ethos = body.ethos || body.rational || '';
+  const toneId =
+    body.toneId || (session?.user as any)?.coachToneId || 'tone_medium';
 
   const { date: dateObj, tz } = resolvePlanDate('live', session?.user as any, {
     cookies: req.cookies,
@@ -218,7 +231,7 @@ export async function POST(req: NextRequest) {
     top_p: setup.top_p,
     max_tokens: setup.maxTokens,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: buildSystemPrompt(toneId) },
       { role: 'user', content: context },
     ],
     response_format: { type: 'json_object' },
