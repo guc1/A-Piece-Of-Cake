@@ -44,6 +44,7 @@ export const users = pgTable('users', {
   accountVisibility: accountVisibilityEnum('account_visibility')
     .notNull()
     .default('open'),
+  coachTone: text('coach_tone').notNull().default('tone_medium'),
   email: text('email').notNull().unique(),
   name: text('name'),
   passwordHash: text('password_hash').notNull(),

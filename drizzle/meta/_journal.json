@@ -177,6 +177,20 @@
       "when": 1756284819557,
       "tag": "0024_add_daily_report_version",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1756284819558,
+      "tag": "0025_split_daily_report_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1756284819559,
+      "tag": "0026_add_users_coach_tone",
+      "breakpoints": true
     }
   ]
 }
