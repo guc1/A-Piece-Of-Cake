@@ -7,13 +7,21 @@ import { getFlavor } from '@/lib/flavors-store';
 import { getSubflavor } from '@/lib/subflavors-store';
 import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { DEFAULT_LLM_SETUP } from '@/lib/llm/config';
+import { getCoachTone } from '@/lib/ai/coach-tone';
+import { db } from '@/lib/db';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
-// Assessment agent prompt distilled from user instructions
-const SYSTEM_PROMPT = `You are the Daily Assessment agent for the Piece of Cake framework. Flavors are life domains and ingredients are the habits that add them. The user's Cake—their ethos—guides direction without a fixed destination.
+function buildSystemPrompt(toneId: string) {
+  const tone = getCoachTone(toneId);
+  return `You are the Daily Assessment agent for the Piece of Cake framework. Flavors are life domains and ingredients are the habits that add them; when combined, the flavors form the user's Cake—their ethos—which guides direction without a fixed destination.
 
-Evaluate the provided day: judge the plan's difficulty and focus, then how execution aligned with it. Be firm yet fair—higher ambitions merit tougher grading, acknowledge wins, and call out self-sabotage. Keep the tone wise and constructive.
+Evaluate the provided day: judge the plan's difficulty, focus, and potential they had on the day, then how execution aligned with it. Be firm yet fair—higher ambitions merit tougher grading, acknowledge wins, and call out self-sabotage. The tone of your assessment should be:
+${JSON.stringify(tone, null, 2)}
+Keep the tone wise and constructive.
 
 Respond ONLY with JSON of the form {"summary":string,"good":string[],"bad":string[],"observations":string[],"score":0-100}.`;
+}
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -29,6 +37,11 @@ export async function POST(req: NextRequest) {
   }
   const reviews = body.reviews || {};
   const ethos = body.ethos || body.rational || '';
+  const [userRow] = await db
+    .select({ coachTone: users.coachTone })
+    .from(users)
+    .where(eq(users.id, userId));
+  const toneId = body.toneId || body.tone || userRow?.coachTone || 'tone_medium';
 
   const { date: dateObj, tz } = resolvePlanDate('live', session?.user as any, {
     cookies: req.cookies,
@@ -204,6 +217,8 @@ export async function POST(req: NextRequest) {
   const context = lines.join('\n');
 
   const setup = DEFAULT_LLM_SETUP;
+  const systemPrompt = buildSystemPrompt(toneId);
+  console.log('daily report system prompt', systemPrompt);
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -218,7 +233,7 @@ export async function POST(req: NextRequest) {
     top_p: setup.top_p,
     max_tokens: setup.maxTokens,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       { role: 'user', content: context },
     ],
     response_format: { type: 'json_object' },

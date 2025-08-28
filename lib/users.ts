@@ -37,6 +37,7 @@ export async function createUser(input: NewUser) {
       displayName: input.displayName ?? input.name,
       avatarUrl: input.avatarUrl,
       accountVisibility: input.accountVisibility ?? 'open',
+      coachTone: 'tone_medium',
       name: input.name,
       passwordHash,
       viewId: randomUUID(),
