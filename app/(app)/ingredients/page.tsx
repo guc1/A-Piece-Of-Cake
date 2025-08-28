@@ -6,6 +6,10 @@ import IngredientsClient from './client';
 import { buildViewContext } from '@/lib/profile';
 import { ViewContextProvider } from '@/lib/view-context';
 import { listPeople } from '@/lib/people-store';
+import { getLatestHeadingReport } from '@/lib/heading-report-store';
+import { listDailyReports } from '@/lib/daily-report-store';
+import { listWeeklyReports } from '@/lib/weekly-report-store';
+import { listMonthlyReports } from '@/lib/monthly-report-store';
 
 export default async function IngredientsPage({
   searchParams,
@@ -17,8 +21,40 @@ export default async function IngredientsPage({
   if (!session) notFound();
   const me = await ensureUser(session);
   const at = params?.at ? new Date(params.at) : undefined;
-  const ingredients = await listIngredients(String(me.id), me.id, at);
-  const people = await listPeople(me.id);
+  const [
+    ingredients,
+    people,
+    heading,
+    dailyReports,
+    weeklyReports,
+    monthlyReports,
+  ] = await Promise.all([
+    listIngredients(String(me.id), me.id, at),
+    listPeople(me.id),
+    getLatestHeadingReport(me.id),
+    listDailyReports(me.id),
+    listWeeklyReports(me.id),
+    listMonthlyReports(me.id),
+  ]);
+
+  const reportContext = {
+    headingFeedback: heading?.feedback ?? [],
+    daily: dailyReports
+      .slice(0, 2)
+      .map((r) => ({ date: r.date, bad: r.bad, observations: r.observations })),
+    weekly: weeklyReports.slice(0, 2).map((r) => ({
+      startDate: r.startDate,
+      endDate: r.endDate,
+      bad: r.bad,
+      observations: r.observations,
+    })),
+    monthly: monthlyReports.slice(0, 2).map((r) => ({
+      startDate: r.startDate,
+      endDate: r.endDate,
+      bad: r.bad,
+      observations: r.observations,
+    })),
+  };
   const ctx = buildViewContext({
     ownerId: me.id,
     viewerId: me.id,
@@ -33,6 +69,7 @@ export default async function IngredientsPage({
         selfId={String(me.id)}
         initialIngredients={ingredients}
         people={people}
+        reportContext={reportContext}
       />
     </ViewContextProvider>
   );
@@ -43,11 +80,13 @@ export function IngredientsHome({
   selfId,
   initialIngredients,
   people,
+  reportContext,
 }: {
   userId: string;
   selfId?: string;
   initialIngredients: any[];
   people?: any;
+  reportContext?: any;
 }) {
   return (
     <IngredientsClient
@@ -55,6 +94,7 @@ export function IngredientsHome({
       selfId={selfId}
       initialIngredients={initialIngredients as any}
       people={people as any}
+      reportContext={reportContext}
     />
   );
 }
