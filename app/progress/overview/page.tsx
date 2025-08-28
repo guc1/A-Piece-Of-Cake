@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor } from '@/lib/navigation';
+import StickyHeader from '@/components/sticky-header';
 
 const items = [
   { href: '/progress/overview/daily', label: 'Daily' },
@@ -13,20 +14,23 @@ const items = [
 export function ProgressOverviewHome() {
   const ctx = useViewContext();
   return (
-    <main className="p-6">
-      <ul className="space-y-2">
-        {items.map((i) => (
-          <li key={i.href}>
-            <Link
-              href={hrefFor(i.href, ctx)}
-              className="block rounded border p-4 hover:bg-orange-50"
-            >
-              {i.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
+    <>
+      <StickyHeader title="Progress Overview" />
+      <main className="p-6 pt-20">
+        <ul className="space-y-2">
+          {items.map((i) => (
+            <li key={i.href}>
+              <Link
+                href={hrefFor(i.href, ctx)}
+                className="block rounded border p-4 hover:bg-orange-50"
+              >
+                {i.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </>
   );
 }
 
