@@ -9,6 +9,7 @@ import { useViewContext } from '@/lib/view-context';
 import { hrefFor, type Section } from '@/lib/navigation';
 import TimeMachine from '@/components/dev/time-machine';
 import { GenerateDailyReportButton } from '@/components/progress/generate-daily-report-button';
+import { GenerateWeeklyReportButton } from '@/components/progress/generate-weekly-report-button';
 
 export function CakeNavigation() {
   const router = useRouter();
@@ -138,13 +139,14 @@ export function CakeNavigation() {
       <div className="grid w-full place-items-center relative">
         {ctx.editable && (
           <div
-            className="absolute -translate-x-1/2"
+            className="absolute -translate-x-1/2 flex gap-2"
             style={{
               top: '-66px',
-              left: 'calc(50% - 90px)', // nudge left ~90px from center
+              left: '50%',
             }}
           >
             <GenerateDailyReportButton userId={ctx.ownerId} />
+            <GenerateWeeklyReportButton userId={ctx.ownerId} />
           </div>
         )}
         <nav

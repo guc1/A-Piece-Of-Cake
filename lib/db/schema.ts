@@ -261,3 +261,28 @@ export const dailyReports = pgTable(
     ).on(table.userId, table.date, table.version),
   }),
 );
+
+export const weeklyReports = pgTable(
+  'weekly_reports',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    startDate: date('start_date').notNull(),
+    endDate: date('end_date').notNull(),
+    summary: text('summary').notNull().default(''),
+    good: text('good').notNull().default('[]'),
+    bad: text('bad').notNull().default('[]'),
+    observations: text('observations').notNull().default('[]'),
+    coachTone: text('coach_tone').notNull().default('tone_medium'),
+    score: integer('score').notNull(),
+    version: integer('version').notNull().default(1),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserWeekVersion: uniqueIndex(
+      'weekly_reports_user_week_version_unique',
+    ).on(table.userId, table.startDate, table.version),
+  }),
+);
