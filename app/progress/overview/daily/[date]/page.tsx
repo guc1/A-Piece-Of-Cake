@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
 import { getDailyReport } from '@/lib/daily-report-store';
+import { getCoachTone } from '@/lib/ai/coach-tone';
 import { redirect, notFound } from 'next/navigation';
 
 export async function DailyReportDetailView({
@@ -12,17 +13,30 @@ export async function DailyReportDetailView({
 }) {
   const report = await getDailyReport(userId, slug);
   if (!report) notFound();
-  const { summary, good, bad, observations } = report;
+  const { summary, good, bad, observations, coachTone } = report;
   return (
     <main className="p-6">
-      <h1 className="mb-4 text-2xl font-bold" id={`d41lyrep-title-${slug}-${userId}`}>
+      <h1
+        className="mb-4 text-2xl font-bold"
+        id={`d41lyrep-title-${slug}-${userId}`}
+      >
         Report for {report.date}
-        {report.version > 1 && <span className="ml-1">(v{report.version})</span>}
+        {report.version > 1 && (
+          <span className="ml-1">(v{report.version})</span>
+        )}
       </h1>
-      <p className="mb-4 font-semibold" id={`d41lyrep-score-${slug}-${userId}`}>
-        Score: {report.score}
+      <p className="mb-4 font-semibold">
+        <span id={`d41lyrep-tone-${slug}-${userId}`}>
+          {getCoachTone(coachTone).name}
+        </span>
+        <span className="ml-2" id={`d41lyrep-score-${slug}-${userId}`}>
+          Score: {report.score}
+        </span>
       </p>
-      <pre className="whitespace-pre-wrap" id={`d41lyrep-sum-${slug}-${userId}`}>
+      <pre
+        className="whitespace-pre-wrap"
+        id={`d41lyrep-sum-${slug}-${userId}`}
+      >
         {summary}
       </pre>
       {good.length > 0 && (

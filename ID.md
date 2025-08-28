@@ -199,6 +199,7 @@ Modal form IDs:
 - `d41lyrep-item-{slug}-{ownerId}` → single daily report entry in list.
 - `d41lyrep-date-{slug}-{ownerId}` → date heading in list entry.
 - `d41lyrep-score-{slug}-{ownerId}` → score badge in list entry.
+- `d41lyrep-tone-{slug}-{ownerId}` → coach tone label in list entry or detail.
 - `d41lyrep-sum-{slug}-{ownerId}` → summary text snippet in list entry.
 - `d41lyrep-good-{index}-{slug}-{ownerId}` → good item in list entry.
 - `d41lyrep-bad-{index}-{slug}-{ownerId}` → bad item in list entry.

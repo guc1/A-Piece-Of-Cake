@@ -42,6 +42,7 @@ export async function listDailyReports(userId: number): Promise<
     slug: string;
     version: number;
     score: number;
+    coachTone: string;
     summary: string;
     good: string[];
     bad: string[];
@@ -57,6 +58,7 @@ export async function listDailyReports(userId: number): Promise<
       bad: dailyReports.bad,
       observations: dailyReports.observations,
       version: dailyReports.version,
+      coachTone: dailyReports.coachTone,
     })
     .from(dailyReports)
     .where(eq(dailyReports.userId, userId))
@@ -69,6 +71,7 @@ export async function listDailyReports(userId: number): Promise<
       slug: slugFromDate(ymd, version),
       version,
       score: r.score ?? 0,
+      coachTone: r.coachTone ?? 'tone_medium',
       summary: r.summary ?? '',
       good: parseList(r.good),
       bad: parseList(r.bad),
@@ -103,6 +106,7 @@ export async function getDailyReport(
     bad: parseList(row.bad),
     observations: parseList(row.observations),
     score: row.score ?? 0,
+    coachTone: row.coachTone ?? 'tone_medium',
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
 }
@@ -112,6 +116,7 @@ export async function createDailyReport(
   date: string,
   content: ReportContent,
   score: number,
+  coachTone: string,
 ): Promise<void> {
   const ymd = new Date(date).toISOString().slice(0, 10);
   try {
@@ -129,6 +134,7 @@ export async function createDailyReport(
       good: JSON.stringify(content.good ?? []),
       bad: JSON.stringify(content.bad ?? []),
       observations: JSON.stringify(content.observations ?? []),
+      coachTone,
       score,
       version: nextVersion,
     });
@@ -137,12 +143,14 @@ export async function createDailyReport(
       date: ymd,
       version: nextVersion,
       score,
+      coachTone,
     });
   } catch (error) {
     console.error('createDailyReport failed', {
       userId,
       date: ymd,
       score,
+      coachTone,
       content,
       error,
     });

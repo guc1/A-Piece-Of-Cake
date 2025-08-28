@@ -250,6 +250,7 @@ export const dailyReports = pgTable(
     good: text('good').notNull().default('[]'),
     bad: text('bad').notNull().default('[]'),
     observations: text('observations').notNull().default('[]'),
+    coachTone: text('coach_tone').notNull().default('tone_medium'),
     score: integer('score').notNull(),
     version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at').defaultNow(),

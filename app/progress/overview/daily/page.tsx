@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
 import { redirect } from 'next/navigation';
 import { listDailyReports } from '@/lib/daily-report-store';
+import { getCoachTone } from '@/lib/ai/coach-tone';
 import { listProfileSnapshotDates } from '@/lib/profile-snapshots';
 
 export async function DailyReportsHome({ userId }: { userId: number }) {
@@ -33,7 +34,9 @@ export async function DailyReportsHome({ userId }: { userId: number }) {
             >
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold">{r.date}</h2>
-                <span className="font-semibold text-red-600">No Assessment</span>
+                <span className="font-semibold text-red-600">
+                  No Assessment
+                </span>
               </div>
               <p className="mt-2 text-sm text-zinc-600">
                 This day the user did not generate a daily assessment.
@@ -51,14 +54,24 @@ export async function DailyReportsHome({ userId }: { userId: number }) {
                   id={`d41lyrep-date-${r.slug}-${userId}`}
                 >
                   {r.date}
-                  {r.version > 1 && <span className="ml-1">(v{r.version})</span>}
+                  {r.version > 1 && (
+                    <span className="ml-1">(v{r.version})</span>
+                  )}
                 </h2>
-                <span
-                  className="font-semibold"
-                  id={`d41lyrep-score-${r.slug}-${userId}`}
-                >
-                  {r.score}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="font-semibold"
+                    id={`d41lyrep-tone-${r.slug}-${userId}`}
+                  >
+                    {getCoachTone(r.coachTone).name}
+                  </span>
+                  <span
+                    className="font-semibold"
+                    id={`d41lyrep-score-${r.slug}-${userId}`}
+                  >
+                    {r.score}
+                  </span>
+                </div>
               </div>
               {r.summary && (
                 <p
