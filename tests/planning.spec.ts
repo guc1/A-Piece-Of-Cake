@@ -196,3 +196,45 @@ test('future plan persists across day change', async ({ page }) => {
   );
   await expect(page.locator('[id^="p1an-blk-"]')).toHaveCount(1);
 });
+
+test('multi-select moves blocks together', async ({ page }) => {
+  const handle = `user${Date.now()}ms`;
+  const email = `${handle}@example.com`;
+  const password = 'pass1234';
+  await page.goto('/signup');
+  await page.fill('input[placeholder="Name"]', 'Tester');
+  await page.fill('input[placeholder="Handle"]', handle);
+  await page.fill('input[placeholder="Email"]', email);
+  await page.fill('input[placeholder="Password"]', password);
+  await page.click('text=Sign Up');
+  await page.goto('/planning');
+  await page.click('[id^="p1an-btn-next-"]');
+  await page.click('[id^="p1an-add-top-"]');
+  await page.click('button[id^="p1an-meta-close-"]');
+  await page.click('[id^="p1an-add-top-"]');
+  await page.click('button[id^="p1an-meta-close-"]');
+  const block1 = page.locator('[id^="p1an-blk-"]').nth(0);
+  const block2 = page.locator('[id^="p1an-blk-"]').nth(1);
+  const box1 = await block1.boundingBox();
+  const box2 = await block2.boundingBox();
+  const startX = box1!.x + box1!.width / 2;
+  const startY = box1!.y - 5;
+  const endY = box2!.y + box2!.height + 5;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX, endY);
+  await page.mouse.up();
+  const t1 = await block1.evaluate((el) => parseInt(getComputedStyle(el).top));
+  const t2 = await block2.evaluate((el) => parseInt(getComputedStyle(el).top));
+  await page.mouse.move(box1!.x + box1!.width / 2, box1!.y + box1!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    box1!.x + box1!.width / 2,
+    box1!.y + box1!.height / 2 + yFor(1),
+  );
+  await page.mouse.up();
+  const nt1 = await block1.evaluate((el) => parseInt(getComputedStyle(el).top));
+  const nt2 = await block2.evaluate((el) => parseInt(getComputedStyle(el).top));
+  expect(nt1).toBe(t1 + yFor(1));
+  expect(nt2).toBe(t2 + yFor(1));
+});

@@ -276,10 +276,12 @@ export default function EditorClient({
   const [metaPinned, setMetaPinned] = useState(false);
   const openMeta = useCallback((id: string) => {
     setSelectedId(id);
+    setSelectedIds([id]);
     setMetaPinned(true);
   }, []);
   const closeMeta = useCallback(() => {
     setSelectedId(null);
+    setSelectedIds([]);
     setMetaPinned(false);
   }, []);
   const selected = useMemo(
@@ -329,6 +331,11 @@ export default function EditorClient({
     };
   }, [closeMeta]);
   const draggingRef = useRef(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectionStartRef = useRef<number | null>(null);
+  const [selectionRect, setSelectionRect] = useState<
+    { top: number; bottom: number } | null
+  >(null);
   const [startMinute, setStartMinute] = useState(DEFAULT_START);
   const [endMinute, setEndMinute] = useState(DEFAULT_END);
   const [showCustom, setShowCustom] = useState(false);
@@ -1108,6 +1115,46 @@ export default function EditorClient({
     setShowCustom(false);
   }
 
+  function handleSelectionStart(e: React.PointerEvent<HTMLDivElement>) {
+    if (!editable || review) return;
+    const target = e.target as HTMLElement;
+    if (target.id?.startsWith('p1an-blk-')) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    selectionStartRef.current = e.clientY;
+    setSelectionRect({ top: e.clientY - rect.top, bottom: e.clientY - rect.top });
+    function onMove(ev: PointerEvent) {
+      if (selectionStartRef.current == null) return;
+      const r = e.currentTarget.getBoundingClientRect();
+      const top = Math.min(selectionStartRef.current, ev.clientY) - r.top;
+      const bottom = Math.max(selectionStartRef.current, ev.clientY) - r.top;
+      setSelectionRect({ top, bottom });
+    }
+    function onUp(ev: PointerEvent) {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      if (selectionStartRef.current == null) return;
+      const r = e.currentTarget.getBoundingClientRect();
+      const top = Math.min(selectionStartRef.current, ev.clientY) - r.top;
+      const bottom = Math.max(selectionStartRef.current, ev.clientY) - r.top;
+      const startM = startMinute + Math.max(top, 0) / PIXELS_PER_MINUTE;
+      const endM = startMinute + Math.max(bottom, 0) / PIXELS_PER_MINUTE;
+      const ids = blocksRef.current
+        .filter((blk) => {
+          const s = minutesFromIso(blk.start);
+          const e = minutesFromIso(blk.end);
+          return s < endM && e > startM;
+        })
+        .map((blk) => blk.id);
+      setSelectedIds(ids);
+      setSelectedId(null);
+      setMetaPinned(false);
+      setSelectionRect(null);
+      selectionStartRef.current = null;
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
   function onDragStart(
     e: React.PointerEvent,
     b: PlanBlock,
@@ -1120,6 +1167,20 @@ export default function EditorClient({
     const startY = e.clientY;
     const initStart = minutesFromIso(b.start);
     const initEnd = minutesFromIso(b.end);
+    const movingIds =
+      mode === 'move' && selectedIds.includes(b.id) && selectedIds.length > 1
+        ? [...selectedIds]
+        : [b.id];
+    const initPositions = movingIds.map((id) => {
+      const blk = blocksRef.current.find((x) => x.id === id)!;
+      return {
+        id,
+        start: minutesFromIso(blk.start),
+        end: minutesFromIso(blk.end),
+      };
+    });
+    const minStart = Math.min(...initPositions.map((p) => p.start));
+    const maxEnd = Math.max(...initPositions.map((p) => p.end));
     const bounds = document
       .getElementById(`p1an-timecol-${userId}`)
       ?.getBoundingClientRect() ?? { top: 0, bottom: 0 };
@@ -1138,15 +1199,32 @@ export default function EditorClient({
       const rawStart = initStart + delta;
       const rawEnd = initEnd + delta;
       if (mode === 'move') {
-        let newStart = rawStart;
-        newStart = Math.max(
-          0,
-          Math.min(newStart, MAX_MINUTES - (initEnd - initStart)),
-        );
-        updateBlock(b.id, {
-          start: isoFromMinutes(newStart),
-          end: isoFromMinutes(newStart + (initEnd - initStart)),
-        });
+        if (movingIds.length > 1) {
+          const maxUp = -minStart;
+          const maxDown = MAX_MINUTES - maxEnd;
+          const clamped = Math.max(Math.min(delta, maxDown), maxUp);
+          setBlocks((prev) =>
+            prev.map((blk) => {
+              const p = initPositions.find((pp) => pp.id === blk.id);
+              if (!p) return blk;
+              return {
+                ...blk,
+                start: isoFromMinutes(p.start + clamped),
+                end: isoFromMinutes(p.end + clamped),
+              };
+            }),
+          );
+        } else {
+          let newStart = rawStart;
+          newStart = Math.max(
+            0,
+            Math.min(newStart, MAX_MINUTES - (initEnd - initStart)),
+          );
+          updateBlock(b.id, {
+            start: isoFromMinutes(newStart),
+            end: isoFromMinutes(newStart + (initEnd - initStart)),
+          });
+        }
       } else if (mode === 'start') {
         let newStart = rawStart;
         newStart = Math.max(0, Math.min(newStart, initEnd - 15));
@@ -1362,7 +1440,19 @@ export default function EditorClient({
                 );
               })}
             </div>
-            <div className="absolute left-12 right-0 top-0">
+            <div
+              className="absolute left-12 right-0 top-0"
+              onPointerDown={handleSelectionStart}
+            >
+              {selectionRect && (
+                <div
+                  className="pointer-events-none absolute left-0 right-0 bg-orange-200/30"
+                  style={{
+                    top: selectionRect.top,
+                    height: selectionRect.bottom - selectionRect.top,
+                  }}
+                />
+              )}
               {Array.from({ length: endHour - startHour + 1 }).map((_, i) => {
                 const h = startHour + i;
                 return (
@@ -1404,9 +1494,9 @@ export default function EditorClient({
                   <div
                     key={b.id}
                     id={`p1an-blk-${b.id}-${userId}`}
-                    data-selected={selectedId === b.id ? 'true' : 'false'}
+                    data-selected={selectedIds.includes(b.id) ? 'true' : 'false'}
                     aria-label={`${b.title}, ${b.start} to ${b.end}`}
-                    className="absolute left-1 right-1 rounded p-1"
+                    className="absolute left-1 right-1 rounded p-1 data-[selected=true]:ring-2 data-[selected=true]:ring-orange-500"
                     style={{
                       top,
                       height,
