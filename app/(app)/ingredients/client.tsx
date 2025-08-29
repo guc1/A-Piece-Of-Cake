@@ -35,7 +35,7 @@ const PRESET_INGREDIENTS: IngredientInput[] = [
     icon: '🏃',
     imageUrl: null,
     tags: null,
-    visibility: 'private',
+    visibility: 'public',
   },
   {
     title: 'No Sugar After Lunch',
@@ -48,7 +48,7 @@ const PRESET_INGREDIENTS: IngredientInput[] = [
     icon: '🍬',
     imageUrl: null,
     tags: null,
-    visibility: 'private',
+    visibility: 'public',
   },
 ];
 
@@ -185,7 +185,7 @@ export default function IngredientsClient({
     whenUsed: '',
     tips: '',
     icon: '⭐',
-    visibility: 'private' as Visibility,
+    visibility: 'public' as Visibility,
   });
   const initialForm = useRef(form);
 
@@ -200,7 +200,7 @@ export default function IngredientsClient({
       whenUsed: '',
       tips: '',
       icon: '⭐',
-      visibility: 'private' as Visibility,
+      visibility: 'public' as Visibility,
     };
     setForm(blank);
     initialForm.current = blank;

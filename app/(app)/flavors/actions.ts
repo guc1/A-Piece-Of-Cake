@@ -39,7 +39,7 @@ function sanitize(body: any): FlavorInput {
     'public',
   ].includes(body.visibility)
     ? body.visibility
-    : 'private';
+    : 'public';
   const orderIndex = typeof body.orderIndex === 'number' ? body.orderIndex : 0;
   return {
     name: body.name,
@@ -71,11 +71,7 @@ export async function updateFlavor(id: string, form: any): Promise<Flavor> {
   const session = await auth();
   const self = await ensureUser(session);
   await assertOwner(self.id, self.id);
-  const updated = await updateFlavorStore(
-    String(self.id),
-    id,
-    sanitize(form),
-  );
+  const updated = await updateFlavorStore(String(self.id), id, sanitize(form));
   if (!updated) {
     throw new Error('Not found');
   }
@@ -90,7 +86,7 @@ export async function copyFlavor(
 ) {
   const session = await auth();
   const self = await ensureUser(session);
-    const source = await getFlavor(fromUserId, flavorId, Number(self.id));
+  const source = await getFlavor(fromUserId, flavorId, Number(self.id));
   if (!source) throw new Error('Not found');
   const created = await createFlavorStore(String(self.id), {
     name: source.name,

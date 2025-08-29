@@ -22,14 +22,18 @@ function toFlavor(row: typeof flavors.$inferSelect): Flavor {
     icon: row.icon ?? '⭐',
     importance: row.importance ?? 0,
     targetMix: row.targetMix ?? 0,
-    visibility: (row.visibility as Visibility) ?? 'private',
+    visibility: (row.visibility as Visibility) ?? 'public',
     orderIndex: row.orderIndex ?? 0,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
   };
 }
 
-async function canView(viewerId: number | null, ownerId: number, vis: Visibility) {
+async function canView(
+  viewerId: number | null,
+  ownerId: number,
+  vis: Visibility,
+) {
   if (viewerId === ownerId) return true;
   switch (vis) {
     case 'public':
@@ -39,24 +43,48 @@ async function canView(viewerId: number | null, ownerId: number, vis: Visibility
       const [f1] = await db
         .select()
         .from(follows)
-        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, ownerId), eq(follows.status, 'accepted')));
+        .where(
+          and(
+            eq(follows.followerId, viewerId),
+            eq(follows.followingId, ownerId),
+            eq(follows.status, 'accepted'),
+          ),
+        );
       if (f1) return true;
       const [f2] = await db
         .select()
         .from(follows)
-        .where(and(eq(follows.followerId, ownerId), eq(follows.followingId, viewerId), eq(follows.status, 'accepted')));
+        .where(
+          and(
+            eq(follows.followerId, ownerId),
+            eq(follows.followingId, viewerId),
+            eq(follows.status, 'accepted'),
+          ),
+        );
       return !!f2;
     case 'friends':
       if (!viewerId) return false;
       const [ff] = await db
         .select()
         .from(follows)
-        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, ownerId), eq(follows.status, 'accepted')));
+        .where(
+          and(
+            eq(follows.followerId, viewerId),
+            eq(follows.followingId, ownerId),
+            eq(follows.status, 'accepted'),
+          ),
+        );
       if (!ff) return false;
       const [rf] = await db
         .select()
         .from(follows)
-        .where(and(eq(follows.followerId, ownerId), eq(follows.followingId, viewerId), eq(follows.status, 'accepted')));
+        .where(
+          and(
+            eq(follows.followerId, ownerId),
+            eq(follows.followingId, viewerId),
+            eq(follows.status, 'accepted'),
+          ),
+        );
       return !!rf;
     default:
       return false;
@@ -80,12 +108,21 @@ export async function getFlavor(
     .from(flavors)
     .where(and(eq(flavors.userId, Number(userId)), eq(flavors.id, id)));
   if (!row) return null;
-  if (!(await canView(viewerId, row.userId ?? 0, (row.visibility as Visibility) ?? 'private')))
+  if (
+    !(await canView(
+      viewerId,
+      row.userId ?? 0,
+      (row.visibility as Visibility) ?? 'public',
+    ))
+  )
     return null;
   return toFlavor(row);
 }
 
-export async function createFlavor(userId: string, input: FlavorInput): Promise<Flavor> {
+export async function createFlavor(
+  userId: string,
+  input: FlavorInput,
+): Promise<Flavor> {
   const id = crypto.randomUUID();
   const now = new Date();
   const [row] = await db
@@ -95,14 +132,17 @@ export async function createFlavor(userId: string, input: FlavorInput): Promise<
       userId: Number(userId),
       slug:
         input.slug ||
-        input.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40),
+        input.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .slice(0, 40),
       name: input.name.slice(0, 40),
       description: input.description.slice(0, 280),
       color: input.color,
       icon: input.icon,
       importance: clamp(input.importance),
       targetMix: clamp(input.targetMix),
-      visibility: input.visibility,
+      visibility: input.visibility ?? 'public',
       orderIndex: input.orderIndex ?? 0,
       createdAt: now,
       updatedAt: now,
@@ -114,7 +154,7 @@ export async function createFlavor(userId: string, input: FlavorInput): Promise<
 export async function updateFlavor(
   userId: string,
   id: string,
-  input: Partial<FlavorInput>
+  input: Partial<FlavorInput>,
 ): Promise<Flavor | null> {
   const now = new Date();
   const [row] = await db
@@ -122,11 +162,15 @@ export async function updateFlavor(
     .set({
       slug: input.slug,
       name: input.name ? input.name.slice(0, 40) : undefined,
-      description: input.description ? input.description.slice(0, 280) : undefined,
+      description: input.description
+        ? input.description.slice(0, 280)
+        : undefined,
       color: input.color,
       icon: input.icon,
-      importance: input.importance !== undefined ? clamp(input.importance) : undefined,
-      targetMix: input.targetMix !== undefined ? clamp(input.targetMix) : undefined,
+      importance:
+        input.importance !== undefined ? clamp(input.importance) : undefined,
+      targetMix:
+        input.targetMix !== undefined ? clamp(input.targetMix) : undefined,
       visibility: input.visibility,
       orderIndex: input.orderIndex,
       updatedAt: now,
@@ -136,7 +180,10 @@ export async function updateFlavor(
   return row ? toFlavor(row) : null;
 }
 
-export async function deleteFlavor(userId: string, id: string): Promise<boolean> {
+export async function deleteFlavor(
+  userId: string,
+  id: string,
+): Promise<boolean> {
   const rows = await db
     .delete(flavors)
     .where(and(eq(flavors.userId, Number(userId)), eq(flavors.id, id)))
