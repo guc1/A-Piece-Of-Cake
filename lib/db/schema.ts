@@ -63,7 +63,7 @@ export const flavors = pgTable('flavors', {
   icon: text('icon'),
   importance: integer('importance'),
   targetMix: integer('target_mix'),
-  visibility: varchar('visibility', { length: 20 }),
+  visibility: varchar('visibility', { length: 20 }).default('public'),
   orderIndex: integer('order_index'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -105,7 +105,7 @@ export const ingredients = pgTable(
     // Icon for the ingredient, stored as emoji or data URL
     icon: text('icon'),
     tags: text('tags').array(),
-    visibility: varchar('visibility', { length: 20 }),
+    visibility: varchar('visibility', { length: 20 }).default('public'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },

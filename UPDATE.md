@@ -260,3 +260,4 @@
 - 2025-10-27: Added subflavor recommendation agent with chat modal and automatic subflavor creation.
 - 2025-10-27: Aligned side calendar weeks to display correct weekdays and match snapshot dates.
 - 2025-10-27: Restyled ingredient edit modal to match flavor edit layout.
+- 2025-10-27: Default new ingredients and flavors to public visibility.

@@ -49,7 +49,7 @@ function sanitize(body: any) {
     'public',
   ].includes(body.visibility)
     ? body.visibility
-    : 'private';
+    : 'public';
   const orderIndex = typeof body.orderIndex === 'number' ? body.orderIndex : 0;
   return {
     name: body.name,

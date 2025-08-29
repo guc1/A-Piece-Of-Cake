@@ -1,6 +1,10 @@
 'use server';
 
-import { createIngredient as createStore, updateIngredient as updateStore, deleteIngredient as deleteStore } from '@/lib/ingredients-store';
+import {
+  createIngredient as createStore,
+  updateIngredient as updateStore,
+  deleteIngredient as deleteStore,
+} from '@/lib/ingredients-store';
 import { assertOwner } from '@/lib/profile';
 import type { Ingredient } from '@/types/ingredient';
 import { revalidatePath } from 'next/cache';
@@ -15,9 +19,11 @@ function sanitize(form: FormData) {
   obj.shortDescription = (obj.shortDescription || '').toString().slice(0, 160);
   obj.imageUrl = typeof obj.imageUrl === 'string' ? obj.imageUrl : null;
   obj.icon = typeof obj.icon === 'string' ? obj.icon : '⭐';
-  obj.visibility = ['private', 'followers', 'friends', 'public'].includes(obj.visibility)
+  obj.visibility = ['private', 'followers', 'friends', 'public'].includes(
+    obj.visibility,
+  )
     ? obj.visibility
-    : 'private';
+    : 'public';
   obj.tags =
     typeof obj.tags === 'string' && obj.tags
       ? (obj.tags as string).split(',').map((t: string) => t.trim())

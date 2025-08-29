@@ -32,7 +32,7 @@ const PRESET_FLAVORS: FlavorInput[] = [
     icon: '❤️',
     importance: 70,
     targetMix: 50,
-    visibility: 'private',
+    visibility: 'public',
     orderIndex: 0,
     slug: '',
   },
@@ -43,7 +43,7 @@ const PRESET_FLAVORS: FlavorInput[] = [
     icon: '📚',
     importance: 60,
     targetMix: 40,
-    visibility: 'private',
+    visibility: 'public',
     orderIndex: 0,
     slug: '',
   },
@@ -125,7 +125,7 @@ export default function FlavorsClient({
     icon: '⭐',
     importance: 50,
     targetMix: 50,
-    visibility: 'private',
+    visibility: 'public',
     orderIndex: 0,
   });
   const [initialForm, setInitialForm] = useState<FormState>(form);
@@ -298,7 +298,7 @@ export default function FlavorsClient({
                   parsed.Importance ?? parsed.importance ?? parsed.description,
                 ) || 50,
               targetMix: 50,
-              visibility: 'private',
+              visibility: 'public',
               orderIndex: 0,
             });
             setFlavors((prev) => sortFlavors([...prev, created]));
@@ -340,7 +340,7 @@ export default function FlavorsClient({
       icon: '⭐',
       importance: 50,
       targetMix: 50,
-      visibility: 'private' as Visibility,
+      visibility: 'public' as Visibility,
       orderIndex: flavors.length,
     };
     setForm(blank);

@@ -1,7 +1,11 @@
 import { db } from './db';
 import { ingredients, ingredientRevisions, follows } from './db/schema';
 import { eq, and, desc, lte } from 'drizzle-orm';
-import type { Ingredient, IngredientInput, Visibility } from '@/types/ingredient';
+import type {
+  Ingredient,
+  IngredientInput,
+  Visibility,
+} from '@/types/ingredient';
 
 function sortIngredients(list: Ingredient[]) {
   return list.sort((a, b) => {
@@ -24,13 +28,17 @@ function toIngredient(row: typeof ingredients.$inferSelect): Ingredient {
     imageUrl: row.imageUrl ?? null,
     icon: row.icon ?? '⭐',
     tags: row.tags ?? null,
-    visibility: (row.visibility as Visibility) ?? 'private',
+    visibility: (row.visibility as Visibility) ?? 'public',
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
   };
 }
 
-async function canView(viewerId: number | null, ownerId: number, vis: Visibility) {
+async function canView(
+  viewerId: number | null,
+  ownerId: number,
+  vis: Visibility,
+) {
   if (viewerId === ownerId) return true;
   switch (vis) {
     case 'public':
@@ -40,18 +48,33 @@ async function canView(viewerId: number | null, ownerId: number, vis: Visibility
       const [f1] = await db
         .select()
         .from(follows)
-        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, ownerId)));
+        .where(
+          and(
+            eq(follows.followerId, viewerId),
+            eq(follows.followingId, ownerId),
+          ),
+        );
       return !!f1 && f1.status === 'accepted';
     case 'friends':
       if (!viewerId) return false;
       const [f2] = await db
         .select()
         .from(follows)
-        .where(and(eq(follows.followerId, viewerId), eq(follows.followingId, ownerId)));
+        .where(
+          and(
+            eq(follows.followerId, viewerId),
+            eq(follows.followingId, ownerId),
+          ),
+        );
       const [f3] = await db
         .select()
         .from(follows)
-        .where(and(eq(follows.followerId, ownerId), eq(follows.followingId, viewerId)));
+        .where(
+          and(
+            eq(follows.followerId, ownerId),
+            eq(follows.followingId, viewerId),
+          ),
+        );
       return f2?.status === 'accepted' && f3?.status === 'accepted';
     case 'private':
     default:
@@ -64,17 +87,31 @@ export async function listIngredients(
   viewerId: number | null = null,
   at?: Date,
 ): Promise<Ingredient[]> {
-  const rows = await db.select().from(ingredients).where(eq(ingredients.userId, Number(userId)));
+  const rows = await db
+    .select()
+    .from(ingredients)
+    .where(eq(ingredients.userId, Number(userId)));
   const list: Ingredient[] = [];
   for (const row of rows) {
-    if (!(await canView(viewerId, row.userId ?? 0, (row.visibility as Visibility) ?? 'private')))
+    if (
+      !(await canView(
+        viewerId,
+        row.userId ?? 0,
+        (row.visibility as Visibility) ?? 'public',
+      ))
+    )
       continue;
     let base = toIngredient(row);
     if (at) {
       const [rev] = await db
         .select()
         .from(ingredientRevisions)
-        .where(and(eq(ingredientRevisions.ingredientId, row.id), lte(ingredientRevisions.snapshotAt, at)))
+        .where(
+          and(
+            eq(ingredientRevisions.ingredientId, row.id),
+            lte(ingredientRevisions.snapshotAt, at),
+          ),
+        )
         .orderBy(desc(ingredientRevisions.snapshotAt))
         .limit(1);
       if (rev) {
@@ -97,14 +134,25 @@ export async function getIngredient(
     .from(ingredients)
     .where(and(eq(ingredients.userId, Number(userId)), eq(ingredients.id, id)));
   if (!row) return null;
-  if (!(await canView(viewerId, row.userId ?? 0, (row.visibility as Visibility) ?? 'private')))
+  if (
+    !(await canView(
+      viewerId,
+      row.userId ?? 0,
+      (row.visibility as Visibility) ?? 'public',
+    ))
+  )
     return null;
   let base = toIngredient(row);
   if (at) {
     const [rev] = await db
       .select()
       .from(ingredientRevisions)
-      .where(and(eq(ingredientRevisions.ingredientId, row.id), lte(ingredientRevisions.snapshotAt, at)))
+      .where(
+        and(
+          eq(ingredientRevisions.ingredientId, row.id),
+          lte(ingredientRevisions.snapshotAt, at),
+        ),
+      )
       .orderBy(desc(ingredientRevisions.snapshotAt))
       .limit(1);
     if (rev) {
@@ -133,7 +181,7 @@ export async function createIngredient(
       imageUrl: input.imageUrl,
       icon: input.icon,
       tags: input.tags ?? null,
-      visibility: input.visibility,
+      visibility: input.visibility ?? 'public',
       createdAt: now,
       updatedAt: now,
     })
@@ -212,7 +260,9 @@ export async function deleteIngredient(
     const [exists] = await tx
       .select({ id: ingredients.id })
       .from(ingredients)
-      .where(and(eq(ingredients.userId, Number(userId)), eq(ingredients.id, id)))
+      .where(
+        and(eq(ingredients.userId, Number(userId)), eq(ingredients.id, id)),
+      )
       .limit(1);
     if (!exists) return false;
     await tx
@@ -220,7 +270,9 @@ export async function deleteIngredient(
       .where(eq(ingredientRevisions.ingredientId, id));
     await tx
       .delete(ingredients)
-      .where(and(eq(ingredients.userId, Number(userId)), eq(ingredients.id, id)));
+      .where(
+        and(eq(ingredients.userId, Number(userId)), eq(ingredients.id, id)),
+      );
     return true;
   });
 }
