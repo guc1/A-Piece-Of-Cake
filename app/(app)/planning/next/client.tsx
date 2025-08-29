@@ -14,6 +14,12 @@ import { savePlanAction } from './actions';
 import { cn } from '@/lib/utils';
 import ColorPresetPicker from '@/components/color-preset-picker';
 import { addUserColorPreset, getUserColorPresets } from '@/lib/color-presets';
+import type {
+  HeadingReport,
+  DailyReport,
+  WeeklyReport,
+  MonthlyReport,
+} from '@/types/report';
 
 const COLORS = [
   '#F87171',
@@ -70,6 +76,12 @@ interface Props {
   live?: boolean;
   review?: boolean;
   initialShowDailyAim?: boolean;
+  reportContext?: {
+    heading: HeadingReport | null;
+    daily: Pick<DailyReport, 'date' | 'bad' | 'observations'>[];
+    weekly: Pick<WeeklyReport, 'startDate' | 'endDate' | 'bad' | 'observations'>[];
+    monthly: Pick<MonthlyReport, 'startDate' | 'endDate' | 'bad' | 'observations'>[];
+  };
 }
 
 export default function EditorClient({
@@ -84,6 +96,7 @@ export default function EditorClient({
   live = false,
   review = false,
   initialShowDailyAim = false,
+  reportContext,
 }: Props) {
   const {
     editable,
@@ -182,6 +195,44 @@ export default function EditorClient({
       // ignore
     }
   }, [initialShowDailyAim, storageKey]);
+
+  const [aiOpen, setAiOpen] = useState(false);
+  const CHAT_STORAGE_KEY = `plan-ai-chat-${userId}-${date}`;
+  type ChatMessage = { role: 'user' | 'assistant'; content: string };
+  const initialChat: ChatMessage[] = [
+    { role: 'assistant', content: 'How can I help you with your planning?' },
+  ];
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat);
+  const [chatInput, setChatInput] = useState('');
+  const chatIdRef = useRef<string>(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2),
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.chatId) chatIdRef.current = parsed.chatId;
+        if (parsed.messages) setChatMessages(parsed.messages);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [CHAT_STORAGE_KEY]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, aiOpen]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(
+      CHAT_STORAGE_KEY,
+      JSON.stringify({ chatId: chatIdRef.current, messages: chatMessages }),
+    );
+  }, [chatMessages, CHAT_STORAGE_KEY]);
   const [reviews, setReviews] = useState<
     Record<
       string,
@@ -368,6 +419,240 @@ export default function EditorClient({
   function isoFromMinutes(min: number) {
     const base = new Date(`${date}T00:00:00`);
     return new Date(base.getTime() + min * 60000).toISOString();
+  }
+
+  function minutesFromTime(t: string) {
+    const [h, m] = t.split(':').map((v) => parseInt(v, 10));
+    return (h || 0) * 60 + (m || 0);
+  }
+
+  function buildPlanBlocksContext(list: PlanBlock[]) {
+    return list
+      .map((b) => {
+        const start = minutesFromIso(b.start);
+        const end = minutesFromIso(b.end);
+        const ing = b.ingredientIds
+          .map((id) => initialIngredients.find((i) => i.id === id)?.title)
+          .filter(Boolean)
+          .join(', ');
+        const flav = b.flavorIds
+          .map((id) => initialFlavors.find((f) => f.id === id)?.name)
+          .filter(Boolean)
+          .join(', ');
+        const parts = [
+          `Activity: ${b.title}`,
+          `Description: ${b.description}`,
+          `Time: ${minutesToTime(start)}-${minutesToTime(end)}`,
+        ];
+        if (ing) parts.push(`Ingredients: ${ing}`);
+        if (flav) parts.push(`Flavors: ${flav}`);
+        return parts.join('\n');
+      })
+      .join('\n\n');
+  }
+
+  function buildDailyAimContext() {
+    const parts: string[] = [];
+    if (dailyAim) parts.push(`Aim: ${dailyAim}`);
+    if (dailyIngredientIds.length) {
+      const names = dailyIngredientIds
+        .map((id) => initialIngredients.find((i) => i.id === id)?.title)
+        .filter(Boolean);
+      if (names.length) parts.push(`Ingredients: ${names.join(', ')}`);
+    }
+    return parts.join('\n');
+  }
+
+  function buildReportContext(rc?: Props['reportContext']) {
+    if (!rc) return '';
+    const lines: string[] = [];
+    if (rc.heading) {
+      lines.push(`Overview: ${rc.heading.overview}`);
+      if (rc.heading.shortTerm?.length)
+        lines.push(`Heading towards short term: ${rc.heading.shortTerm.join('; ')}`);
+      if (rc.heading.longTerm?.length)
+        lines.push(`Heading towards long term: ${rc.heading.longTerm.join('; ')}`);
+      if (rc.heading.feedback?.length)
+        lines.push(`Feedback: ${rc.heading.feedback.join('; ')}`);
+    }
+    if (rc.daily?.length) {
+      lines.push(
+        'Daily rapports last 7 days: ' +
+          rc.daily
+            .slice(0, 7)
+            .map(
+              (d) =>
+                `${d.date}: bad: ${d.bad.join('; ')} observations: ${d.observations.join(
+                  '; ',
+                )}`,
+            )
+            .join(' | '),
+      );
+    }
+    if (rc.weekly?.length) {
+      lines.push(
+        'Weekly rapports last 2 weeks: ' +
+          rc.weekly
+            .slice(0, 2)
+            .map(
+              (w) =>
+                `${w.startDate}-${w.endDate}: bad: ${w.bad.join('; ')} observations: ${w.observations.join(
+                  '; ',
+                )}`,
+            )
+            .join(' | '),
+      );
+    }
+    if (rc.monthly?.length) {
+      lines.push(
+        'Monthly rapports last 2 months: ' +
+          rc.monthly
+            .slice(0, 2)
+            .map(
+              (m) =>
+                `${m.startDate}-${m.endDate}: bad: ${m.bad.join('; ')} observations: ${m.observations.join(
+                  '; ',
+                )}`,
+            )
+            .join(' | '),
+      );
+    }
+    return lines.join('\n');
+  }
+
+  function buildPlanningContext() {
+    const rational =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('review-rational') || ''
+        : '';
+    const report = buildReportContext(reportContext);
+    const aim = buildDailyAimContext();
+    const planBlocks = buildPlanBlocksContext(blocks);
+    return (
+      `this is the life ethos statement/goal the user has in its life: ${rational}. ` +
+      `This is the rapport of the user where he is heading towards, which include an Overview. heading toward long and short term, and feedback: ${report}. ` +
+      `----- here is the current users aim for the day: ${aim}. ` +
+      `Currently the user has the following planning: ${planBlocks}. ` +
+      `That was the context. now this is the input message the user had (very important to respond to that):`
+    );
+  }
+
+  type ActivitySuggestion = {
+    Activity: string;
+    Description: string;
+    start: string;
+    end: string;
+  };
+
+  function parseActivities(str: string): ActivitySuggestion[] | null {
+    try {
+      const obj = JSON.parse(str);
+      return Array.isArray(obj) ? obj : [obj];
+    } catch {
+      try {
+        const m = str.match(/```json\s*([\s\S]*?)\s*```/i);
+        if (m) {
+          const obj = JSON.parse(m[1]);
+          return Array.isArray(obj) ? obj : [obj];
+        }
+      } catch {
+        return null;
+      }
+      return null;
+    }
+  }
+
+  function resetChat() {
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+    chatIdRef.current = id;
+    setChatMessages(initialChat);
+  }
+
+  const SYSTEM_PROMPT =
+    'You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life , last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. and based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity . you are going to plan a day for him that matches his ambitions. always listen to the feedback of the user, and try to make as good as possible planning for him or her. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity than respond ONLY with a JSON object containing the fields: Activity (which is the title of the activity), Description (which is a detailed description of the activity) start (starting time of activity), end (end time of activity) for each activity the user wanted to have implemented. ';
+
+  async function sendChat() {
+    if (!chatInput.trim()) return;
+    const isFirst =
+      chatMessages.length === 1 && chatMessages[0].role === 'assistant';
+    const userContent = isFirst
+      ? `${chatInput}\n\n${buildPlanningContext()}`
+      : chatInput;
+    const newMessages: ChatMessage[] = [
+      ...chatMessages,
+      { role: 'user', content: userContent },
+    ];
+    setChatMessages(newMessages);
+    setChatInput('');
+    const payload = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...newMessages,
+    ];
+    try {
+      const res = await fetch('/api/planning/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId: chatIdRef.current, messages: payload }),
+      });
+      const data = await res.json();
+      if (data.response) {
+        const parsed = parseActivities(data.response as string);
+        if (parsed && parsed.length) {
+          const titles = parsed.map((p) => p.Activity).join(', ');
+          const ok = confirm(`Should I add these activities (${titles})?`);
+          if (ok) {
+            const newBlocks = parsed.map((p) => {
+              const start = minutesFromTime(p.start);
+              const end = minutesFromTime(p.end);
+              return {
+                id:
+                  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                    ? crypto.randomUUID()
+                    : Math.random().toString(36).slice(2),
+                planId: initialPlan?.id || '',
+                start: isoFromMinutes(start),
+                end: isoFromMinutes(end),
+                title: p.Activity,
+                description: p.Description,
+                color: COLORS[0],
+                colorPreset: '',
+                ingredientIds: [],
+                flavorIds: [],
+                subflavorIds: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              } as PlanBlock;
+            });
+            setBlocks((prev) => [...prev, ...newBlocks]);
+            setChatMessages([
+              ...newMessages,
+              {
+                role: 'assistant',
+                content: `Added activities: ${titles}.`,
+              },
+            ]);
+          } else {
+            setChatMessages([
+              ...newMessages,
+              { role: 'assistant', content: 'Okay, not adding them.' },
+            ]);
+          }
+        } else {
+          setChatMessages([
+            ...newMessages,
+            { role: 'assistant', content: data.response as string },
+          ]);
+        }
+      }
+    } catch {
+      setChatMessages([
+        ...newMessages,
+        { role: 'assistant', content: 'Sorry, something went wrong.' },
+      ]);
+    }
   }
 
   useEffect(() => {
@@ -931,6 +1216,13 @@ export default function EditorClient({
                 Load later
               </button>
             )}
+            <button
+              id={`p1an-ai-${userId}`}
+              className="rounded bg-orange-500 px-3 py-1 text-white"
+              onClick={() => setAiOpen(true)}
+            >
+              AI planning
+            </button>
             <Button
               id={`p1an-daily-aim-${userId}`}
               variant="outline"
@@ -2267,6 +2559,65 @@ export default function EditorClient({
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {aiOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex w-[90%] max-w-2xl max-h-[90vh] flex-col rounded bg-white p-6 shadow-lg">
+            <div className="mb-4 flex-1 overflow-y-auto space-y-2">
+              {chatMessages.map((m, i) => (
+                <div
+                  key={i}
+                  className={m.role === 'user' ? 'text-right' : 'text-left'}
+                >
+                  <span
+                    className={
+                      m.role === 'user'
+                        ? 'inline-block rounded bg-orange-100 px-2 py-1'
+                        : 'inline-block rounded bg-gray-200 px-2 py-1'
+                    }
+                  >
+                    {m.content}
+                  </span>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') sendChat();
+                }}
+                placeholder="Type your answer..."
+                className="flex-1 rounded border px-2 py-1"
+              />
+              <button
+                onClick={sendChat}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+              >
+                Send
+              </button>
+            </div>
+            <div className="mt-4 flex justify-between">
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={resetChat}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={() => setAiOpen(false)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

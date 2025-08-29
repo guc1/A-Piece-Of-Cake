@@ -9,6 +9,10 @@ import EditorClient from './client';
 import { listIngredients } from '@/lib/ingredients-store';
 import { listFlavors } from '@/lib/flavors-store';
 import { listAllSubflavors } from '@/lib/subflavors-store';
+import { getLatestHeadingReport } from '@/lib/heading-report-store';
+import { listDailyReports } from '@/lib/daily-report-store';
+import { listWeeklyReports } from '@/lib/weekly-report-store';
+import { listMonthlyReports } from '@/lib/monthly-report-store';
 
 export const revalidate = 0;
 
@@ -33,10 +37,43 @@ export default async function PlanningNextPage({
   }
   const dateStr = toYMD(info.date, info.tz);
   const todayStr = toYMD(info.today, info.tz);
-  const plan = await getOrCreatePlan(me.id, dateStr);
-  const ingredients = await listIngredients(String(me.id), me.id);
-  const flavors = await listFlavors(String(me.id));
-  const subflavors = await listAllSubflavors(String(me.id));
+  const [
+    plan,
+    ingredients,
+    flavors,
+    subflavors,
+    heading,
+    dailyReports,
+    weeklyReports,
+    monthlyReports,
+  ] = await Promise.all([
+    getOrCreatePlan(me.id, dateStr),
+    listIngredients(String(me.id), me.id),
+    listFlavors(String(me.id)),
+    listAllSubflavors(String(me.id)),
+    getLatestHeadingReport(me.id),
+    listDailyReports(me.id),
+    listWeeklyReports(me.id),
+    listMonthlyReports(me.id),
+  ]);
+  const reportContext = {
+    heading,
+    daily: dailyReports
+      .slice(0, 7)
+      .map((r) => ({ date: r.date, bad: r.bad, observations: r.observations })),
+    weekly: weeklyReports.slice(0, 2).map((r) => ({
+      startDate: r.startDate,
+      endDate: r.endDate,
+      bad: r.bad,
+      observations: r.observations,
+    })),
+    monthly: monthlyReports.slice(0, 2).map((r) => ({
+      startDate: r.startDate,
+      endDate: r.endDate,
+      bad: r.bad,
+      observations: r.observations,
+    })),
+  };
   const overrideLabel = info.override
     ? `${info.now.toLocaleString('en-US', { timeZone: info.tz })} (tz: ${info.tz})`
     : null;
@@ -53,6 +90,7 @@ export default async function PlanningNextPage({
         ingredients={ingredients}
         flavors={flavors}
         subflavors={subflavors}
+        reportContext={reportContext}
         initialShowDailyAim={showDailyAim}
       />
     </>
