@@ -14,7 +14,7 @@ export default async function AppLayout({
 }) {
   const session = await auth();
   if (!session) {
-    redirect('/');
+    redirect('/signin');
   }
   const me = await ensureUser(session);
   const tz = getUserTimeZone(me as any);
