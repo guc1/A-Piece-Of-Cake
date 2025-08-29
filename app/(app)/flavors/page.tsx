@@ -6,6 +6,7 @@ import { getUserByViewId, ensureUser } from '@/lib/users';
 import { listPeople } from '@/lib/people-store';
 import { buildViewContext } from '@/lib/profile';
 import { ViewContextProvider } from '@/lib/view-context';
+import { getLatestHeadingReport } from '@/lib/heading-report-store';
 
 export default async function FlavorsPage({
   params,
@@ -21,8 +22,11 @@ export default async function FlavorsPage({
     if (!user) notFound();
     owner = user;
   }
-  const flavors = await listFlavors(String(owner.id));
-  const people = owner.id === viewer.id ? await listPeople(owner.id) : undefined;
+  const [flavors, people, heading] = await Promise.all([
+    listFlavors(String(owner.id)),
+    owner.id === viewer.id ? listPeople(owner.id) : Promise.resolve(undefined),
+    getLatestHeadingReport(owner.id),
+  ]);
   const ctx = buildViewContext({
     ownerId: owner.id,
     viewerId: viewer.id,
@@ -36,6 +40,7 @@ export default async function FlavorsPage({
         selfId={String(viewer.id)}
         initialFlavors={flavors}
         people={people}
+        headingReport={heading ?? undefined}
       />
     </ViewContextProvider>
   );
@@ -46,11 +51,13 @@ export function FlavorsHome({
   selfId,
   initialFlavors,
   people,
+  headingReport,
 }: {
   userId: string;
   selfId?: string;
   initialFlavors: any[];
   people?: any;
+  headingReport?: any;
 }) {
   return (
     <FlavorsClient
@@ -58,6 +65,7 @@ export function FlavorsHome({
       selfId={selfId}
       initialFlavors={initialFlavors as any}
       people={people as any}
+      headingReport={headingReport}
     />
   );
 }
