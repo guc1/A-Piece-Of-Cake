@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 import { listFlavors } from '@/lib/flavors-store';
 import { buildViewContext } from '@/lib/profile';
 import { ViewContextProvider } from '@/lib/view-context';
-import { FlavorsHome } from '@/app/(app)/flavors/page';
+import { FlavorsHome } from '@/app/(app)/flavors/flavors-home';
 
 export default async function ViewFlavorsPage({
   params,
