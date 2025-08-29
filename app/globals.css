@@ -4,24 +4,24 @@
 
 :root {
   --font-sans: ui-sans-serif, system-ui;
-  --bg: #0B0C0F0A;
-  --surface: rgba(255,255,255,0.8);
-  --text: #0B0C0F;
+  --bg: #ffffff;
+  --surface: rgba(255, 255, 255, 0.8);
+  --text: #0b0c0f;
   --text-muted: #384150;
-  --accent: #FF7A00;
-  --planning: #6AA7FF;
-  --flavors: #9A6BFF;
-  --ingredients: #00C2A8;
-  --review: #FFC53D;
-  --people: #6ED8A0;
-  --visibility: #FF7A7A;
+  --accent: #ff7a00;
+  --planning: #6aa7ff;
+  --flavors: #9a6bff;
+  --ingredients: #00c2a8;
+  --review: #ffc53d;
+  --people: #6ed8a0;
+  --visibility: #ff7a7a;
 }
 
 .dark {
-  --bg: #0B0C0F;
-  --surface: rgba(15,17,21,0.8);
-  --text: #E6EAF2;
-  --text-muted: #98A2B3;
+  --bg: #0b0c0f;
+  --surface: rgba(15, 17, 21, 0.8);
+  --text: #e6eaf2;
+  --text-muted: #98a2b3;
 }
 
 body {

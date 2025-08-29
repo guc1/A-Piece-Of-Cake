@@ -10,7 +10,11 @@ export async function CakeHome({ ownerId }: { ownerId: number }) {
     <section className="w-full">
       <h1 className="sr-only">Cake</h1>
       <SideCalendar snapshotDates={snapshotDates} reportDates={reportDates} />
-      <CakeNavigation />
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-5xl rounded-lg bg-white p-6 shadow">
+          <CakeNavigation />
+        </div>
+      </div>
     </section>
   );
 }
