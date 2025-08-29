@@ -12,6 +12,7 @@ interface LogsContextType {
   addLog: (entry: LogEntry) => void;
   unlocked: boolean;
   unlock: () => void;
+  lock: () => void;
 }
 
 const LogsContext = createContext<LogsContextType | undefined>(undefined);
@@ -33,8 +34,14 @@ export function LogsProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('logsUnlocked', 'true');
   };
 
+  const lock = () => {
+    setUnlocked(false);
+    localStorage.removeItem('logsUnlocked');
+    setLogs([]);
+  };
+
   return (
-    <LogsContext.Provider value={{ logs, addLog, unlocked, unlock }}>
+    <LogsContext.Provider value={{ logs, addLog, unlocked, unlock, lock }}>
       {children}
     </LogsContext.Provider>
   );
