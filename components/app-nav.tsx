@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor, type Section } from '@/lib/navigation';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ const labels: Record<Section, string> = {
 export function AppNav() {
   const ctx = useViewContext();
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const sections: Section[] =
     ctx.mode === 'viewer'
       ? [
@@ -69,9 +72,15 @@ export function AppNav() {
       </ul>
       <div className="flex items-center gap-4">
         <Clock />
-        <form action="/api/auth/signout" method="post">
-          <Button type="submit">Sign out</Button>
-        </form>
+        {status === 'loading' ? null : session ? (
+          <form action="/api/auth/signout" method="post">
+            <Button type="submit">Sign out</Button>
+          </form>
+        ) : (
+          <Button type="button" onClick={() => router.push('/signin')}>
+            Sign in
+          </Button>
+        )}
       </div>
     </nav>
   );
