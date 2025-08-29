@@ -257,3 +257,4 @@
 - 2025-10-27: Added ingredient improvement chat with AI-assisted updates during editing.
 - 2025-10-27: Closed edit dialog when launching improvement chat and recreate ingredients from AI suggestions to avoid update errors.
 - 2025-10-27: Added flavor recommendation agent with chat modal and automatic flavor creation.
+- 2025-10-27: Aligned side calendar weeks to display correct weekdays and match snapshot dates.
