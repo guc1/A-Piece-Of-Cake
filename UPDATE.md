@@ -263,3 +263,5 @@
 - 2025-10-27: Default new ingredients and flavors to public visibility.
 - 2025-10-27: Aligned daily report activity times with user timezone so agents see planned hours accurately.
 - 2025-10-27: Added planning recommendation agent with daily chat modal and automatic activity insertion.
+- 2025-10-27: Added colour assessment agent to choose presets for AI-generated activities and raised AI modal above planning blocks.
+- 2025-10-27: Blurred planning background when AI chat opens so only the chat box is visible.
