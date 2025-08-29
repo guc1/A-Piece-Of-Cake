@@ -71,6 +71,7 @@ export default async function RootLayout({
 })();`,
           }}
         />
+        <link rel="icon" href="/Favicon_pieceofcake.png" />
       </head>
       <body>
         <LogsProvider>

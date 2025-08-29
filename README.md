@@ -26,3 +26,10 @@
    ```sh
    pnpm test
    ```
+
+### Custom Favicon
+
+Add your favicon image named `Favicon_pieceofcake.png` to the
+`public/` directory. The repository doesn’t track a default image,
+so supplying your own ensures the `<link rel="icon" href="/Favicon_pieceofcake.png" />`
+in the root layout resolves both locally and after deployment.
