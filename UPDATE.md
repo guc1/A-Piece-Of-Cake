@@ -275,3 +275,4 @@
 - 2025-10-28: Linked favicon and documented placement for `Favicon_pieceofcake.png`.
 - 2025-10-28: Added historical review pages with snapshot-based heading report retrieval and read-only note handling.
 - 2025-10-28: Restyled top navigation with white background, colored active underline, and subtle shadow.
+- 2025-10-28: Applied split gradient background from white to light gray for natural page sectioning.
