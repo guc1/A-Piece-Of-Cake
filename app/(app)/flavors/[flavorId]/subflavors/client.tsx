@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { Subflavor, Visibility, SubflavorInput } from '@/types/subflavor';
+import type { Flavor } from '@/types/flavor';
+import type { HeadingReport } from '@/types/report';
 import { createSubflavor, updateSubflavor, copySubflavor } from './actions';
 import type { PeopleLists, Person } from '@/lib/people-store';
 import { useViewContext } from '@/lib/view-context';
@@ -80,6 +82,8 @@ export default function SubflavorsClient({
   initialSubflavors,
   people,
   targetFlavorId,
+  flavor,
+  headingReport,
 }: {
   userId: string;
   selfId?: string;
@@ -87,6 +91,8 @@ export default function SubflavorsClient({
   initialSubflavors: Subflavor[];
   people?: PeopleLists;
   targetFlavorId?: string;
+  flavor: Flavor;
+  headingReport?: HeadingReport;
 }) {
   const { editable } = useViewContext();
   const [subflavors, setSubflavors] = useState<Subflavor[]>(
@@ -100,6 +106,23 @@ export default function SubflavorsClient({
     'choice',
   );
   const [peopleSearch, setPeopleSearch] = useState('');
+  const [recommendOpen, setRecommendOpen] = useState(false);
+  type ChatMessage = { role: 'user' | 'assistant'; content: string };
+  const initialChat: ChatMessage[] = [
+    {
+      role: 'assistant',
+      content: 'What kind of subflavour would you like to create?',
+    },
+  ];
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat);
+  const [chatInput, setChatInput] = useState('');
+  const CHAT_STORAGE_KEY = `subflavor-recommend-chat-${flavorId}`;
+  const chatIdRef = useRef<string>(
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2),
+  );
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<Subflavor | null>(null);
   const [form, setForm] = useState<FormState>({
     name: '',
@@ -118,6 +141,30 @@ export default function SubflavorsClient({
   const modalRef = useRef<HTMLDivElement>(null);
   const formRef = useRef(form);
   const initialFormRef = useRef(initialForm);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.chatId) chatIdRef.current = parsed.chatId;
+        if (parsed.messages) setChatMessages(parsed.messages);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [CHAT_STORAGE_KEY]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (recommendOpen)
+      localStorage.setItem(
+        CHAT_STORAGE_KEY,
+        JSON.stringify({ chatId: chatIdRef.current, messages: chatMessages }),
+      );
+  }, [chatMessages, recommendOpen, CHAT_STORAGE_KEY]);
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, recommendOpen]);
   const filtered = useMemo(
     () =>
       subflavors.filter(
@@ -160,6 +207,143 @@ export default function SubflavorsClient({
     { label: 'Following', list: filterPeople(people?.following) },
     { label: 'Others', list: filterPeople(people?.others) },
   ];
+
+  function buildSubflavorContext(list: Subflavor[]) {
+    return sortSubflavors(list)
+      .map((s) => {
+        const parts = [`Name\n${s.name}`, `Importance (${s.importance})`];
+        if (s.description) parts.push(`Description\n${s.description}`);
+        parts.push(`Target mix (${s.targetMix})`);
+        return parts.join('\n');
+      })
+      .join('\n\n');
+  }
+
+  function buildHeadingContext(r?: HeadingReport) {
+    if (!r) return '';
+    const lines: string[] = [];
+    if (r.overview) lines.push(`Overview\n${r.overview}`);
+    if (r.shortTerm?.length)
+      lines.push(`Heading towards short term\n${r.shortTerm.join('; ')}`);
+    if (r.longTerm?.length)
+      lines.push(`Heading towards long term\n${r.longTerm.join('; ')}`);
+    if (r.feedback?.length) lines.push(`Feedback\n${r.feedback.join('; ')}`);
+    return lines.join('\n');
+  }
+
+  function buildFlavorInfo(f: Flavor) {
+    const parts = [`Name\n${f.name}`, `Importance (${f.importance})`];
+    if (f.description) parts.push(`Description\n${f.description}`);
+    return parts.join('\n');
+  }
+
+  function parseSubflavor(str: string): any {
+    try {
+      return JSON.parse(str);
+    } catch {
+      try {
+        const m = str.match(/```json\s*([\s\S]*?)\s*```/i);
+        if (m) return JSON.parse(m[1]);
+      } catch {
+        return null;
+      }
+      return null;
+    }
+  }
+
+  function resetChat() {
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+    chatIdRef.current = id;
+    setChatMessages(initialChat);
+  }
+
+  async function sendChat() {
+    if (!chatInput.trim()) return;
+    const isFirst =
+      chatMessages.length === 1 && chatMessages[0].role === 'assistant';
+    const rational =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem('review-rational') || ''
+        : '';
+    const overviewCtx = buildHeadingContext(headingReport);
+    const flavorCtx = buildFlavorInfo(flavor);
+    const subCtx = buildSubflavorContext(subflavors);
+    const userContent = isFirst
+      ? `this is the life ethos statement/goal the user has in its life: ${rational} . This is the rapport of the user where he is heading towards, which include an Overview. heading toward long and short term, and feedback: <${overviewCtx}>. the Main flavour we are now talking about<${flavorCtx}>. These are the current subflavours the user has for the main flavour: <${subCtx}> This was the input message from the user: ${chatInput}. Based on this, generate an advice on Sub flavours for the user .`
+      : chatInput;
+    const newMessages: ChatMessage[] = [
+      ...chatMessages,
+      { role: 'user', content: userContent },
+    ];
+    setChatMessages(newMessages);
+    setChatInput('');
+    const payload = [
+      {
+        role: 'system',
+        content:
+          'You are a helpful assistant in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. If you want an apple cake, and you use too many of the banna flavours and too little of the apple ones, the cake will turn into a banana cake. Same with life, doing too much or too little in a domain can change the outcome of somebody\'s life. Subflavours are kind of intermediate/smaller goals that the user has to complete in order to have a change of reaching their goal of the the main flavour, main flavour are kind of the bigger domains. \n Ingredient are habits/protocols that help him build those flavours. you’re goals is to advise a subflavour that user is missing based on what his goals are, the direction he is going towards, and the current subflavours the user has for that particular main flavour. always listen to the users suggestions but if the user is unsure, suggest one they may be missing. Always end responses with: "Should I create that Sub Flavour for you?" If the user agrees, respond ONLY with a JSON object containing the fields Name, Description, Importance, description. Do not include any other text\nName is the title of the subflavour, description is the description of the Flavour, and description is a score from 0 -100 on how important this subflavour is based on the users goal in life and compared to the other subflavors in that main flavour. IMportant is that the subflavours are kind of the breakdown of a main flavour, so if a main flavour is improve fitness, one subflavour could be a core workout, another a bicep workout, or running etc. you get the ponit',
+      },
+      ...newMessages,
+    ];
+    try {
+      const res = await fetch('/api/subflavors/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chatId: chatIdRef.current, messages: payload }),
+      });
+      const data = await res.json();
+      if (data.response) {
+        const parsed = parseSubflavor(data.response as string);
+        const name = parsed?.Name || parsed?.name;
+        if (parsed && name) {
+          const ok = confirm(`Do you want to add this subflavor (${name})?`);
+          if (ok) {
+            const created = await createSubflavor(flavorId, {
+              name,
+              description: parsed.Description || parsed.description || '',
+              color: '#888888',
+              icon: '🤖',
+              importance:
+                Number(
+                  parsed.Importance ??
+                    parsed.importance ??
+                    (parsed as any).description,
+                ) || 50,
+              targetMix: 50,
+              visibility: 'private',
+              orderIndex: 0,
+            });
+            setSubflavors((prev) => sortSubflavors([...prev, created]));
+            setChatMessages([
+              ...newMessages,
+              {
+                role: 'assistant',
+                content: `Added subflavor "${created.name}".`,
+              },
+            ]);
+          } else {
+            setChatMessages([
+              ...newMessages,
+              { role: 'assistant', content: 'Okay, not adding it.' },
+            ]);
+          }
+        } else {
+          setChatMessages([
+            ...newMessages,
+            { role: 'assistant', content: data.response as string },
+          ]);
+        }
+      }
+    } catch {
+      setChatMessages([
+        ...newMessages,
+        { role: 'assistant', content: 'Sorry, something went wrong.' },
+      ]);
+    }
+  }
 
   function openNew() {
     if (!editable) return;
@@ -418,6 +602,16 @@ export default function SubflavorsClient({
               >
                 Import subflavor
               </button>
+              <button
+                id={`s7ubflav-add-recommend-${userId}`}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+                onClick={() => {
+                  setChoiceOpen(false);
+                  setRecommendOpen(true);
+                }}
+              >
+                Recommend subflavour
+              </button>
             </div>
             <div className="mt-4 flex justify-end">
               <button
@@ -426,6 +620,67 @@ export default function SubflavorsClient({
                 onClick={() => setChoiceOpen(false)}
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {recommendOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex w-[90%] max-w-2xl max-h-[90vh] flex-col rounded bg-white p-6 shadow-lg">
+            <div className="mb-4 flex-1 overflow-y-auto space-y-2">
+              {chatMessages.map((m, i) => (
+                <div
+                  key={i}
+                  className={m.role === 'user' ? 'text-right' : 'text-left'}
+                >
+                  <span
+                    className={
+                      m.role === 'user'
+                        ? 'inline-block rounded bg-orange-100 px-2 py-1'
+                        : 'inline-block rounded bg-gray-200 px-2 py-1'
+                    }
+                  >
+                    {m.content}
+                  </span>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') sendChat();
+                }}
+                placeholder="Type your answer..."
+                className="flex-1 rounded border px-2 py-1"
+              />
+              <button
+                onClick={sendChat}
+                className="rounded bg-orange-500 px-3 py-1 text-white"
+              >
+                Send
+              </button>
+            </div>
+            <div className="mt-4 flex justify-between">
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={resetChat}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                className="rounded border px-3 py-1"
+                onClick={() => {
+                  setRecommendOpen(false);
+                }}
+              >
+                Close
               </button>
             </div>
           </div>
