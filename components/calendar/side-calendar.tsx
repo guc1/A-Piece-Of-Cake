@@ -23,8 +23,18 @@ export function SideCalendar({
 
   const start = new Date(base);
   start.setDate(start.getDate() - 30);
+  // Align the start date to the beginning of the week (Sunday) so the
+  // calendar grid columns match actual weekdays. Without this adjustment the
+  // weekday labels drift, causing each date to appear under the wrong day
+  // (e.g. 1 September 2025 showing under Sunday).
+  start.setDate(start.getDate() - start.getDay());
+
   const end = new Date(base);
   end.setDate(end.getDate() + 7);
+  // Extend the end date to the end of its week so that the grid covers whole
+  // weeks after shifting the start. This also keeps "yesterday" snapshots
+  // aligned with the correct date.
+  end.setDate(end.getDate() + (6 - end.getDay()));
 
   const days: Date[] = [];
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
