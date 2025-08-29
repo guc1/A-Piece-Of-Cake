@@ -20,15 +20,17 @@ export function ReviewHome({
 
   // Load saved notes from localStorage on mount
   useEffect(() => {
+    if (!editable) return;
     const savedRational = localStorage.getItem('review-rational');
     const savedGuilty = localStorage.getItem('review-guilty');
     if (savedRational) setRational(savedRational);
     if (savedGuilty) setGuilty(savedGuilty);
-  }, []);
+  }, [editable]);
 
   const handleRationalChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setRational(value);
+    if (!editable) return;
     if (value) {
       localStorage.setItem('review-rational', value);
     } else {
@@ -39,6 +41,7 @@ export function ReviewHome({
   const handleGuiltyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setGuilty(value);
+    if (!editable) return;
     if (value) {
       localStorage.setItem('review-guilty', value);
     } else {

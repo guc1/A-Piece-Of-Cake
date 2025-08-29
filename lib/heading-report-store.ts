@@ -1,6 +1,6 @@
 import { db } from './db';
 import { headingReports } from './db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, lte } from 'drizzle-orm';
 import type { HeadingReport } from '@/types/report';
 
 function slugFromDate(ymd: string, version = 1): string {
@@ -116,6 +116,40 @@ export async function getLatestHeadingReport(
   };
 }
 
+export async function getHeadingReportAt(
+  userId: number,
+  date: string,
+  at: Date,
+): Promise<HeadingReport | null> {
+  const [row] = await db
+    .select()
+    .from(headingReports)
+    .where(
+      and(
+        eq(headingReports.userId, userId),
+        eq(headingReports.date, date),
+        lte(headingReports.createdAt, at),
+      ),
+    )
+    .orderBy(desc(headingReports.version))
+    .limit(1);
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.userId ?? 0,
+    date,
+    version: row.version ?? 1,
+    overview: row.overview ?? '',
+    shortTerm: parseList(row.shortTerm),
+    longTerm: parseList(row.longTerm),
+    feedback: parseList(row.feedback),
+    scoreProgress: row.scoreProgress ?? 0,
+    scoreProbability: row.scoreProbability ?? 0,
+    coachTone: row.coachTone ?? 'tone_medium',
+    createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
+  };
+}
+
 export async function createHeadingReport(
   userId: number,
   date: string,
@@ -136,7 +170,9 @@ export async function createHeadingReport(
         maxVersion: sql<number>`coalesce(max(${headingReports.version}),0)`,
       })
       .from(headingReports)
-      .where(and(eq(headingReports.userId, userId), eq(headingReports.date, ymd)));
+      .where(
+        and(eq(headingReports.userId, userId), eq(headingReports.date, ymd)),
+      );
     const nextVersion = (maxVersion ?? 0) + 1;
     await db.insert(headingReports).values({
       userId,
