@@ -485,9 +485,10 @@ export default function IngredientsClient({
             const created = await createMine(fd);
             await deleteMine(editing.id);
             setIngredients((prev) =>
-              sortIngredients(
-                [...prev.filter((p) => p.id !== editing.id), created],
-              ),
+              sortIngredients([
+                ...prev.filter((p) => p.id !== editing.id),
+                created,
+              ]),
             );
             setEditing(created);
             setForm({
@@ -939,197 +940,245 @@ export default function IngredientsClient({
       {open && (
         <div
           id={`1ngred-modal-${editing ? editing.id : 'new'}-${userId}`}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ingredient-modal-title"
+          onClick={() => setOpen(false)}
         >
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded bg-white p-6 shadow-lg">
-            <div className="mb-4 flex justify-between">
-              <h2 className="text-xl font-semibold">
-                {editing ? 'Edit ingredient' : 'New ingredient'}
+          <div
+            className="max-h-[90vh] w-full max-w-[800px] overflow-y-auto rounded-3xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 id="ingredient-modal-title" className="text-lg font-semibold">
+                {editing ? 'Edit Ingredient' : 'New Ingredient'}
               </h2>
-              <button onClick={() => setOpen(false)}>✕</button>
+              <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-100">
+                {iconSrc(form.icon) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={iconSrc(form.icon) as string}
+                    alt="icon"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl">{form.icon}</span>
+                )}
+              </div>
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium">Icon</label>
-              <IconPicker
-                value={form.icon}
-                onChange={(icon) => setForm({ ...form, icon })}
-                people={people}
-                editable={editable}
-              />
-            </div>
-            <label
-              className="block text-sm font-medium"
-              htmlFor={`1ngred-t1tle-${editing ? editing.id : 'new'}-${userId}`}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                save();
+              }}
+              className="grid gap-4 md:grid-cols-2"
             >
-              Title
-            </label>
-            <input
-              id={`1ngred-t1tle-${editing ? editing.id : 'new'}-${userId}`}
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              disabled={!editable}
-              className="mb-2 w-full rounded border px-2 py-1"
-            />
-            <label
-              className="block text-sm font-medium"
-              htmlFor={`1ngred-sh0rt-${editing ? editing.id : 'new'}-${userId}`}
-            >
-              Short description
-            </label>
-            <input
-              id={`1ngred-sh0rt-${editing ? editing.id : 'new'}-${userId}`}
-              value={form.shortDescription}
-              onChange={(e) =>
-                setForm({ ...form, shortDescription: e.target.value })
-              }
-              disabled={!editable}
-              className="mb-2 w-full rounded border px-2 py-1"
-            />
-            <label
-              className="block text-sm font-medium"
-              htmlFor={`1ngred-u53-${editing ? editing.id : 'new'}-${userId}`}
-            >
-              Usefulness ({form.usefulness})
-            </label>
-            <input
-              id={`1ngred-u53-${editing ? editing.id : 'new'}-${userId}`}
-              type="range"
-              min={0}
-              max={100}
-              value={form.usefulness}
-              onChange={(e) =>
-                setForm({ ...form, usefulness: Number(e.target.value) })
-              }
-              disabled={!editable}
-              className="mb-2 w-full"
-            />
-            <label
-              className="block text-sm font-medium"
-              htmlFor={`1ngred-de5c-${editing ? editing.id : 'new'}-${userId}`}
-            >
-              What it is
-            </label>
-            <textarea
-              id={`1ngred-de5c-${editing ? editing.id : 'new'}-${userId}`}
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              disabled={!editable}
-              className="mb-2 w-full rounded border px-2 py-1"
-            />
-            <label
-              className="block text-sm font-medium"
-              htmlFor={`1ngred-why-${editing ? editing.id : 'new'}-${userId}`}
-            >
-              Why used
-            </label>
-            <textarea
-              id={`1ngred-why-${editing ? editing.id : 'new'}-${userId}`}
-              value={form.whyUsed}
-              onChange={(e) => setForm({ ...form, whyUsed: e.target.value })}
-              disabled={!editable}
-              className="mb-2 w-full rounded border px-2 py-1"
-            />
-            <label
-              className="block text-sm font-medium"
-              htmlFor={`1ngred-when-${editing ? editing.id : 'new'}-${userId}`}
-            >
-              When used / situations
-            </label>
-            <textarea
-              id={`1ngred-when-${editing ? editing.id : 'new'}-${userId}`}
-              value={form.whenUsed}
-              onChange={(e) => setForm({ ...form, whenUsed: e.target.value })}
-              disabled={!editable}
-              className="mb-2 w-full rounded border px-2 py-1"
-            />
-            <label
-              className="block text-sm font-medium"
-              htmlFor={`1ngred-tips-${editing ? editing.id : 'new'}-${userId}`}
-            >
-              Tips
-            </label>
-            <textarea
-              id={`1ngred-tips-${editing ? editing.id : 'new'}-${userId}`}
-              value={form.tips}
-              onChange={(e) => setForm({ ...form, tips: e.target.value })}
-              disabled={!editable}
-              className="mb-2 w-full rounded border px-2 py-1"
-            />
-            <label
-              className="block text-sm font-medium"
-              htmlFor={`1ngred-vis-${editing ? editing.id : 'new'}-${userId}`}
-            >
-              Visibility
-            </label>
-            <select
-              id={`1ngred-vis-${editing ? editing.id : 'new'}-${userId}`}
-              value={form.visibility}
-              onChange={(e) =>
-                setForm({ ...form, visibility: e.target.value as Visibility })
-              }
-              disabled={!editable}
-              className="mb-4 w-full rounded border px-2 py-1"
-            >
-              {VISIBILITIES.map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-2">
-              {editing && editable && (
-                <>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium">Icon</label>
+                <IconPicker
+                  value={form.icon}
+                  onChange={(icon) => setForm({ ...form, icon })}
+                  people={people}
+                  editable={editable}
+                />
+              </div>
+              <div>
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`1ngred-t1tle-${editing ? editing.id : 'new'}-${userId}`}
+                >
+                  Title
+                </label>
+                <input
+                  id={`1ngred-t1tle-${editing ? editing.id : 'new'}-${userId}`}
+                  className="w-full rounded border p-1"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  disabled={!editable}
+                />
+              </div>
+              <div>
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`1ngred-sh0rt-${editing ? editing.id : 'new'}-${userId}`}
+                >
+                  Short description
+                </label>
+                <input
+                  id={`1ngred-sh0rt-${editing ? editing.id : 'new'}-${userId}`}
+                  className="w-full rounded border p-1"
+                  value={form.shortDescription}
+                  onChange={(e) =>
+                    setForm({ ...form, shortDescription: e.target.value })
+                  }
+                  disabled={!editable}
+                />
+              </div>
+              <div>
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`1ngred-u53-${editing ? editing.id : 'new'}-${userId}`}
+                >
+                  Usefulness ({form.usefulness})
+                </label>
+                <input
+                  id={`1ngred-u53-${editing ? editing.id : 'new'}-${userId}`}
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={form.usefulness}
+                  onChange={(e) =>
+                    setForm({ ...form, usefulness: Number(e.target.value) })
+                  }
+                  disabled={!editable}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`1ngred-vis-${editing ? editing.id : 'new'}-${userId}`}
+                >
+                  Visibility
+                </label>
+                <select
+                  id={`1ngred-vis-${editing ? editing.id : 'new'}-${userId}`}
+                  className="w-full rounded border p-1"
+                  value={form.visibility}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      visibility: e.target.value as Visibility,
+                    })
+                  }
+                  disabled={!editable}
+                >
+                  {VISIBILITIES.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`1ngred-de5c-${editing ? editing.id : 'new'}-${userId}`}
+                >
+                  What it is
+                </label>
+                <textarea
+                  id={`1ngred-de5c-${editing ? editing.id : 'new'}-${userId}`}
+                  className="w-full rounded border p-1"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  disabled={!editable}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`1ngred-why-${editing ? editing.id : 'new'}-${userId}`}
+                >
+                  Why used
+                </label>
+                <textarea
+                  id={`1ngred-why-${editing ? editing.id : 'new'}-${userId}`}
+                  className="w-full rounded border p-1"
+                  value={form.whyUsed}
+                  onChange={(e) =>
+                    setForm({ ...form, whyUsed: e.target.value })
+                  }
+                  disabled={!editable}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`1ngred-when-${editing ? editing.id : 'new'}-${userId}`}
+                >
+                  When used / situations
+                </label>
+                <textarea
+                  id={`1ngred-when-${editing ? editing.id : 'new'}-${userId}`}
+                  className="w-full rounded border p-1"
+                  value={form.whenUsed}
+                  onChange={(e) =>
+                    setForm({ ...form, whenUsed: e.target.value })
+                  }
+                  disabled={!editable}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label
+                  className="block text-sm font-medium"
+                  htmlFor={`1ngred-tips-${editing ? editing.id : 'new'}-${userId}`}
+                >
+                  Tips
+                </label>
+                <textarea
+                  id={`1ngred-tips-${editing ? editing.id : 'new'}-${userId}`}
+                  className="w-full rounded border p-1"
+                  value={form.tips}
+                  onChange={(e) => setForm({ ...form, tips: e.target.value })}
+                  disabled={!editable}
+                />
+              </div>
+              <div className="md:col-span-2 flex justify-end gap-2 pt-4">
+                {editing && editable && (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded bg-orange-500 px-3 py-1 text-white"
+                      onClick={openImprove}
+                    >
+                      Improve
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded bg-red-600 px-3 py-1 text-white"
+                      onClick={() => remove(editing)}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+                {editable && (
+                  <button
+                    type="submit"
+                    className="rounded bg-orange-500 px-3 py-1 text-white"
+                  >
+                    Save
+                  </button>
+                )}
+                {!editable && selfId && (
                   <button
                     type="button"
                     className="rounded bg-orange-500 px-3 py-1 text-white"
-                    onClick={openImprove}
+                    onClick={async () => {
+                      const fd = new FormData();
+                      Object.entries(form).forEach(([k, v]) =>
+                        fd.append(k, v as any),
+                      );
+                      await createMine(fd);
+                      alert('Copied');
+                    }}
                   >
-                    Improve
+                    Copy to my ingredients
                   </button>
-                  <button
-                    type="button"
-                    className="rounded bg-red-600 px-3 py-1 text-white"
-                    onClick={() => remove(editing)}
-                  >
-                    Delete
-                  </button>
-                </>
-              )}
-              {editable && (
+                )}
                 <button
                   type="button"
-                  className="rounded bg-orange-500 px-3 py-1 text-white"
-                  onClick={save}
+                  className="rounded border px-3 py-1"
+                  onClick={() => setOpen(false)}
                 >
-                  Save
+                  Cancel
                 </button>
-              )}
-              {!editable && selfId && (
-                <button
-                  type="button"
-                  className="rounded bg-orange-500 px-3 py-1 text-white"
-                  onClick={async () => {
-                    const fd = new FormData();
-                    Object.entries(form).forEach(([k, v]) =>
-                      fd.append(k, v as any),
-                    );
-                    await createMine(fd);
-                    alert('Copied');
-                  }}
-                >
-                  Copy to my ingredients
-                </button>
-              )}
-              <button
-                type="button"
-                className="rounded border px-3 py-1"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </button>
-            </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
