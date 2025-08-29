@@ -13,7 +13,11 @@ import type { Subflavor } from '@/types/subflavor';
 import { savePlanAction } from './actions';
 import { cn } from '@/lib/utils';
 import ColorPresetPicker from '@/components/color-preset-picker';
-import { addUserColorPreset, getUserColorPresets } from '@/lib/color-presets';
+import {
+  addUserColorPreset,
+  getUserColorPresets,
+  DEFAULT_COLOR_PRESETS,
+} from '@/lib/color-presets';
 import type {
   HeadingReport,
   DailyReport,
@@ -601,12 +605,45 @@ export default function EditorClient({
       if (data.response) {
         const parsed = parseActivities(data.response as string);
         if (parsed && parsed.length) {
+          const availablePresets = [
+            ...DEFAULT_COLOR_PRESETS.map((p) => ({
+              id: p.id,
+              name: p.name,
+              color: p.colors[0],
+            })),
+            ...getUserColorPresets(currentUserId).map((p) => ({
+              id: p.id,
+              name: p.name,
+              color: p.colors[0],
+            })),
+          ];
+          let assignments: Record<string, string> = {};
+          try {
+            const colorRes = await fetch('/api/planning/color', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ activities: parsed, presets: availablePresets }),
+            });
+            const colorData = await colorRes.json();
+            if (Array.isArray(colorData.assignments)) {
+              assignments = Object.fromEntries(
+                colorData.assignments.map((a: any) => [a.activity, a.presetId]),
+              );
+            }
+          } catch {
+            // ignore color assignment errors
+          }
           const titles = parsed.map((p) => p.Activity).join(', ');
           const ok = confirm(`Should I add these activities (${titles})?`);
           if (ok) {
+            const presetMap = Object.fromEntries(
+              availablePresets.map((p) => [p.id, p.color]),
+            );
             const newBlocks = parsed.map((p) => {
               const start = minutesFromTime(p.start);
               const end = minutesFromTime(p.end);
+              const presetId = assignments[p.Activity] || '';
+              const color = presetMap[presetId] || COLORS[0];
               return {
                 id:
                   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -617,8 +654,8 @@ export default function EditorClient({
                 end: isoFromMinutes(end),
                 title: p.Activity,
                 description: p.Description,
-                color: COLORS[0],
-                colorPreset: '',
+                color,
+                colorPreset: presetId,
                 ingredientIds: [],
                 flavorIds: [],
                 subflavorIds: [],
@@ -2563,7 +2600,7 @@ export default function EditorClient({
         </div>
       )}
       {aiOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="flex w-[90%] max-w-2xl max-h-[90vh] flex-col rounded bg-white p-6 shadow-lg">
             <div className="mb-4 flex-1 overflow-y-auto space-y-2">
               {chatMessages.map((m, i) => (
