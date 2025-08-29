@@ -266,3 +266,4 @@
 - 2025-10-27: Added colour assessment agent to choose presets for AI-generated activities and raised AI modal above planning blocks.
 - 2025-10-27: Blurred planning background when AI chat opens so only the chat box is visible.
 - 2025-10-27: Increased AI chat background blur for better focus.
+- 2025-10-27: Added motivational Live AI assistant on live planning page with contextual chat modal.

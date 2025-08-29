@@ -202,10 +202,17 @@ export default function EditorClient({
   }, [initialShowDailyAim, storageKey]);
 
   const [aiOpen, setAiOpen] = useState(false);
-  const CHAT_STORAGE_KEY = `plan-ai-chat-${userId}-${date}`;
+  const CHAT_STORAGE_KEY = `${
+    live ? 'plan-live-ai-chat' : 'plan-ai-chat'
+  }-${userId}-${date}`;
   type ChatMessage = { role: 'user' | 'assistant'; content: string };
   const initialChat: ChatMessage[] = [
-    { role: 'assistant', content: 'How can I help you with your planning?' },
+    {
+      role: 'assistant',
+      content: live
+        ? 'How can I help you make the most of your day?'
+        : 'How can I help you with your planning?',
+    },
   ];
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat);
   const [chatInput, setChatInput] = useState('');
@@ -530,6 +537,74 @@ export default function EditorClient({
     return lines.join('\n');
   }
 
+  function summarizeBlock(b: PlanBlock) {
+    const start = minutesFromIso(b.start);
+    const end = minutesFromIso(b.end);
+    const ing = b.ingredientIds
+      .map((id) => initialIngredients.find((i) => i.id === id)?.title)
+      .filter(Boolean)
+      .join(', ');
+    const flav = b.flavorIds
+      .map((id) => initialFlavors.find((f) => f.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+    const parts = [
+      `Activity: ${b.title}`,
+      `Description: ${b.description}`,
+      `Time: ${minutesToTime(start)}-${minutesToTime(end)}`,
+    ];
+    if (ing) parts.push(`Ingredients: ${ing}`);
+    if (flav) parts.push(`Flavors: ${flav}`);
+    return parts.join(' ');
+  }
+
+  function buildLiveContext(prompt: string) {
+    const rational =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('review-rational') || ''
+        : '';
+    const guilty =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('review-guilty') || ''
+        : '';
+    const report = buildReportContext(reportContext);
+    const aim = buildDailyAimContext();
+    const nowStr = new Date().toLocaleString('en-US', { timeZone: tz });
+    const now = nowMinute;
+    const current = blocks.filter((b) => {
+      const s = minutesFromIso(b.start);
+      const e = minutesFromIso(b.end);
+      return s <= now && now < e;
+    });
+    const done = blocks.filter((b) => minutesFromIso(b.end) <= now);
+    const upcoming = blocks.filter((b) => minutesFromIso(b.start) > now);
+    const curStr = current.length ? current.map(summarizeBlock).join(' | ') : 'none';
+    const doneStr = done.length ? done.map(summarizeBlock).join(' | ') : 'none';
+    const upStr = upcoming.length
+      ? upcoming.map(summarizeBlock).join(' | ')
+      : 'none';
+    const ingredientStr = initialIngredients
+      .slice()
+      .sort((a, b) => b.usefulness - a.usefulness)
+      .map((i) => `${i.title} (${i.usefulness})`)
+      .join(', ');
+    const flavorStr = initialFlavors
+      .slice()
+      .sort((a, b) => b.importance - a.importance)
+      .map((f) => `${f.name} (${f.importance})`)
+      .join(', ');
+    return (
+      `The goal/life ethos of the user is ${rational}; the guilty pleasure is ${guilty}. ` +
+      `according to the rapports this is the direction of the user ${report}. ` +
+      `The daily aim of the user is: ${aim}. ` +
+      `The current time is ${nowStr}, currently the user is doing this activity ${curStr}. ` +
+      `The activities the user already done today ${doneStr} , and these activities the user still has to do ${upStr}. ` +
+      `The ingredients the user has created ${ingredientStr}. ` +
+      `And the main flavours of the user ${flavorStr}. ` +
+      `Youre goal is to help the user with: ${prompt}`
+    );
+  }
+
   function buildPlanningContext() {
     const rational =
       typeof window !== 'undefined'
@@ -604,15 +679,20 @@ export default function EditorClient({
     setChatMessages(initialChat);
   }
 
-  const SYSTEM_PROMPT =
+  const PLANNING_SYSTEM_PROMPT =
     'You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life , last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. and based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity . you are going to plan a day for him that matches his ambitions. always listen to the feedback of the user, and try to make as good as possible planning for him or her. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity than respond ONLY with a JSON object containing the fields: Activity (which is the title of the activity), Description (which is a detailed description of the activity) start (starting time of activity), end (end time of activity) for each activity the user wanted to have implemented. ';
+  const LIVE_SYSTEM_PROMPT =
+    'You are a helpful live assistant agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake, ingredients are kind of the habits the user has created to help him create the flavours successful. Your context as an agent: the person is currently working on his planning on the day, and when he chats with you Your goal is to provide help with whatever the user needs help with. probably it is going to be with finding motivation , or questions on if he or she should build the day up differently from now, or just general tips. Your context will exist out of his goal in life, where he is currently heading towards according to the rapport , the current activities he is doing. the other activities on the day. the daily aim. and all the ingredients and flavours the user has on his account. You are going to make him motivated, with reminding him about the goal etc. talk him out of negative thoughts, and help him make the best out of the day. Give him a sense of purpose, recognition of his work, and belief. Yet stay honest. Really motivates him or her to perform outstandingly. the tone and honesty the user wants: ${JSON.stringify(tone, null, 2)} ';
+  const SYSTEM_PROMPT = live ? LIVE_SYSTEM_PROMPT : PLANNING_SYSTEM_PROMPT;
 
   async function sendChat() {
     if (!chatInput.trim()) return;
     const isFirst =
       chatMessages.length === 1 && chatMessages[0].role === 'assistant';
     const userContent = isFirst
-      ? `${chatInput}\n\n${buildPlanningContext()}`
+      ? live
+        ? buildLiveContext(chatInput)
+        : `${chatInput}\n\n${buildPlanningContext()}`
       : chatInput;
     const newMessages: ChatMessage[] = [
       ...chatMessages,
@@ -632,84 +712,91 @@ export default function EditorClient({
       });
       const data = await res.json();
       if (data.response) {
-        const parsed = parseActivities(data.response as string);
-        if (parsed && parsed.length) {
-          const presets = [
-            ...DEFAULT_COLOR_PRESETS,
-            ...getUserColorPresets(userId),
-          ];
-          const presetMap = new Map(presets.map((p) => [p.id, p]));
-          let assignments: ColorAssignment[] | null = null;
-          try {
-            const colorRes = await fetch(
-              '/api/planning/color-assessment',
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  activities: parsed,
-                  presets: presets.map((p) => ({ id: p.id, name: p.name })),
-                }),
-              },
-            );
-            const colorData = await colorRes.json();
-            assignments = parseColorAssignments(
-              colorData.response as string,
-            );
-          } catch {
-            assignments = null;
-          }
-
-          const titles = parsed.map((p) => p.Activity).join(', ');
-          const ok = confirm(`Should I add these activities (${titles})?`);
-          if (ok) {
-            const newBlocks = parsed.map((p) => {
-              const start = minutesFromTime(p.start);
-              const end = minutesFromTime(p.end);
-              const presetId = assignments?.find(
-                (a) => a.Activity === p.Activity,
-              )?.ColorPresetId;
-              const preset = presetId
-                ? (presetMap.get(presetId) as ColorPreset | undefined)
-                : undefined;
-              return {
-                id:
-                  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                    ? crypto.randomUUID()
-                    : Math.random().toString(36).slice(2),
-                planId: initialPlan?.id || '',
-                start: isoFromMinutes(start),
-                end: isoFromMinutes(end),
-                title: p.Activity,
-                description: p.Description,
-                color: preset ? preset.colors[0] : COLORS[0],
-                colorPreset: preset ? preset.id : '',
-                ingredientIds: [],
-                flavorIds: [],
-                subflavorIds: [],
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              } as PlanBlock;
-            });
-            setBlocks((prev) => [...prev, ...newBlocks]);
-            setChatMessages([
-              ...newMessages,
-              {
-                role: 'assistant',
-                content: `Added activities: ${titles}.`,
-              },
-            ]);
-          } else {
-            setChatMessages([
-              ...newMessages,
-              { role: 'assistant', content: 'Okay, not adding them.' },
-            ]);
-          }
-        } else {
+        if (live) {
           setChatMessages([
             ...newMessages,
             { role: 'assistant', content: data.response as string },
           ]);
+        } else {
+          const parsed = parseActivities(data.response as string);
+          if (parsed && parsed.length) {
+            const presets = [
+              ...DEFAULT_COLOR_PRESETS,
+              ...getUserColorPresets(userId),
+            ];
+            const presetMap = new Map(presets.map((p) => [p.id, p]));
+            let assignments: ColorAssignment[] | null = null;
+            try {
+              const colorRes = await fetch(
+                '/api/planning/color-assessment',
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    activities: parsed,
+                    presets: presets.map((p) => ({ id: p.id, name: p.name })),
+                  }),
+                },
+              );
+              const colorData = await colorRes.json();
+              assignments = parseColorAssignments(
+                colorData.response as string,
+              );
+            } catch {
+              assignments = null;
+            }
+
+            const titles = parsed.map((p) => p.Activity).join(', ');
+            const ok = confirm(`Should I add these activities (${titles})?`);
+            if (ok) {
+              const newBlocks = parsed.map((p) => {
+                const start = minutesFromTime(p.start);
+                const end = minutesFromTime(p.end);
+                const presetId = assignments?.find(
+                  (a) => a.Activity === p.Activity,
+                )?.ColorPresetId;
+                const preset = presetId
+                  ? (presetMap.get(presetId) as ColorPreset | undefined)
+                  : undefined;
+                return {
+                  id:
+                    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                      ? crypto.randomUUID()
+                      : Math.random().toString(36).slice(2),
+                  planId: initialPlan?.id || '',
+                  start: isoFromMinutes(start),
+                  end: isoFromMinutes(end),
+                  title: p.Activity,
+                  description: p.Description,
+                  color: preset ? preset.colors[0] : COLORS[0],
+                  colorPreset: preset ? preset.id : '',
+                  ingredientIds: [],
+                  flavorIds: [],
+                  subflavorIds: [],
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                } as PlanBlock;
+              });
+              setBlocks((prev) => [...prev, ...newBlocks]);
+              setChatMessages([
+                ...newMessages,
+                {
+                  role: 'assistant',
+                  content: `Added activities: ${titles}.`,
+                },
+              ]);
+            } else {
+              setChatMessages([
+                ...newMessages,
+                { role: 'assistant', content: 'Okay, not adding them.' },
+              ]);
+            }
+          } else {
+            setChatMessages([
+              ...newMessages,
+              { role: 'assistant', content: data.response as string },
+            ]);
+          }
         }
       }
     } catch {
@@ -1282,11 +1369,11 @@ export default function EditorClient({
               </button>
             )}
             <button
-              id={`p1an-ai-${userId}`}
+              id={`p1an-${live ? 'live-ai' : 'ai'}-${userId}`}
               className="rounded bg-orange-500 px-3 py-1 text-white"
               onClick={() => setAiOpen(true)}
             >
-              AI planning
+              {live ? 'Live AI' : 'AI planning'}
             </button>
             <Button
               id={`p1an-daily-aim-${userId}`}
