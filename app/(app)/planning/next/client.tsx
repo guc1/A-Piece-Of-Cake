@@ -84,8 +84,14 @@ interface Props {
   reportContext?: {
     heading: HeadingReport | null;
     daily: Pick<DailyReport, 'date' | 'bad' | 'observations'>[];
-    weekly: Pick<WeeklyReport, 'startDate' | 'endDate' | 'bad' | 'observations'>[];
-    monthly: Pick<MonthlyReport, 'startDate' | 'endDate' | 'bad' | 'observations'>[];
+    weekly: Pick<
+      WeeklyReport,
+      'startDate' | 'endDate' | 'bad' | 'observations'
+    >[];
+    monthly: Pick<
+      MonthlyReport,
+      'startDate' | 'endDate' | 'bad' | 'observations'
+    >[];
   };
 }
 
@@ -273,8 +279,14 @@ export default function EditorClient({
   });
   const [showPresetPicker, setShowPresetPicker] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectionBox, setSelectionBox] = useState<{
+    start: number;
+    end: number;
+  } | null>(null);
   const [metaPinned, setMetaPinned] = useState(false);
   const openMeta = useCallback((id: string) => {
+    setSelectedIds([]);
     setSelectedId(id);
     setMetaPinned(true);
   }, []);
@@ -479,9 +491,13 @@ export default function EditorClient({
     if (rc.heading) {
       lines.push(`Overview: ${rc.heading.overview}`);
       if (rc.heading.shortTerm?.length)
-        lines.push(`Heading towards short term: ${rc.heading.shortTerm.join('; ')}`);
+        lines.push(
+          `Heading towards short term: ${rc.heading.shortTerm.join('; ')}`,
+        );
       if (rc.heading.longTerm?.length)
-        lines.push(`Heading towards long term: ${rc.heading.longTerm.join('; ')}`);
+        lines.push(
+          `Heading towards long term: ${rc.heading.longTerm.join('; ')}`,
+        );
       if (rc.heading.feedback?.length)
         lines.push(`Feedback: ${rc.heading.feedback.join('; ')}`);
     }
@@ -641,21 +657,16 @@ export default function EditorClient({
           const presetMap = new Map(presets.map((p) => [p.id, p]));
           let assignments: ColorAssignment[] | null = null;
           try {
-            const colorRes = await fetch(
-              '/api/planning/color-assessment',
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  activities: parsed,
-                  presets: presets.map((p) => ({ id: p.id, name: p.name })),
-                }),
-              },
-            );
+            const colorRes = await fetch('/api/planning/color-assessment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                activities: parsed,
+                presets: presets.map((p) => ({ id: p.id, name: p.name })),
+              }),
+            });
             const colorData = await colorRes.json();
-            assignments = parseColorAssignments(
-              colorData.response as string,
-            );
+            assignments = parseColorAssignments(colorData.response as string);
           } catch {
             assignments = null;
           }
@@ -1166,6 +1177,99 @@ export default function EditorClient({
     window.addEventListener('pointerup', onUp);
   }
 
+  function onGroupDragStart(
+    e: React.PointerEvent,
+    ids: string[],
+    dragRef: React.MutableRefObject<boolean>,
+  ) {
+    if (!editable || review) return;
+    e.preventDefault();
+    dragRef.current = false;
+    const startY = e.clientY;
+    const init = blocksRef.current
+      .filter((b) => ids.includes(b.id))
+      .map((b) => ({
+        id: b.id,
+        start: minutesFromIso(b.start),
+        end: minutesFromIso(b.end),
+      }));
+    const minStart = Math.min(...init.map((i) => i.start));
+    const maxEnd = Math.max(...init.map((i) => i.end));
+    const bounds = document
+      .getElementById(`p1an-timecol-${userId}`)
+      ?.getBoundingClientRect() ?? { top: 0, bottom: 0 };
+    const marginPx = 10;
+    function onMove(ev: PointerEvent) {
+      dragRef.current = true;
+      if (
+        ev.clientY < bounds.top + marginPx ||
+        ev.clientY > bounds.bottom - marginPx
+      ) {
+        onUp();
+        return;
+      }
+      let delta =
+        Math.round((ev.clientY - startY) / PIXELS_PER_MINUTE / 15) * 15;
+      if (minStart + delta < 0) delta = -minStart;
+      if (maxEnd + delta > MAX_MINUTES) delta = MAX_MINUTES - maxEnd;
+      setBlocks((prev) =>
+        prev.map((b) => {
+          const entry = init.find((i) => i.id === b.id);
+          if (!entry) return b;
+          return {
+            ...b,
+            start: isoFromMinutes(entry.start + delta),
+            end: isoFromMinutes(entry.end + delta),
+          };
+        }),
+      );
+    }
+    function onUp() {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      dragRef.current = false;
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  function handleTimelinePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!editable || review) return;
+    const container = e.currentTarget;
+    const rect = container.getBoundingClientRect();
+    const start = e.clientY - rect.top + startMinute * PIXELS_PER_MINUTE;
+    let current = start;
+    setSelectionBox({ start, end: start });
+    function onMove(ev: PointerEvent) {
+      current = ev.clientY - rect.top + startMinute * PIXELS_PER_MINUTE;
+      setSelectionBox({ start, end: current });
+    }
+    function onUp() {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      const minY = Math.min(start, current);
+      const maxY = Math.max(start, current);
+      setSelectionBox(null);
+      if (Math.abs(maxY - minY) < 4) {
+        setSelectedIds([]);
+        setSelectedId(null);
+        return;
+      }
+      const ids = blocksRef.current
+        .filter((b) => {
+          const bStart = minutesFromIso(b.start) * PIXELS_PER_MINUTE;
+          const bEnd = minutesFromIso(b.end) * PIXELS_PER_MINUTE;
+          return bEnd > minY && bStart < maxY;
+        })
+        .map((b) => b.id);
+      setSelectedIds(ids);
+      setSelectedId(null);
+      setMetaPinned(false);
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
   const sortedBlocks = useMemo(
     () =>
       [...blocks].sort(
@@ -1210,10 +1314,10 @@ export default function EditorClient({
   }, [liveBlocks, minutesFromIso]);
 
   useEffect(() => {
-    if (!live || metaPinned) return;
+    if (!live || metaPinned || selectedIds.length > 0) return;
     if (currentBlock) setSelectedId(currentBlock.id);
     else setSelectedId(null);
-  }, [live, currentBlock, metaPinned]);
+  }, [live, currentBlock, metaPinned, selectedIds.length]);
 
   const lineColor = useMemo(() => {
     if (!live) return '#FF0000';
@@ -1231,9 +1335,11 @@ export default function EditorClient({
         <div
           className={`relative overflow-y-hidden ${selected ? 'w-1/2' : 'w-full'}`}
           id={`p1an-timecol-${userId}`}
+          onPointerDown={handleTimelinePointerDown}
         >
           <div
             className="sticky top-0 z-10 flex flex-wrap items-end gap-2 bg-gray-100 p-2 text-sm"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             {!review &&
@@ -1318,6 +1424,7 @@ export default function EditorClient({
           {showCustom && (
             <div
               className="sticky top-[48px] z-10 flex items-center gap-2 bg-gray-50 p-2 text-xs"
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
               <span>Start:</span>
@@ -1400,13 +1507,18 @@ export default function EditorClient({
                 const z = (blockDepth[b.id] || 0) * Z_BASE + (Z_BASE - bStart);
                 const textColor = getTextColor(b.color);
                 const fontSize = Math.min(20, Math.max(12, height / 2));
+                const isSelected =
+                  selectedId === b.id || selectedIds.includes(b.id);
                 return (
                   <div
                     key={b.id}
                     id={`p1an-blk-${b.id}-${userId}`}
-                    data-selected={selectedId === b.id ? 'true' : 'false'}
+                    data-selected={isSelected ? 'true' : 'false'}
                     aria-label={`${b.title}, ${b.start} to ${b.end}`}
-                    className="absolute left-1 right-1 rounded p-1"
+                    className={cn(
+                      'absolute left-1 right-1 rounded p-1',
+                      isSelected && 'ring-2 ring-blue-500',
+                    )}
                     style={{
                       top,
                       height,
@@ -1449,13 +1561,22 @@ export default function EditorClient({
                           : rect.height - offset < 8
                             ? 'end'
                             : 'move';
-                      onDragStart(e, b, mode, draggingRef);
+                      if (
+                        mode === 'move' &&
+                        selectedIds.length > 1 &&
+                        selectedIds.includes(b.id)
+                      ) {
+                        onGroupDragStart(e, selectedIds, draggingRef);
+                      } else {
+                        onDragStart(e, b, mode, draggingRef);
+                      }
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (draggingRef.current) return;
                       if (review && live && nowMinute < minutesFromIso(b.end))
                         return;
+                      if (selectedIds.length > 0) setSelectedIds([]);
                       openMeta(b.id);
                     }}
                   >
@@ -1468,6 +1589,18 @@ export default function EditorClient({
                   </div>
                 );
               })}
+              {selectionBox && (
+                <div
+                  className="pointer-events-none absolute left-0 right-0 bg-blue-200/40"
+                  style={{
+                    top:
+                      Math.min(selectionBox.start, selectionBox.end) -
+                      startMinute * PIXELS_PER_MINUTE,
+                    height: Math.abs(selectionBox.end - selectionBox.start),
+                    zIndex: 1000000,
+                  }}
+                />
+              )}
               {live && nowMinute >= startMinute && nowMinute <= endMinute && (
                 <div
                   id={`p1an-now-${userId}`}
@@ -1494,6 +1627,7 @@ export default function EditorClient({
                   e.stopPropagation();
                   addBlock();
                 }}
+                onPointerDown={(e) => e.stopPropagation()}
                 className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-orange-500 text-white"
                 disabled={!editable}
               >
@@ -1505,6 +1639,7 @@ export default function EditorClient({
                 className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-orange-500 text-white"
                 disabled
                 title="Read-only in viewing mode"
+                onPointerDown={(e) => e.stopPropagation()}
               >
                 +
               </button>
