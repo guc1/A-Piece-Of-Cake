@@ -5,6 +5,7 @@ import { useViewContext } from '@/lib/view-context';
 import { hrefFor, type Section } from '@/lib/navigation';
 import { Button } from '@/components/ui/button';
 import { Clock } from '@/components/clock';
+import { cn } from '@/lib/utils';
 
 const labels: Record<Section, string> = {
   cake: 'Cake',
@@ -15,6 +16,17 @@ const labels: Record<Section, string> = {
   people: 'People',
   visibility: 'Visibility',
   progress: 'Progress',
+};
+
+const underlineColors: Record<Section, string> = {
+  cake: 'var(--accent)',
+  planning: 'var(--planning)',
+  flavors: 'var(--flavors)',
+  ingredients: 'var(--ingredients)',
+  review: 'var(--review)',
+  people: 'var(--people)',
+  visibility: 'var(--visibility)',
+  progress: 'var(--accent)',
 };
 
 export function AppNav() {
@@ -55,21 +67,31 @@ export function AppNav() {
           ];
 
   return (
-    <nav className="flex items-center justify-between border-b bg-[var(--bg)] p-4">
-      <ul className="flex gap-4">
+    <nav className="flex items-center justify-between bg-white p-4 shadow-sm">
+      <ul className="flex gap-4 text-neutral-700">
         {sections.map((sec) => {
           const href = hrefFor(sec, ctx);
           const active = pathname === href;
           return (
             <li key={sec}>
-              <Link href={href} className={active ? 'font-semibold' : ''}>
+              <Link
+                href={href}
+                className={cn(
+                  active && 'font-semibold underline underline-offset-4',
+                )}
+                style={
+                  active
+                    ? { textDecorationColor: underlineColors[sec] }
+                    : undefined
+                }
+              >
                 {labels[sec]}
               </Link>
             </li>
           );
         })}
       </ul>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 text-neutral-700">
         <Clock />
         {signedIn ? (
           <form action="/api/auth/signout" method="post">
