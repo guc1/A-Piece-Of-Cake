@@ -204,10 +204,7 @@ export function CakeNavigation() {
     : '';
 
   return (
-    <div
-      className="relative grid w-full justify-items-center"
-      style={{ minHeight: 'calc(100vh - 64px)' }}
-    >
+    <div className="relative grid w-full justify-items-center">
       {ctx.editable && <SettingsButton />}
       <div
         className="grid w-full place-items-center"
