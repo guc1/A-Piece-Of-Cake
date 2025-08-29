@@ -272,3 +272,4 @@
 - 2025-10-27: Disabled Webpack filesystem cache to prevent PackFileCacheStrategy errors during development.
 - 2025-10-27: Replaced always-on sign-out with conditional sign-in/out in AppNav.
 - 2025-10-27: Derived sign-in state from view context to avoid SessionProvider error in AppNav.
+- 2025-10-28: Linked favicon and documented placement for `Favicon_pieceofcake.png`.

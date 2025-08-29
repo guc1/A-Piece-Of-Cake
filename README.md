@@ -26,3 +26,8 @@
    ```sh
    pnpm test
    ```
+
+## Favicon
+
+1. Place your favicon image at `public/Favicon_pieceofcake.png`.
+2. The app automatically references this file, so ensure the filename matches when deploying.
