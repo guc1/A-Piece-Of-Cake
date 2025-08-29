@@ -13,7 +13,12 @@ import type { Subflavor } from '@/types/subflavor';
 import { savePlanAction } from './actions';
 import { cn } from '@/lib/utils';
 import ColorPresetPicker from '@/components/color-preset-picker';
-import { addUserColorPreset, getUserColorPresets } from '@/lib/color-presets';
+import {
+  addUserColorPreset,
+  getUserColorPresets,
+  DEFAULT_COLOR_PRESETS,
+  type ColorPreset,
+} from '@/lib/color-presets';
 import type {
   HeadingReport,
   DailyReport,
@@ -562,6 +567,29 @@ export default function EditorClient({
     }
   }
 
+  type ColorAssignment = {
+    Activity: string;
+    ColorPresetId: string;
+  };
+
+  function parseColorAssignments(str: string): ColorAssignment[] | null {
+    try {
+      const obj = JSON.parse(str);
+      return Array.isArray(obj) ? obj : [obj];
+    } catch {
+      try {
+        const m = str.match(/```json\s*([\s\S]*?)\s*```/i);
+        if (m) {
+          const obj = JSON.parse(m[1]);
+          return Array.isArray(obj) ? obj : [obj];
+        }
+      } catch {
+        return null;
+      }
+      return null;
+    }
+  }
+
   function resetChat() {
     const id =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -601,12 +629,44 @@ export default function EditorClient({
       if (data.response) {
         const parsed = parseActivities(data.response as string);
         if (parsed && parsed.length) {
+          const presets = [
+            ...DEFAULT_COLOR_PRESETS,
+            ...getUserColorPresets(userId),
+          ];
+          const presetMap = new Map(presets.map((p) => [p.id, p]));
+          let assignments: ColorAssignment[] | null = null;
+          try {
+            const colorRes = await fetch(
+              '/api/planning/color-assessment',
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  activities: parsed,
+                  presets: presets.map((p) => ({ id: p.id, name: p.name })),
+                }),
+              },
+            );
+            const colorData = await colorRes.json();
+            assignments = parseColorAssignments(
+              colorData.response as string,
+            );
+          } catch {
+            assignments = null;
+          }
+
           const titles = parsed.map((p) => p.Activity).join(', ');
           const ok = confirm(`Should I add these activities (${titles})?`);
           if (ok) {
             const newBlocks = parsed.map((p) => {
               const start = minutesFromTime(p.start);
               const end = minutesFromTime(p.end);
+              const presetId = assignments?.find(
+                (a) => a.Activity === p.Activity,
+              )?.ColorPresetId;
+              const preset = presetId
+                ? (presetMap.get(presetId) as ColorPreset | undefined)
+                : undefined;
               return {
                 id:
                   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -617,8 +677,8 @@ export default function EditorClient({
                 end: isoFromMinutes(end),
                 title: p.Activity,
                 description: p.Description,
-                color: COLORS[0],
-                colorPreset: '',
+                color: preset ? preset.colors[0] : COLORS[0],
+                colorPreset: preset ? preset.id : '',
                 ingredientIds: [],
                 flavorIds: [],
                 subflavorIds: [],
@@ -2563,7 +2623,7 @@ export default function EditorClient({
         </div>
       )}
       {aiOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="flex w-[90%] max-w-2xl max-h-[90vh] flex-col rounded bg-white p-6 shadow-lg">
             <div className="mb-4 flex-1 overflow-y-auto space-y-2">
               {chatMessages.map((m, i) => (
