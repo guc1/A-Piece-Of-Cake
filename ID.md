@@ -41,6 +41,7 @@ Modal form IDs:
 - `f7avsubfbtn{flavorId}-{ownerId}` → open subflavors button.
 - `f7av-add-own-{ownerId}` → create own flavor option.
 - `f7av-add-import-{ownerId}` → import flavor option.
+- `f7av-add-recommend-{ownerId}` → recommend flavor option.
 - `f7av-imp-pre-{ownerId}` → choose preset flavor import.
 - `f7av-imp-srch-{ownerId}` → search others flavor import.
 - `f7av-pr3-{index}-{ownerId}` → preset flavor selection.
