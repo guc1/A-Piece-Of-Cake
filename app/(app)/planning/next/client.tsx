@@ -10,6 +10,7 @@ import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 import type { Ingredient } from '@/types/ingredient';
 import type { Flavor } from '@/types/flavor';
 import type { Subflavor } from '@/types/subflavor';
+import type { ChatMessage, ChatThread } from '@/types/chat';
 import { savePlanAction } from './actions';
 import { cn } from '@/lib/utils';
 import ColorPresetPicker from '@/components/color-preset-picker';
@@ -202,49 +203,52 @@ export default function EditorClient({
   }, [initialShowDailyAim, storageKey]);
 
   const [aiOpen, setAiOpen] = useState(false);
-  const CHAT_STORAGE_KEY = `${
-    live ? 'plan-live-ai-chat' : 'plan-ai-chat'
-  }-${userId}-${date}`;
-  type ChatMessage = { role: 'user' | 'assistant'; content: string };
-  const initialChat: ChatMessage[] = [
-    {
-      role: 'assistant',
-      content: live
-        ? 'How can I help you make the most of your day?'
-        : 'How can I help you with your planning?',
-    },
-  ];
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChat);
+  const welcome: ChatMessage = {
+    role: 'assistant',
+    content: live
+      ? 'How can I help you make the most of your day?'
+      : 'How can I help you with your planning?',
+    createdAt: new Date().toISOString(),
+  };
+  const savedThread: ChatThread = useMemo(() => {
+    const thread = live ? initialPlan?.liveChat : initialPlan?.planningChat;
+    return {
+      chatId: thread?.chatId || '',
+      messages: Array.isArray(thread?.messages) ? thread!.messages : [],
+    };
+  }, [initialPlan, live]);
+  let initialMsgs = savedThread.messages.length ? savedThread.messages : [welcome];
+  if (snapshotDate) {
+    const snap = new Date(snapshotDate);
+    snap.setDate(snap.getDate() + 1);
+    initialMsgs = initialMsgs.filter((m) => new Date(m.createdAt) < snap);
+    if (initialMsgs.length === 0) initialMsgs = [welcome];
+  }
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialMsgs);
   const [chatInput, setChatInput] = useState('');
   const chatIdRef = useRef<string>(
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
+    savedThread.chatId ||
+      (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2)),
   );
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const saved = localStorage.getItem(CHAT_STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.chatId) chatIdRef.current = parsed.chatId;
-        if (parsed.messages) setChatMessages(parsed.messages);
-      } catch {
-        /* ignore */
-      }
-    }
-  }, [CHAT_STORAGE_KEY]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, aiOpen]);
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(
-      CHAT_STORAGE_KEY,
-      JSON.stringify({ chatId: chatIdRef.current, messages: chatMessages }),
-    );
-  }, [chatMessages, CHAT_STORAGE_KEY]);
+    if (!editable || snapshotDate) return;
+    fetch('/api/planning/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date,
+        mode,
+        chatId: chatIdRef.current,
+        messages: chatMessages,
+      }),
+    }).catch(() => {});
+  }, [chatMessages, editable, snapshotDate, date, mode]);
   useEffect(() => {
     if (typeof document === 'undefined') return;
     if (aiOpen) document.body.classList.add('overflow-hidden');
@@ -671,12 +675,13 @@ export default function EditorClient({
   }
 
   function resetChat() {
+    if (!editable) return;
     const id =
       typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
         : Math.random().toString(36).slice(2);
     chatIdRef.current = id;
-    setChatMessages(initialChat);
+    setChatMessages([welcome]);
   }
 
   const PLANNING_SYSTEM_PROMPT =
@@ -686,7 +691,7 @@ export default function EditorClient({
   const SYSTEM_PROMPT = live ? LIVE_SYSTEM_PROMPT : PLANNING_SYSTEM_PROMPT;
 
   async function sendChat() {
-    if (!chatInput.trim()) return;
+    if (!editable || !chatInput.trim()) return;
     const isFirst =
       chatMessages.length === 1 && chatMessages[0].role === 'assistant';
     const userContent = isFirst
@@ -696,13 +701,17 @@ export default function EditorClient({
       : chatInput;
     const newMessages: ChatMessage[] = [
       ...chatMessages,
-      { role: 'user', content: userContent },
+      {
+        role: 'user',
+        content: userContent,
+        createdAt: new Date().toISOString(),
+      },
     ];
     setChatMessages(newMessages);
     setChatInput('');
     const payload = [
       { role: 'system', content: SYSTEM_PROMPT },
-      ...newMessages,
+      ...newMessages.map(({ role, content }) => ({ role, content })),
     ];
     try {
       const res = await fetch('/api/planning/recommend', {
@@ -715,7 +724,11 @@ export default function EditorClient({
         if (live) {
           setChatMessages([
             ...newMessages,
-            { role: 'assistant', content: data.response as string },
+            {
+              role: 'assistant',
+              content: data.response as string,
+              createdAt: new Date().toISOString(),
+            },
           ]);
         } else {
           const parsed = parseActivities(data.response as string);
@@ -783,18 +796,27 @@ export default function EditorClient({
                 {
                   role: 'assistant',
                   content: `Added activities: ${titles}.`,
+                  createdAt: new Date().toISOString(),
                 },
               ]);
             } else {
               setChatMessages([
                 ...newMessages,
-                { role: 'assistant', content: 'Okay, not adding them.' },
+                {
+                  role: 'assistant',
+                  content: 'Okay, not adding them.',
+                  createdAt: new Date().toISOString(),
+                },
               ]);
             }
           } else {
             setChatMessages([
               ...newMessages,
-              { role: 'assistant', content: data.response as string },
+              {
+                role: 'assistant',
+                content: data.response as string,
+                createdAt: new Date().toISOString(),
+              },
             ]);
           }
         }
@@ -802,7 +824,11 @@ export default function EditorClient({
     } catch {
       setChatMessages([
         ...newMessages,
-        { role: 'assistant', content: 'Sorry, something went wrong.' },
+        {
+          role: 'assistant',
+          content: 'Sorry, something went wrong.',
+          createdAt: new Date().toISOString(),
+        },
       ]);
     }
   }
@@ -2736,32 +2762,36 @@ export default function EditorClient({
               ))}
               <div ref={chatEndRef} />
             </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') sendChat();
-                }}
-                placeholder="Type your answer..."
-                className="flex-1 rounded border px-2 py-1"
-              />
-              <button
-                onClick={sendChat}
-                className="rounded bg-orange-500 px-3 py-1 text-white"
-              >
-                Send
-              </button>
-            </div>
+            {editable && (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') sendChat();
+                  }}
+                  placeholder="Type your answer..."
+                  className="flex-1 rounded border px-2 py-1"
+                />
+                <button
+                  onClick={sendChat}
+                  className="rounded bg-orange-500 px-3 py-1 text-white"
+                >
+                  Send
+                </button>
+              </div>
+            )}
             <div className="mt-4 flex justify-between">
-              <button
-                type="button"
-                className="rounded border px-3 py-1"
-                onClick={resetChat}
-              >
-                Reset
-              </button>
+              {editable && (
+                <button
+                  type="button"
+                  className="rounded border px-3 py-1"
+                  onClick={resetChat}
+                >
+                  Reset
+                </button>
+              )}
               <button
                 type="button"
                 className="rounded border px-3 py-1"

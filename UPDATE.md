@@ -267,3 +267,5 @@
 - 2025-10-27: Blurred planning background when AI chat opens so only the chat box is visible.
 - 2025-10-27: Increased AI chat background blur for better focus.
 - 2025-10-27: Added motivational Live AI assistant on live planning page with contextual chat modal.
+- 2025-10-27: Made planning AI chat view-only for viewers and historical snapshots, filtering messages by snapshot date and adding read-only tests.
+- 2025-10-27: Stored planning AI chat in database so conversations persist across visits and show in viewer and snapshot modes.
