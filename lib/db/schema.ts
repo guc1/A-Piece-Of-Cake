@@ -180,6 +180,8 @@ export const plans = pgTable(
     date: date('date').notNull(),
     dailyAim: text('daily_aim'),
     dailyIngredientIds: integer('daily_ingredient_ids').array(),
+    planningChat: jsonb('planning_chat'),
+    liveChat: jsonb('live_chat'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },

@@ -1,4 +1,5 @@
 import type { ColorPreset } from '@/lib/color-presets';
+import type { ChatThread } from './chat';
 
 export interface Plan {
   id: string;
@@ -8,6 +9,8 @@ export interface Plan {
   dailyAim: string;
   dailyIngredientIds: number[];
   colorPresets?: ColorPreset[];
+  planningChat?: ChatThread;
+  liveChat?: ChatThread;
 }
 
 export interface PlanBlock {

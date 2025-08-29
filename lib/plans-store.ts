@@ -3,6 +3,7 @@ import { plans, planBlocks, planRevisions } from './db/schema';
 import { eq, and, inArray, lte, desc } from 'drizzle-orm';
 import type { Plan, PlanBlock, PlanBlockInput } from '@/types/plan';
 import type { ColorPreset } from '@/lib/color-presets';
+import type { ChatThread } from '@/types/chat';
 import { randomUUID } from 'crypto';
 
 function toPlanBlock(row: typeof planBlocks.$inferSelect): PlanBlock {
@@ -33,6 +34,8 @@ async function fetchPlan(userId: number, date: string): Promise<Plan | null> {
     .select()
     .from(planBlocks)
     .where(eq(planBlocks.planId, planRow.id));
+  const pChat: any = planRow.planningChat ?? {};
+  const lChat: any = planRow.liveChat ?? {};
   return {
     id: planRow.id.toString(),
     userId: String(userId),
@@ -41,6 +44,14 @@ async function fetchPlan(userId: number, date: string): Promise<Plan | null> {
     dailyAim: planRow.dailyAim ?? '',
     dailyIngredientIds: planRow.dailyIngredientIds ?? [],
     colorPresets: [],
+    planningChat: {
+      chatId: pChat.chatId ?? '',
+      messages: Array.isArray(pChat.messages) ? pChat.messages : [],
+    },
+    liveChat: {
+      chatId: lChat.chatId ?? '',
+      messages: Array.isArray(lChat.messages) ? lChat.messages : [],
+    },
   };
 }
 
@@ -61,7 +72,9 @@ export async function getOrCreatePlan(
       blocks: [],
       dailyAim: '',
       dailyIngredientIds: [],
-      colorPresets: [],
+       colorPresets: [],
+       planningChat: { chatId: '', messages: [] },
+       liveChat: { chatId: '', messages: [] },
     };
   }
   return plan;
@@ -81,6 +94,8 @@ export async function getPlanStrict(
     dailyAim: '',
     dailyIngredientIds: [],
     colorPresets: [],
+    planningChat: { chatId: '', messages: [] },
+    liveChat: { chatId: '', messages: [] },
   };
 }
 
@@ -123,6 +138,8 @@ export async function getPlanAt(
           name: p.name,
           colors: p.colors,
         })),
+      planningChat: payload.planningChat ?? { chatId: '', messages: [] },
+      liveChat: payload.liveChat ?? { chatId: '', messages: [] },
     };
   }
   // When no revision exists at or before the requested time, the user had not
@@ -137,6 +154,8 @@ export async function getPlanAt(
     dailyAim: '',
     dailyIngredientIds: [],
     colorPresets: [],
+    planningChat: { chatId: '', messages: [] },
+    liveChat: { chatId: '', messages: [] },
   };
 }
 
@@ -147,11 +166,15 @@ export async function savePlan(
   dailyAim = '',
   dailyIngredientIds: number[] = [],
   colorPresets: ColorPreset[] = [],
+  planningChat?: ChatThread,
+  liveChat?: ChatThread,
 ): Promise<Plan> {
   let planRow = await fetchPlan(Number(userId), date);
   if (!planRow) {
     planRow = await getOrCreatePlan(Number(userId), date);
   }
+  planningChat = planningChat ?? planRow.planningChat;
+  liveChat = liveChat ?? planRow.liveChat;
   const existing = await db
     .select({ id: planBlocks.id })
     .from(planBlocks)
@@ -214,13 +237,22 @@ export async function savePlan(
     .set({
       dailyAim,
       dailyIngredientIds,
+      planningChat,
+      liveChat,
       updatedAt: now,
     })
     .where(eq(plans.id, Number(planRow.id)));
   await db.insert(planRevisions).values({
     userId: Number(userId),
     planDate: date,
-    payload: { blocks: results, dailyAim, dailyIngredientIds, colorPresets },
+    payload: {
+      blocks: results,
+      dailyAim,
+      dailyIngredientIds,
+      colorPresets,
+      planningChat,
+      liveChat,
+    },
   });
   return {
     id: String(planRow.id),
@@ -230,5 +262,38 @@ export async function savePlan(
     dailyAim,
     dailyIngredientIds,
     colorPresets,
+    planningChat,
+    liveChat,
   };
+}
+
+export async function savePlanChat(
+  userId: string,
+  date: string,
+  mode: 'live' | 'next',
+  chat: ChatThread,
+): Promise<Plan> {
+  const plan = await getPlanStrict(Number(userId), date);
+  const blockInputs: PlanBlockInput[] = plan.blocks.map((b) => ({
+    id: b.id,
+    start: b.start,
+    end: b.end,
+    title: b.title,
+    description: b.description,
+    color: b.color,
+    colorPreset: b.colorPreset,
+    ingredientIds: b.ingredientIds,
+    flavorIds: b.flavorIds,
+    subflavorIds: b.subflavorIds,
+  }));
+  return savePlan(
+    userId,
+    date,
+    blockInputs,
+    plan.dailyAim,
+    plan.dailyIngredientIds,
+    plan.colorPresets ?? [],
+    mode === 'next' ? chat : plan.planningChat,
+    mode === 'live' ? chat : plan.liveChat,
+  );
 }
