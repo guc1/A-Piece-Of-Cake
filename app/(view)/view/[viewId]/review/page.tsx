@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { ReviewHome } from '@/app/(app)/review/client';
 import { getLatestHeadingReport } from '@/lib/heading-report-store';
 
+export const revalidate = 0;
+
 export default async function ViewReviewPage({
   params,
 }: {
