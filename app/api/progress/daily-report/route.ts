@@ -52,6 +52,14 @@ export async function POST(req: NextRequest) {
   const targetDate =
     typeof body.date === 'string' && body.date ? body.date : today;
 
+  const formatTime = (iso: string) =>
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(iso));
+
   const plan = body.plan
     ? {
         blocks: body.plan.blocks ?? [],
@@ -96,8 +104,8 @@ export async function POST(req: NextRequest) {
       id: blk.id,
       title: blk.title,
       description: blk.description,
-      start: blk.start,
-      end: blk.end,
+      start: formatTime(blk.start),
+      end: formatTime(blk.end),
       ingredients: ings.filter(Boolean),
       flavors: flavors.filter(Boolean),
       subflavors: subflavors.filter(Boolean),
