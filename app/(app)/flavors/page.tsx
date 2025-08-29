@@ -11,14 +11,15 @@ import { getLatestHeadingReport } from '@/lib/heading-report-store';
 export default async function FlavorsPage({
   params,
 }: {
-  params?: { viewId?: string };
+  params: Promise<{ viewId?: string }>;
 }) {
+  const { viewId } = await params;
   const session = await auth();
   if (!session) notFound();
   const viewer = await ensureUser(session);
   let owner = viewer;
-  if (params?.viewId) {
-    const user = await getUserByViewId(params.viewId);
+  if (viewId) {
+    const user = await getUserByViewId(viewId);
     if (!user) notFound();
     owner = user;
   }
@@ -43,29 +44,5 @@ export default async function FlavorsPage({
         headingReport={heading ?? undefined}
       />
     </ViewContextProvider>
-  );
-}
-
-export function FlavorsHome({
-  userId,
-  selfId,
-  initialFlavors,
-  people,
-  headingReport,
-}: {
-  userId: string;
-  selfId?: string;
-  initialFlavors: any[];
-  people?: any;
-  headingReport?: any;
-}) {
-  return (
-    <FlavorsClient
-      userId={userId}
-      selfId={selfId}
-      initialFlavors={initialFlavors as any}
-      people={people as any}
-      headingReport={headingReport}
-    />
   );
 }

@@ -14,8 +14,9 @@ import { ViewLink } from '@/components/people/view-link';
 export default async function PeoplePage({
   params,
 }: {
-  params?: { viewId?: string };
+  params: Promise<{ viewId?: string }>;
 }) {
+  const { viewId } = await params;
   const session = await auth();
   if (!session?.user?.email) {
     return (
@@ -27,8 +28,8 @@ export default async function PeoplePage({
   }
   const viewer = await ensureUser(session);
   let owner = viewer;
-  if (params?.viewId) {
-    const user = await getUserByViewId(params.viewId);
+  if (viewId) {
+    const user = await getUserByViewId(viewId);
     if (!user) notFound();
     owner = user;
   }
@@ -38,7 +39,7 @@ export default async function PeoplePage({
   const ctx = buildViewContext({
     ownerId,
     viewerId,
-    mode: params?.viewId ? 'viewer' : 'owner',
+    mode: viewId ? 'viewer' : 'owner',
     viewId: owner.viewId,
   });
 
@@ -120,7 +121,10 @@ export default async function PeoplePage({
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">People</h1>
         {ownerId === viewerId && (
-          <Link href={hrefFor('/people/inbox', ctx)} className="text-sm underline">
+          <Link
+            href={hrefFor('/people/inbox', ctx)}
+            className="text-sm underline"
+          >
             Inbox
           </Link>
         )}
@@ -179,13 +183,7 @@ function UserList({
   );
 }
 
-function UserAction({
-  viewerId,
-  user,
-}: {
-  viewerId: number;
-  user: UserInfo;
-}) {
+function UserAction({ viewerId, user }: { viewerId: number; user: UserInfo }) {
   if (user.viewerStatus === 'pending') {
     return (
       <div className="flex gap-2">
@@ -237,8 +235,8 @@ function UserAction({
           {user.followsMe
             ? 'Follow back'
             : user.accountVisibility === 'open'
-            ? 'Follow'
-            : 'Request to follow'}
+              ? 'Follow'
+              : 'Request to follow'}
         </Button>
       </form>
       {user.canView && (
