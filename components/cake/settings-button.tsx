@@ -26,7 +26,7 @@ export function SettingsButton() {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const [followers, setFollowers] = useState(0);
-  const { unlock, unlocked } = useLogs();
+  const { unlock, lock, unlocked } = useLogs();
 
   useEffect(() => {
     const storedTheme = localStorage.getItem('color-mode');
@@ -89,17 +89,24 @@ export function SettingsButton() {
           >
             Account settings
           </Link>
-          {!unlocked && (
+          {unlocked ? (
+            <button
+              className="mb-2 w-full rounded bg-[var(--surface)] px-3 py-1 text-center hover:bg-[var(--accent)] hover:text-white"
+              onClick={lock}
+            >
+              Disable LLM-logs
+            </button>
+          ) : (
             <button
               className="mb-2 w-full rounded bg-[var(--surface)] px-3 py-1 text-center hover:bg-[var(--accent)] hover:text-white"
               onClick={() => {
                 const code = window.prompt('Enter code');
-                if (code === '123Yergush123') {
+                if (code === 'cake2025') {
                   unlock();
                 }
               }}
             >
-              LLM-logs
+              Enable LLM-logs
             </button>
           )}
           <button

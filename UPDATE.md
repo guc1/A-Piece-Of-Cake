@@ -277,3 +277,4 @@
 - 2025-10-28: Restyled top navigation with white background, colored active underline, and subtle shadow.
 - 2025-10-28: Applied split gradient background from white to light gray for natural page sectioning.
 - 2025-10-28: Fixed redirect loop by sending unauthenticated users to the sign-in page.
+- 2025-10-29: Added settings toggle to enable or disable LLM logs with code 'cake2025'.
