@@ -3,6 +3,7 @@ import { getProfileSnapshot } from '@/lib/profile-snapshots';
 import { notFound } from 'next/navigation';
 import { getPlanAt } from '@/lib/plans-store';
 import { getUserTimeZone, startOfDay, addDays, toYMD } from '@/lib/clock';
+import { cookies } from 'next/headers';
 import EditorClient from '@/app/(app)/planning/next/client';
 import { listIngredients } from '@/lib/ingredients-store';
 
@@ -21,7 +22,8 @@ export default async function HistoryPlanningNext({
   if (!owner) notFound();
   const snapshot = await getProfileSnapshot(owner.id, date);
   if (!snapshot) notFound();
-  const tz = getUserTimeZone(owner);
+  const cookieStore = await cookies();
+  const tz = getUserTimeZone(owner, { cookies: cookieStore });
   const day = startOfDay(new Date(date), tz);
   const base = addDays(day, 1, tz);
   let target = base;

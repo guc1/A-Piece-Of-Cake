@@ -3,6 +3,7 @@ import { ensureUser } from '@/lib/users';
 import { getProfileSnapshot } from '@/lib/profile-snapshots';
 import { notFound } from 'next/navigation';
 import { getUserTimeZone, startOfDay, addDays, toYMD } from '@/lib/clock';
+import { cookies } from 'next/headers';
 import PlanningLanding from '@/app/(app)/planning/client';
 
 export default async function HistorySelfPlanningLanding({
@@ -16,7 +17,8 @@ export default async function HistorySelfPlanningLanding({
   const me = await ensureUser(session);
   const snapshot = await getProfileSnapshot(me.id, date);
   if (!snapshot) notFound();
-  const tz = getUserTimeZone(me);
+  const cookieStore = await cookies();
+  const tz = getUserTimeZone(me, { cookies: cookieStore });
   const day = startOfDay(new Date(date), tz);
   const next = addDays(day, 1, tz);
   const liveLabel = day.toLocaleDateString('en-US', {

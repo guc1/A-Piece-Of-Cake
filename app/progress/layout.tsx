@@ -4,6 +4,7 @@ import { ensureUser } from '@/lib/users';
 import { buildViewContext } from '@/lib/profile';
 import { ensureDailyProfileSnapshot } from '@/lib/profile-snapshots';
 import { getUserTimeZone } from '@/lib/clock';
+import { cookies } from 'next/headers';
 import { ViewContextProvider } from '@/lib/view-context';
 import { AppNav } from '@/components/app-nav';
 
@@ -17,7 +18,8 @@ export default async function ProgressLayout({
     redirect('/');
   }
   const me = await ensureUser(session);
-  const tz = getUserTimeZone(me as any);
+  const cookieStore = await cookies();
+  const tz = getUserTimeZone(me as any, { cookies: cookieStore });
   await ensureDailyProfileSnapshot(me.id, tz);
   const ctx = buildViewContext({
     ownerId: me.id,

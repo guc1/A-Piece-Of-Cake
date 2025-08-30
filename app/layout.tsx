@@ -2,6 +2,7 @@ import './globals.css';
 import { cookies } from 'next/headers';
 import { LogsProvider } from '@/components/dev/logs-provider';
 import { LogsButton } from '@/components/dev/logs-button';
+import TimezoneSync from '@/components/timezone-sync';
 
 export default async function RootLayout({
   children,
@@ -77,6 +78,7 @@ export default async function RootLayout({
         <LogsProvider>
           {children}
           <LogsButton />
+          <TimezoneSync />
         </LogsProvider>
       </body>
     </html>

@@ -2,6 +2,7 @@ import { getUserByViewId } from '@/lib/users';
 import { getProfileSnapshot } from '@/lib/profile-snapshots';
 import { notFound } from 'next/navigation';
 import { getUserTimeZone, startOfDay, addDays, toYMD } from '@/lib/clock';
+import { cookies } from 'next/headers';
 import PlanningLanding from '@/app/(app)/planning/client';
 
 export default async function HistoryPlanningLanding({
@@ -14,7 +15,8 @@ export default async function HistoryPlanningLanding({
   if (!owner) notFound();
   const snapshot = await getProfileSnapshot(owner.id, date);
   if (!snapshot) notFound();
-  const tz = getUserTimeZone(owner);
+  const cookieStore = await cookies();
+  const tz = getUserTimeZone(owner, { cookies: cookieStore });
   const day = startOfDay(new Date(date), tz);
   const next = addDays(day, 1, tz);
   const liveLabel = day.toLocaleDateString('en-US', {

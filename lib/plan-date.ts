@@ -20,7 +20,7 @@ export function resolvePlanDate(
   user: { timeZone?: string } & Record<string, unknown>,
   req?: ReqInit,
 ) {
-  const tz = getUserTimeZone(user);
+  const tz = getUserTimeZone(user, req);
   const { now, override } = getNow(tz, req);
   const today = startOfDay(now, tz);
   const tomorrow = addDays(today, 1, tz);
