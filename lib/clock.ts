@@ -35,9 +35,16 @@ function getOffset(date: Date, tz: string): number {
 
 export function getUserTimeZone(
   user?: { timeZone?: string } | Record<string, unknown>,
+  req?: ReqLike,
 ): string {
   const tz = (user as any)?.timeZone as string | undefined;
-  return tz || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  if (tz) return tz;
+  const param = req?.searchParams?.['tz'];
+  const tzParam = Array.isArray(param) ? param[0] : param;
+  if (tzParam) return tzParam;
+  const cookieTz = req?.cookies?.get('apoc_tz')?.value;
+  if (cookieTz) return cookieTz;
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 }
 
 function first(val?: string | string[]): string | undefined {
