@@ -496,6 +496,7 @@ export default function SubflavorsClient({
             tabIndex={0}
             onClick={(e) => openEdit(f, e.currentTarget)}
             onKeyDown={(e) => {
+              if (e.nativeEvent.isComposing) return;
               if (e.key === 'Enter')
                 openEdit(f, e.currentTarget as HTMLElement);
               if (editable && e.key === 'Delete') remove(f);
@@ -653,7 +654,8 @@ export default function SubflavorsClient({
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') sendChat();
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing)
+                    sendChat();
                 }}
                 placeholder="Type your answer..."
                 className="flex-1 rounded border px-2 py-1"

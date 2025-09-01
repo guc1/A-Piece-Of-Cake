@@ -700,7 +700,8 @@ export default function IngredientsClient({
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') sendChat();
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing)
+                    sendChat();
                 }}
                 placeholder="Type your answer..."
                 className="flex-1 rounded border px-2 py-1"
@@ -761,7 +762,8 @@ export default function IngredientsClient({
                 value={improveChatInput}
                 onChange={(e) => setImproveChatInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') sendImproveChat();
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing)
+                    sendImproveChat();
                 }}
                 placeholder="Type your answer..."
                 className="flex-1 rounded border px-2 py-1"

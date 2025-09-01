@@ -279,3 +279,4 @@
 - 2025-10-28: Fixed redirect loop by sending unauthenticated users to the sign-in page.
 - 2025-10-29: Added settings toggle to enable or disable LLM logs with code 'cake2025'.
 - 2025-10-29: Synced client timezone via cookie and used it server-side to fix plan and snapshot date offsets.
+- 2025-10-29: Ignored Enter key during IME composition so typing doesn't drop characters.
