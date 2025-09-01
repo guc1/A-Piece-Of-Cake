@@ -68,6 +68,15 @@ export default function PlanningLanding({
     navigate('review');
   }
 
+  function handleTodo() {
+    if (editable) {
+      router.push('/todos');
+    } else if (viewId) {
+      const at = mode === 'historical' && snapshotDate ? `?at=${snapshotDate}` : '';
+      router.push(`/view/${viewId}/todos${at}`);
+    }
+  }
+
   return (
     <section
       id={`p1an-landing-${userId}`}
@@ -98,6 +107,13 @@ export default function PlanningLanding({
         onClick={handleReview}
       >
         Review Today’s Planning — {reviewLabel}
+      </Button>
+      <Button
+        id={`p1an-btn-todo-${userId}`}
+        title={tooltip}
+        onClick={handleTodo}
+      >
+        To Do
       </Button>
     </section>
   );

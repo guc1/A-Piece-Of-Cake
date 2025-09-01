@@ -126,6 +126,39 @@ export const ingredientRevisions = pgTable('ingredient_revisions', {
   payload: jsonb('payload').notNull(),
 });
 
+export const todos = pgTable(
+  'todos',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    title: varchar('title', { length: 80 }).notNull(),
+    description: text('description'),
+    priority: integer('priority').default(0),
+    // Allow emoji or data URL
+    icon: text('icon'),
+    visibility: varchar('visibility', { length: 20 }).default('public'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserTitle: uniqueIndex('todos_user_title_unique').on(
+      table.userId,
+      table.title,
+    ),
+  }),
+);
+
+export const todoRevisions = pgTable('todo_revisions', {
+  id: serial('id').primaryKey(),
+  todoId: integer('todo_id')
+    .references(() => todos.id)
+    .notNull(),
+  snapshotAt: timestamp('snapshot_at').defaultNow(),
+  payload: jsonb('payload').notNull(),
+});
+
 export const follows = pgTable(
   'follows',
   {
