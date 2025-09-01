@@ -54,6 +54,8 @@ export function TimeMachine({ open, onClose }: Props) {
     const offset = target - RealDate.now();
     override(offset);
     handleClose();
+    // Reload to ensure server-rendered content uses the same offseted time.
+    window.location.reload();
   }
 
   function resetOverride() {
@@ -61,6 +63,8 @@ export function TimeMachine({ open, onClose }: Props) {
     (globalThis as any).Date = RealDate;
     localStorage.removeItem('timeOffset');
     document.cookie = 'timeOffset=; Max-Age=0; path=/';
+    // Refresh so both server and client revert to real time.
+    window.location.reload();
   }
 
   function resetToCurrentNl() {
@@ -75,6 +79,8 @@ export function TimeMachine({ open, onClose }: Props) {
     const offset = t - RealDate.now();
     override(offset);
     handleClose();
+    // Reload so subsequent renders use the Amsterdam time.
+    window.location.reload();
   }
 
   function handleClose() {
