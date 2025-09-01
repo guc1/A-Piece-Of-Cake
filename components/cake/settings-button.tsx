@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { useLogs } from '@/components/dev/logs-provider';
 
+interface Props {
+  onOpenDev?: () => void;
+}
+
 function GearIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -22,7 +26,7 @@ function GearIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-export function SettingsButton() {
+export function SettingsButton({ onOpenDev }: Props) {
   const [open, setOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const [followers, setFollowers] = useState(0);
@@ -89,6 +93,19 @@ export function SettingsButton() {
           >
             Account settings
           </Link>
+          {onOpenDev && (
+            <button
+              className="mb-2 w-full rounded bg-[var(--surface)] px-3 py-1 text-center hover:bg-[var(--accent)] hover:text-white"
+              onClick={() => {
+                const code = window.prompt('Enter dev code');
+                if (code === 'Cake2025') {
+                  onOpenDev();
+                }
+              }}
+            >
+              DEV
+            </button>
+          )}
           {unlocked ? (
             <button
               className="mb-2 w-full rounded bg-[var(--surface)] px-3 py-1 text-center hover:bg-[var(--accent)] hover:text-white"
