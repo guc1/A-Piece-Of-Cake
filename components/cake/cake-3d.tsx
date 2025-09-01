@@ -98,10 +98,9 @@ export function Cake3D({
               aria-label={slice.label}
               role="link"
               tabIndex={0}
-              onClick={() =>
-                router.push(hrefFor(slice.slug as Section, ctx))
-              }
+              onClick={() => router.push(hrefFor(slice.slug as Section, ctx))}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing) return;
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   router.push(hrefFor(slice.slug as Section, ctx));
