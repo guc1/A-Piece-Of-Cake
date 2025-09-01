@@ -85,8 +85,14 @@ interface Props {
   reportContext?: {
     heading: HeadingReport | null;
     daily: Pick<DailyReport, 'date' | 'bad' | 'observations'>[];
-    weekly: Pick<WeeklyReport, 'startDate' | 'endDate' | 'bad' | 'observations'>[];
-    monthly: Pick<MonthlyReport, 'startDate' | 'endDate' | 'bad' | 'observations'>[];
+    weekly: Pick<
+      WeeklyReport,
+      'startDate' | 'endDate' | 'bad' | 'observations'
+    >[];
+    monthly: Pick<
+      MonthlyReport,
+      'startDate' | 'endDate' | 'bad' | 'observations'
+    >[];
   };
 }
 
@@ -217,7 +223,9 @@ export default function EditorClient({
       messages: Array.isArray(thread?.messages) ? thread!.messages : [],
     };
   }, [initialPlan, live]);
-  let initialMsgs = savedThread.messages.length ? savedThread.messages : [welcome];
+  let initialMsgs = savedThread.messages.length
+    ? savedThread.messages
+    : [welcome];
   if (snapshotDate) {
     const snap = new Date(snapshotDate);
     snap.setDate(snap.getDate() + 1);
@@ -350,22 +358,31 @@ export default function EditorClient({
   const startHour = Math.floor(startMinute / 60);
   const endHour = Math.ceil(endMinute / 60);
 
-  const [nowMinute, setNowMinute] = useState(() => {
-    if (!live) return 0;
-    const d = new Date();
-    return d.getHours() * 60 + d.getMinutes();
-  });
+  function currentMinute(zone: string) {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const [h, m] = formatter
+      .format(new Date())
+      .split(':')
+      .map((v) => parseInt(v, 10));
+    return h * 60 + m;
+  }
+
+  const [nowMinute, setNowMinute] = useState(() =>
+    live ? currentMinute(tz) : 0,
+  );
 
   useEffect(() => {
     if (!live) return;
-    const tick = () => {
-      const d = new Date();
-      setNowMinute(d.getHours() * 60 + d.getMinutes());
-    };
+    const tick = () => setNowMinute(currentMinute(tz));
     tick();
     const id = setInterval(tick, 60_000);
     return () => clearInterval(id);
-  }, [live]);
+  }, [live, tz]);
 
   useEffect(() => {
     if (!live) return;
@@ -490,9 +507,13 @@ export default function EditorClient({
     if (rc.heading) {
       lines.push(`Overview: ${rc.heading.overview}`);
       if (rc.heading.shortTerm?.length)
-        lines.push(`Heading towards short term: ${rc.heading.shortTerm.join('; ')}`);
+        lines.push(
+          `Heading towards short term: ${rc.heading.shortTerm.join('; ')}`,
+        );
       if (rc.heading.longTerm?.length)
-        lines.push(`Heading towards long term: ${rc.heading.longTerm.join('; ')}`);
+        lines.push(
+          `Heading towards long term: ${rc.heading.longTerm.join('; ')}`,
+        );
       if (rc.heading.feedback?.length)
         lines.push(`Feedback: ${rc.heading.feedback.join('; ')}`);
     }
@@ -582,7 +603,9 @@ export default function EditorClient({
     });
     const done = blocks.filter((b) => minutesFromIso(b.end) <= now);
     const upcoming = blocks.filter((b) => minutesFromIso(b.start) > now);
-    const curStr = current.length ? current.map(summarizeBlock).join(' | ') : 'none';
+    const curStr = current.length
+      ? current.map(summarizeBlock).join(' | ')
+      : 'none';
     const doneStr = done.length ? done.map(summarizeBlock).join(' | ') : 'none';
     const upStr = upcoming.length
       ? upcoming.map(summarizeBlock).join(' | ')
@@ -740,21 +763,16 @@ export default function EditorClient({
             const presetMap = new Map(presets.map((p) => [p.id, p]));
             let assignments: ColorAssignment[] | null = null;
             try {
-              const colorRes = await fetch(
-                '/api/planning/color-assessment',
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    activities: parsed,
-                    presets: presets.map((p) => ({ id: p.id, name: p.name })),
-                  }),
-                },
-              );
+              const colorRes = await fetch('/api/planning/color-assessment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  activities: parsed,
+                  presets: presets.map((p) => ({ id: p.id, name: p.name })),
+                }),
+              });
               const colorData = await colorRes.json();
-              assignments = parseColorAssignments(
-                colorData.response as string,
-              );
+              assignments = parseColorAssignments(colorData.response as string);
             } catch {
               assignments = null;
             }
