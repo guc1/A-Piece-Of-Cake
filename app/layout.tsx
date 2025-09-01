@@ -50,7 +50,8 @@ export default async function RootLayout({
             __html: `(() => {
   const RealDate = Date;
   globalThis._realDate = RealDate;
-  const offsetStr = localStorage.getItem('timeOffset');
+  const match = document.cookie.match(/(?:^|; )timeOffset=(-?\d+)/);
+  const offsetStr = match ? match[1] : null;
   if (offsetStr) {
     const offset = parseInt(offsetStr, 10);
     if (!isNaN(offset)) {
@@ -68,7 +69,12 @@ export default async function RootLayout({
         }
       }
       globalThis.Date = MockDate;
+      localStorage.setItem('timeOffset', offsetStr);
+    } else {
+      localStorage.removeItem('timeOffset');
     }
+  } else {
+    localStorage.removeItem('timeOffset');
   }
 })();`,
           }}
