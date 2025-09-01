@@ -208,7 +208,9 @@ export function CakeNavigation() {
       className="relative grid w-full justify-items-center"
       style={{ minHeight: 'calc(100vh - 64px)' }}
     >
-      {ctx.editable && <SettingsButton />}
+      {ctx.editable && (
+        <SettingsButton onOpenDev={() => setTimeMachineOpen(true)} />
+      )}
       <div
         className="grid w-full place-items-center"
         style={{ marginBottom: 'clamp(24px,3vh,36px)' }}

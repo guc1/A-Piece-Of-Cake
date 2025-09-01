@@ -18,7 +18,7 @@ export function TimeMachine({ open, onClose }: Props) {
   if (!open) return null;
 
   function handleVerify() {
-    if (code.trim() === 'hsug') {
+    if (code.trim() === 'Cake2025') {
       setStage('time');
       setCode('');
       setError('');
