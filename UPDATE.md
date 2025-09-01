@@ -280,3 +280,4 @@
 - 2025-10-29: Added settings toggle to enable or disable LLM logs with code 'cake2025'.
 - 2025-10-29: Synced client timezone via cookie and used it server-side to fix plan and snapshot date offsets.
 - 2025-10-29: Reloaded the app after applying TimeMachine overrides to keep server and client time in sync and prevent hydration mismatches.
+- 2025-10-29: Introduced to-do lists with priority, icons, and snapshot support, accessible from planning via new To Do button.
