@@ -26,6 +26,7 @@ import type {
   WeeklyReport,
   MonthlyReport,
 } from '@/types/report';
+import type { Todo } from '@/types/todo';
 
 const COLORS = [
   '#F87171',
@@ -79,14 +80,21 @@ interface Props {
   ingredients?: Ingredient[];
   flavors?: Flavor[];
   subflavors?: Subflavor[];
+  todos?: Todo[];
   live?: boolean;
   review?: boolean;
   initialShowDailyAim?: boolean;
   reportContext?: {
     heading: HeadingReport | null;
     daily: Pick<DailyReport, 'date' | 'bad' | 'observations'>[];
-    weekly: Pick<WeeklyReport, 'startDate' | 'endDate' | 'bad' | 'observations'>[];
-    monthly: Pick<MonthlyReport, 'startDate' | 'endDate' | 'bad' | 'observations'>[];
+    weekly: Pick<
+      WeeklyReport,
+      'startDate' | 'endDate' | 'bad' | 'observations'
+    >[];
+    monthly: Pick<
+      MonthlyReport,
+      'startDate' | 'endDate' | 'bad' | 'observations'
+    >[];
   };
 }
 
@@ -99,6 +107,7 @@ export default function EditorClient({
   ingredients: initialIngredients = [],
   flavors: initialFlavors = [],
   subflavors: initialSubflavors = [],
+  todos: initialTodos = [],
   live = false,
   review = false,
   initialShowDailyAim = false,
@@ -173,6 +182,7 @@ export default function EditorClient({
   );
   const [flavors] = useState(initialFlavors);
   const [subflavors] = useState(initialSubflavors);
+  const [todos] = useState(initialTodos);
   const [selectFlavor, setSelectFlavor] = useState(false);
   const [flavorTab, setFlavorTab] = useState<'flavor' | 'subflavor'>('flavor');
   const [flavorSearch, setFlavorSearch] = useState('');
@@ -217,7 +227,9 @@ export default function EditorClient({
       messages: Array.isArray(thread?.messages) ? thread!.messages : [],
     };
   }, [initialPlan, live]);
-  let initialMsgs = savedThread.messages.length ? savedThread.messages : [welcome];
+  let initialMsgs = savedThread.messages.length
+    ? savedThread.messages
+    : [welcome];
   if (snapshotDate) {
     const snap = new Date(snapshotDate);
     snap.setDate(snap.getDate() + 1);
@@ -472,6 +484,17 @@ export default function EditorClient({
       .join('\n\n');
   }
 
+  function buildTodoContext(list: Todo[]) {
+    if (!list.length) return 'No to-dos.';
+    return list
+      .slice(0, 10)
+      .map(
+        (t) =>
+          `${t.title}${t.description ? ` - ${t.description}` : ''} (priority: ${t.priority})`,
+      )
+      .join('; ');
+  }
+
   function buildDailyAimContext() {
     const parts: string[] = [];
     if (dailyAim) parts.push(`Aim: ${dailyAim}`);
@@ -490,9 +513,13 @@ export default function EditorClient({
     if (rc.heading) {
       lines.push(`Overview: ${rc.heading.overview}`);
       if (rc.heading.shortTerm?.length)
-        lines.push(`Heading towards short term: ${rc.heading.shortTerm.join('; ')}`);
+        lines.push(
+          `Heading towards short term: ${rc.heading.shortTerm.join('; ')}`,
+        );
       if (rc.heading.longTerm?.length)
-        lines.push(`Heading towards long term: ${rc.heading.longTerm.join('; ')}`);
+        lines.push(
+          `Heading towards long term: ${rc.heading.longTerm.join('; ')}`,
+        );
       if (rc.heading.feedback?.length)
         lines.push(`Feedback: ${rc.heading.feedback.join('; ')}`);
     }
@@ -582,7 +609,9 @@ export default function EditorClient({
     });
     const done = blocks.filter((b) => minutesFromIso(b.end) <= now);
     const upcoming = blocks.filter((b) => minutesFromIso(b.start) > now);
-    const curStr = current.length ? current.map(summarizeBlock).join(' | ') : 'none';
+    const curStr = current.length
+      ? current.map(summarizeBlock).join(' | ')
+      : 'none';
     const doneStr = done.length ? done.map(summarizeBlock).join(' | ') : 'none';
     const upStr = upcoming.length
       ? upcoming.map(summarizeBlock).join(' | ')
@@ -617,11 +646,13 @@ export default function EditorClient({
     const report = buildReportContext(reportContext);
     const aim = buildDailyAimContext();
     const planBlocks = buildPlanBlocksContext(blocks);
+    const todoStr = buildTodoContext(todos);
     return (
       `this is the life ethos statement/goal the user has in its life: ${rational}. ` +
       `This is the rapport of the user where he is heading towards, which include an Overview. heading toward long and short term, and feedback: ${report}. ` +
       `----- here is the current users aim for the day: ${aim}. ` +
       `Currently the user has the following planning: ${planBlocks}. ` +
+      `These are the user's to-dos: ${todoStr}. ` +
       `That was the context. now this is the input message the user had (very important to respond to that):`
     );
   }
@@ -685,7 +716,7 @@ export default function EditorClient({
   }
 
   const PLANNING_SYSTEM_PROMPT =
-    'You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life , last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. and based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity . you are going to plan a day for him that matches his ambitions. always listen to the feedback of the user, and try to make as good as possible planning for him or her. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity than respond ONLY with a JSON object containing the fields: Activity (which is the title of the activity), Description (which is a detailed description of the activity) start (starting time of activity), end (end time of activity) for each activity the user wanted to have implemented. ';
+    "You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life , last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. and based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity. If the user asks you to plan activities without clarifying which ones, create a planning that takes both what you know about the user's progress and his to-dos, aiming for an ideal schedule that fits the user's needs. always listen to the feedback of the user, and try to make as good as possible planning for him or her. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity than respond ONLY with a JSON object containing the fields: Activity (which is the title of the activity), Description (which is a detailed description of the activity) start (starting time of activity), end (end time of activity) for each activity the user wanted to have implemented. ";
   const LIVE_SYSTEM_PROMPT =
     'You are a helpful live assistant agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake, ingredients are kind of the habits the user has created to help him create the flavours successful. Your context as an agent: the person is currently working on his planning on the day, and when he chats with you Your goal is to provide help with whatever the user needs help with. probably it is going to be with finding motivation , or questions on if he or she should build the day up differently from now, or just general tips. Your context will exist out of his goal in life, where he is currently heading towards according to the rapport , the current activities he is doing. the other activities on the day. the daily aim. and all the ingredients and flavours the user has on his account. You are going to make him motivated, with reminding him about the goal etc. talk him out of negative thoughts, and help him make the best out of the day. Give him a sense of purpose, recognition of his work, and belief. Yet stay honest. Really motivates him or her to perform outstandingly. the tone and honesty the user wants: ${JSON.stringify(tone, null, 2)} ';
   const SYSTEM_PROMPT = live ? LIVE_SYSTEM_PROMPT : PLANNING_SYSTEM_PROMPT;
@@ -740,21 +771,16 @@ export default function EditorClient({
             const presetMap = new Map(presets.map((p) => [p.id, p]));
             let assignments: ColorAssignment[] | null = null;
             try {
-              const colorRes = await fetch(
-                '/api/planning/color-assessment',
-                {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    activities: parsed,
-                    presets: presets.map((p) => ({ id: p.id, name: p.name })),
-                  }),
-                },
-              );
+              const colorRes = await fetch('/api/planning/color-assessment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  activities: parsed,
+                  presets: presets.map((p) => ({ id: p.id, name: p.name })),
+                }),
+              });
               const colorData = await colorRes.json();
-              assignments = parseColorAssignments(
-                colorData.response as string,
-              );
+              assignments = parseColorAssignments(colorData.response as string);
             } catch {
               assignments = null;
             }

@@ -13,6 +13,7 @@ import { getLatestHeadingReport } from '@/lib/heading-report-store';
 import { listDailyReports } from '@/lib/daily-report-store';
 import { listWeeklyReports } from '@/lib/weekly-report-store';
 import { listMonthlyReports } from '@/lib/monthly-report-store';
+import { listTodos } from '@/lib/todos-store';
 
 export const revalidate = 0;
 
@@ -46,6 +47,7 @@ export default async function PlanningNextPage({
     dailyReports,
     weeklyReports,
     monthlyReports,
+    todos,
   ] = await Promise.all([
     getOrCreatePlan(me.id, dateStr),
     listIngredients(String(me.id), me.id),
@@ -55,6 +57,7 @@ export default async function PlanningNextPage({
     listDailyReports(me.id),
     listWeeklyReports(me.id),
     listMonthlyReports(me.id),
+    listTodos(String(me.id), me.id),
   ]);
   const reportContext = {
     heading,
@@ -90,6 +93,7 @@ export default async function PlanningNextPage({
         ingredients={ingredients}
         flavors={flavors}
         subflavors={subflavors}
+        todos={todos}
         reportContext={reportContext}
         initialShowDailyAim={showDailyAim}
       />
