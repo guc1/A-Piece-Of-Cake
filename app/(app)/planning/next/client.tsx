@@ -1104,6 +1104,7 @@ export default function EditorClient({
     if (serialized === lastSaved.current) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
+      const reqSerialized = serialized;
       const payload: PlanBlockInput[] = blocks.map((b) => ({
         id: b.id,
         start: b.start,
@@ -1124,6 +1125,12 @@ export default function EditorClient({
         dailyIngredientIds,
         presetsSnapshot,
       ).then((plan) => {
+        const currentSerialized = JSON.stringify({
+          blocks: blocksRef.current,
+          dailyAim: dailyAimRef.current,
+          dailyIngredientIds: dailyIngredientIdsRef.current,
+        });
+        if (currentSerialized !== reqSerialized) return;
         const prevSelected =
           metaPinned && selectedId
             ? blocksRef.current.find((b) => b.id === selectedId)
