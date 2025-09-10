@@ -141,6 +141,7 @@ export const todos = pgTable(
     icon: text('icon'),
     visibility: varchar('visibility', { length: 20 }).default('public'),
     completed: boolean('completed').notNull().default(false),
+    dueAt: timestamp('due_at'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },

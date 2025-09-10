@@ -20,6 +20,7 @@ function toTodo(row: typeof todos.$inferSelect): Todo {
     icon: row.icon ?? '✅',
     visibility: (row.visibility as Visibility) ?? 'public',
     completed: row.completed ?? false,
+    dueAt: row.dueAt?.toISOString() ?? null,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -168,6 +169,7 @@ export async function createTodo(
       icon: input.icon,
       visibility: input.visibility ?? 'public',
       completed: input.completed ?? false,
+      dueAt: input.dueAt ? new Date(input.dueAt) : undefined,
       createdAt: now,
       updatedAt: now,
     })
@@ -181,6 +183,7 @@ export async function createTodo(
       priority: todo.priority,
       icon: todo.icon,
       completed: todo.completed,
+      dueAt: todo.dueAt,
     },
   });
   return todo;
@@ -202,6 +205,7 @@ export async function updateTodo(
       icon: input.icon,
       visibility: input.visibility,
       completed: input.completed !== undefined ? input.completed : undefined,
+      dueAt: input.dueAt ? new Date(input.dueAt) : undefined,
       updatedAt: now,
     })
     .where(and(eq(todos.userId, Number(userId)), eq(todos.id, id)))
@@ -216,6 +220,7 @@ export async function updateTodo(
       priority: todo.priority,
       icon: todo.icon,
       completed: todo.completed,
+      dueAt: todo.dueAt,
     },
   });
   return todo;

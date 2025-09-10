@@ -30,6 +30,11 @@ function sanitize(form: FormData) {
       ? vis
       : 'public';
   }
+  if (form.has('dueAt')) {
+    const val = form.get('dueAt');
+    const d = val ? new Date(String(val)) : null;
+    if (d && !isNaN(d.getTime())) obj.dueAt = d.toISOString();
+  }
   if (form.has('completed')) {
     obj.completed = form.get('completed') === 'true';
   }

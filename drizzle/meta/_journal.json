@@ -204,6 +204,13 @@
       "when": 1756284819561,
       "tag": "0030_add_todos_completed",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1756284819562,
+      "tag": "0031_add_todos_due_at",
+      "breakpoints": true
     }
   ]
 }
