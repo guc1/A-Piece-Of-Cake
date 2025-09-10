@@ -5,13 +5,23 @@ import { useState } from 'react';
 import IconPicker from '@/components/icon-picker';
 import type { Todo, TodoInput, Visibility } from '@/types/todo';
 import { useViewContext } from '@/lib/view-context';
-import { createTodo as createAction } from './actions';
+import {
+  createTodo as createAction,
+  updateTodo as updateAction,
+  deleteTodo as deleteAction,
+} from './actions';
 import { Button } from '@/components/ui/button';
 
-const VISIBILITIES: Visibility[] = ['private', 'followers', 'friends', 'public'];
+const VISIBILITIES: Visibility[] = [
+  'private',
+  'followers',
+  'friends',
+  'public',
+];
 
 function sortTodos(list: Todo[]) {
   return [...list].sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
     if (b.priority !== a.priority) return b.priority - a.priority;
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
   });
@@ -62,6 +72,26 @@ export default function TodosClient({
     setOpen(false);
   }
 
+  async function handleComplete(id: number) {
+    if (!editable) return;
+    const fd = new FormData();
+    fd.append('completed', 'true');
+    const updated = await updateAction(Number(userId), id, fd);
+    if (updated) {
+      setTodos((prev) =>
+        sortTodos(prev.map((t) => (t.id === id ? updated : t))),
+      );
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!editable) return;
+    const ok = await deleteAction(Number(userId), id);
+    if (ok) {
+      setTodos((prev) => prev.filter((t) => t.id !== id));
+    }
+  }
+
   return (
     <div id={`todo-list-${userId}`} className="space-y-4 p-4">
       {editable && (
@@ -77,7 +107,10 @@ export default function TodosClient({
             className="w-full max-w-sm space-y-2 rounded bg-white p-6 shadow-lg"
           >
             <div>
-              <label className="block text-sm font-medium" htmlFor={`todo-title-${userId}`}>
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`todo-title-${userId}`}
+              >
                 Title
               </label>
               <input
@@ -90,7 +123,10 @@ export default function TodosClient({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium" htmlFor={`todo-desc-${userId}`}>
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`todo-desc-${userId}`}
+              >
                 Description
               </label>
               <textarea
@@ -98,11 +134,16 @@ export default function TodosClient({
                 className="w-full border p-1"
                 value={form.description}
                 rows={3}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
               />
             </div>
             <div>
-              <label className="block text-sm font-medium" htmlFor={`todo-pri-${userId}`}>
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`todo-pri-${userId}`}
+              >
                 Priority ({form.priority})
               </label>
               <input
@@ -111,7 +152,9 @@ export default function TodosClient({
                 min={0}
                 max={100}
                 value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}
+                onChange={(e) =>
+                  setForm({ ...form, priority: Number(e.target.value) })
+                }
               />
             </div>
             <div>
@@ -157,7 +200,9 @@ export default function TodosClient({
         {todos.map((t) => (
           <li
             key={t.id}
-            className="flex items-center gap-2 rounded border p-2"
+            className={`flex items-center gap-2 rounded border p-2 ${
+              t.completed ? 'bg-green-100' : ''
+            }`}
           >
             {iconSrc(t.icon) ? (
               <img
@@ -170,6 +215,26 @@ export default function TodosClient({
             )}
             <span className="font-medium">{t.title}</span>
             <span className="text-xs text-gray-500">{t.priority}</span>
+            {editable && !t.completed && (
+              <Button
+                id={`todo-complete-${t.id}`}
+                size="sm"
+                onClick={() => handleComplete(t.id)}
+              >
+                Completed
+              </Button>
+            )}
+            {editable && (
+              <Button
+                id={`todo-delete-${t.id}`}
+                size="sm"
+                variant="outline"
+                className="text-red-600"
+                onClick={() => handleDelete(t.id)}
+              >
+                Delete
+              </Button>
+            )}
           </li>
         ))}
       </ul>

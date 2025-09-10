@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   json,
   jsonb,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -139,6 +140,7 @@ export const todos = pgTable(
     // Allow emoji or data URL
     icon: text('icon'),
     visibility: varchar('visibility', { length: 20 }).default('public'),
+    completed: boolean('completed').default(false).notNull(),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
   },

@@ -8,6 +8,7 @@ export interface Todo {
   priority: number;
   icon: string;
   visibility: Visibility;
+  completed: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,4 +19,5 @@ export interface TodoInput {
   priority: number;
   icon: string;
   visibility?: Visibility;
+  completed?: boolean;
 }
