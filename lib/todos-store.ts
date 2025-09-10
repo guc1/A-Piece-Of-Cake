@@ -19,6 +19,7 @@ function toTodo(row: typeof todos.$inferSelect): Todo {
     priority: row.priority ?? 0,
     icon: row.icon ?? '✅',
     visibility: (row.visibility as Visibility) ?? 'public',
+    completed: row.completed ?? false,
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? new Date().toISOString(),
   };
@@ -166,6 +167,7 @@ export async function createTodo(
       priority: clamp(input.priority),
       icon: input.icon,
       visibility: input.visibility ?? 'public',
+      completed: input.completed ?? false,
       createdAt: now,
       updatedAt: now,
     })
@@ -178,6 +180,7 @@ export async function createTodo(
       description: todo.description,
       priority: todo.priority,
       icon: todo.icon,
+      completed: todo.completed,
     },
   });
   return todo;
@@ -194,9 +197,11 @@ export async function updateTodo(
     .set({
       title: input.title ? input.title.slice(0, 80) : undefined,
       description: input.description,
-      priority: input.priority !== undefined ? clamp(input.priority) : undefined,
+      priority:
+        input.priority !== undefined ? clamp(input.priority) : undefined,
       icon: input.icon,
       visibility: input.visibility,
+      completed: input.completed !== undefined ? input.completed : undefined,
       updatedAt: now,
     })
     .where(and(eq(todos.userId, Number(userId)), eq(todos.id, id)))
@@ -210,15 +215,13 @@ export async function updateTodo(
       description: todo.description,
       priority: todo.priority,
       icon: todo.icon,
+      completed: todo.completed,
     },
   });
   return todo;
 }
 
-export async function deleteTodo(
-  userId: string,
-  id: number,
-): Promise<boolean> {
+export async function deleteTodo(userId: string, id: number): Promise<boolean> {
   return db.transaction(async (tx) => {
     const [exists] = await tx
       .select({ id: todos.id })
@@ -237,4 +240,3 @@ export async function deleteTodo(
 function clamp(n: number) {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
-
