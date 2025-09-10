@@ -9,6 +9,7 @@ export interface Todo {
   icon: string;
   visibility: Visibility;
   completed: boolean;
+  dueAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,4 +21,5 @@ export interface TodoInput {
   icon: string;
   visibility?: Visibility;
   completed?: boolean;
+  dueAt?: string;
 }

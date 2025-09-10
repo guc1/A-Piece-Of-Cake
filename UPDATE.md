@@ -286,3 +286,4 @@
 - 2025-10-29: Added DEV option in settings to unlock the TimeMachine with code "Cake2025" for manual time overrides.
 - 2025-10-29: Guarded planning autosave against stale responses to keep text from disappearing while typing.
 - 2025-10-29: Added completion and delete controls to to-do list, moving finished items under a green Completed section.
+- 2025-10-29: Introduced "finish before" deadlines on to-dos with color-coded time left and edit capability.
