@@ -193,6 +193,16 @@ export default function EditorClient({
     () => dailyAim.trim().length > 0 || dailyIngredientIds.length > 0,
     [dailyAim, dailyIngredientIds],
   );
+  const planningDateText = new Date(`${date}T00:00:00`).toLocaleDateString(
+    'en-US',
+    {
+      timeZone: tz,
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    },
+  );
   useEffect(() => {
     if (!initialShowDailyAim) return;
     setShowDailyAim(true);
@@ -485,14 +495,42 @@ export default function EditorClient({
   }
 
   function buildTodoContext(list: Todo[]) {
-    if (!list.length) return 'No to-dos.';
-    return list
+    const active = list.filter((t) => !t.completed);
+    if (!active.length) return 'No to-dos.';
+    const now = Date.now();
+    return active
       .slice(0, 10)
-      .map(
-        (t) =>
-          `${t.title}${t.description ? ` - ${t.description}` : ''} (priority: ${t.priority})`,
-      )
+      .map((t) => {
+        let due = '';
+        if (t.dueAt) {
+          const exact = new Date(t.dueAt).toLocaleString('en-US', { timeZone: tz });
+          const rel = formatTimeUntil(t.dueAt, now);
+          due = `, due ${exact} (${rel})`;
+        }
+        return `${t.title}${t.description ? ` - ${t.description}` : ''} (priority: ${t.priority}${due})`;
+      })
       .join('; ');
+  }
+
+  function formatTimeUntil(dueAt: string, now: number) {
+    const diff = new Date(dueAt).getTime() - now;
+    const abs = Math.abs(diff);
+    const mins = Math.round(abs / 60000);
+    if (mins < 60) {
+      return diff >= 0
+        ? `due in ${mins} minute${mins === 1 ? '' : 's'}`
+        : `overdue by ${mins} minute${mins === 1 ? '' : 's'}`;
+    }
+    const hours = Math.round(mins / 60);
+    if (hours < 24) {
+      return diff >= 0
+        ? `due in ${hours} hour${hours === 1 ? '' : 's'}`
+        : `overdue by ${hours} hour${hours === 1 ? '' : 's'}`;
+    }
+    const days = Math.round(hours / 24);
+    return diff >= 0
+      ? `due in ${days} day${days === 1 ? '' : 's'}`
+      : `overdue by ${days} day${days === 1 ? '' : 's'}`;
   }
 
   function buildDailyAimContext() {
@@ -626,12 +664,14 @@ export default function EditorClient({
       .sort((a, b) => b.importance - a.importance)
       .map((f) => `${f.name} (${f.importance})`)
       .join(', ');
+    const todoStr = buildTodoContext(todos);
     return (
       `The goal/life ethos of the user is ${rational}; the guilty pleasure is ${guilty}. ` +
       `according to the rapports this is the direction of the user ${report}. ` +
       `The daily aim of the user is: ${aim}. ` +
       `The current time is ${nowStr}, currently the user is doing this activity ${curStr}. ` +
       `The activities the user already done today ${doneStr} , and these activities the user still has to do ${upStr}. ` +
+      `These are the user's to-dos: ${todoStr}. ` +
       `The ingredients the user has created ${ingredientStr}. ` +
       `And the main flavours of the user ${flavorStr}. ` +
       `Youre goal is to help the user with: ${prompt}`
@@ -648,6 +688,7 @@ export default function EditorClient({
     const planBlocks = buildPlanBlocksContext(blocks);
     const todoStr = buildTodoContext(todos);
     return (
+      `Planning for ${planningDateText}. ` +
       `this is the life ethos statement/goal the user has in its life: ${rational}. ` +
       `This is the rapport of the user where he is heading towards, which include an Overview. heading toward long and short term, and feedback: ${report}. ` +
       `----- here is the current users aim for the day: ${aim}. ` +
@@ -716,7 +757,7 @@ export default function EditorClient({
   }
 
   const PLANNING_SYSTEM_PROMPT =
-    "You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life , last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. and based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity. If the user asks you to plan activities without clarifying which ones, create a planning that takes both what you know about the user's progress and his to-dos, aiming for an ideal schedule that fits the user's needs. always listen to the feedback of the user, and try to make as good as possible planning for him or her. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity than respond ONLY with a JSON object containing the fields: Activity (which is the title of the activity), Description (which is a detailed description of the activity) start (starting time of activity), end (end time of activity) for each activity the user wanted to have implemented. ";
+    `You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. You are helping the user plan the day for ${planningDateText}. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life, last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. Based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity. If the user asks you to plan activities without clarifying which ones, create a planning that takes both what you know about the user's progress and his to-dos, aiming for an ideal schedule that fits the user's needs. Always listen to the feedback of the user, and try to make as good as possible planning for him or her. Regarding to-dos, always advise planning each task before its deadline. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity than respond ONLY with a JSON object containing the fields: Activity (which is the title of the activity), Description (which is a detailed description of the activity) start (starting time of activity), end (end time of activity) for each activity the user wanted to have implemented.`;
   const LIVE_SYSTEM_PROMPT =
     'You are a helpful live assistant agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake, ingredients are kind of the habits the user has created to help him create the flavours successful. Your context as an agent: the person is currently working on his planning on the day, and when he chats with you Your goal is to provide help with whatever the user needs help with. probably it is going to be with finding motivation , or questions on if he or she should build the day up differently from now, or just general tips. Your context will exist out of his goal in life, where he is currently heading towards according to the rapport , the current activities he is doing. the other activities on the day. the daily aim. and all the ingredients and flavours the user has on his account. You are going to make him motivated, with reminding him about the goal etc. talk him out of negative thoughts, and help him make the best out of the day. Give him a sense of purpose, recognition of his work, and belief. Yet stay honest. Really motivates him or her to perform outstandingly. the tone and honesty the user wants: ${JSON.stringify(tone, null, 2)} ';
   const SYSTEM_PROMPT = live ? LIVE_SYSTEM_PROMPT : PLANNING_SYSTEM_PROMPT;
