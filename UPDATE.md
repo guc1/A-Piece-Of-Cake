@@ -289,3 +289,4 @@
 - 2025-10-29: Introduced "finish before" deadlines on to-dos with color-coded time left and edit capability.
 - 2025-10-29: Excluded completed to-dos from planning and live agent prompts and added time-until-due context for each remaining task.
 - 2025-10-29: Added exact due times to to-do context and noted planning date with pre-deadline scheduling guidance for planning agent.
+- 2025-10-29: Displayed original activity description during planning review to aid feedback writing and added test coverage.
