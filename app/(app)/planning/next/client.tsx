@@ -503,7 +503,9 @@ export default function EditorClient({
       .map((t) => {
         let due = '';
         if (t.dueAt) {
-          const exact = new Date(t.dueAt).toLocaleString('en-US', { timeZone: tz });
+          const exact = new Date(t.dueAt).toLocaleString('en-US', {
+            timeZone: tz,
+          });
           const rel = formatTimeUntil(t.dueAt, now);
           due = `, due ${exact} (${rel})`;
         }
@@ -756,8 +758,7 @@ export default function EditorClient({
     setChatMessages([welcome]);
   }
 
-  const PLANNING_SYSTEM_PROMPT =
-    `You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. You are helping the user plan the day for ${planningDateText}. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life, last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. Based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity. If the user asks you to plan activities without clarifying which ones, create a planning that takes both what you know about the user's progress and his to-dos, aiming for an ideal schedule that fits the user's needs. Always listen to the feedback of the user, and try to make as good as possible planning for him or her. Regarding to-dos, always advise planning each task before its deadline. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity than respond ONLY with a JSON object containing the fields: Activity (which is the title of the activity), Description (which is a detailed description of the activity) start (starting time of activity), end (end time of activity) for each activity the user wanted to have implemented.`;
+  const PLANNING_SYSTEM_PROMPT = `You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. You are helping the user plan the day for ${planningDateText}. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life, last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. Based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity. If the user asks you to plan activities without clarifying which ones, create a planning that takes both what you know about the user's progress and his to-dos, aiming for an ideal schedule that fits the user's needs. Always listen to the feedback of the user, and try to make as good as possible planning for him or her. Regarding to-dos, always advise planning each task before its deadline. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity than respond ONLY with a JSON object containing the fields: Activity (which is the title of the activity), Description (which is a detailed description of the activity) start (starting time of activity), end (end time of activity) for each activity the user wanted to have implemented.`;
   const LIVE_SYSTEM_PROMPT =
     'You are a helpful live assistant agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake, ingredients are kind of the habits the user has created to help him create the flavours successful. Your context as an agent: the person is currently working on his planning on the day, and when he chats with you Your goal is to provide help with whatever the user needs help with. probably it is going to be with finding motivation , or questions on if he or she should build the day up differently from now, or just general tips. Your context will exist out of his goal in life, where he is currently heading towards according to the rapport , the current activities he is doing. the other activities on the day. the daily aim. and all the ingredients and flavours the user has on his account. You are going to make him motivated, with reminding him about the goal etc. talk him out of negative thoughts, and help him make the best out of the day. Give him a sense of purpose, recognition of his work, and belief. Yet stay honest. Really motivates him or her to perform outstandingly. the tone and honesty the user wants: ${JSON.stringify(tone, null, 2)} ';
   const SYSTEM_PROMPT = live ? LIVE_SYSTEM_PROMPT : PLANNING_SYSTEM_PROMPT;
@@ -1706,6 +1707,31 @@ export default function EditorClient({
               <>
                 <div className="mb-2 text-sm text-gray-500">
                   {editable ? null : 'Read-only (viewing mode)'}
+                </div>
+                <div className="mb-4">
+                  <div
+                    id={`p1an-meta-ttl-${selected.id}-${userId}`}
+                    className="font-semibold"
+                  >
+                    {selected.title}
+                  </div>
+                  <div className="mt-1">
+                    {selected.description ? (
+                      <pre
+                        id={`p1an-meta-dsc-${selected.id}-${userId}`}
+                        className="whitespace-pre-wrap rounded border p-2 text-sm"
+                      >
+                        {selected.description}
+                      </pre>
+                    ) : (
+                      <div
+                        id={`p1an-meta-dsc-${selected.id}-${userId}`}
+                        className="rounded border p-2 text-sm text-gray-500"
+                      >
+                        No description provided
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <label
                   className="block text-sm font-medium"

@@ -196,3 +196,30 @@ test('future plan persists across day change', async ({ page }) => {
   );
   await expect(page.locator('[id^="p1an-blk-"]')).toHaveCount(1);
 });
+
+test('review shows original block description', async ({ page }) => {
+  const handle = `user${Date.now()}rd`;
+  const email = `${handle}@example.com`;
+  const password = 'pass1234';
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  await page.goto('/signup');
+  await page.fill('input[placeholder="Name"]', 'Tester');
+  await page.fill('input[placeholder="Handle"]', handle);
+  await page.fill('input[placeholder="Email"]', email);
+  await page.fill('input[placeholder="Password"]', password);
+  await page.click('text=Sign Up');
+
+  await page.goto(`/planning/live?apoc_date=${today}&apoc_time=08:00`);
+  await page.click('[id^="p1an-add-top-"]');
+  await page.fill('input[id^="p1an-meta-ttl-"]', 'Morning run');
+  await page.fill('textarea[id^="p1an-meta-dsc-"]', 'Run 5km in the park');
+  await page.click('button[id^="p1an-meta-close-"]');
+  await page.waitForTimeout(1000);
+
+  await page.goto(`/planning/review?apoc_date=${today}&apoc_time=23:59`);
+  await page.click('[id^="p1an-blk-"]');
+  const desc = page.locator('[id^="p1an-meta-dsc-"]');
+  await expect(desc).toHaveText('Run 5km in the park');
+});
