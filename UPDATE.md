@@ -287,3 +287,4 @@
 - 2025-10-29: Guarded planning autosave against stale responses to keep text from disappearing while typing.
 - 2025-10-29: Added completion and delete controls to to-do list, moving finished items under a green Completed section.
 - 2025-10-29: Introduced "finish before" deadlines on to-dos with color-coded time left and edit capability.
+- 2025-10-29: Excluded completed to-dos from planning and live agent prompts and added time-until-due context for each remaining task.
