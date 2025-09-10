@@ -485,14 +485,40 @@ export default function EditorClient({
   }
 
   function buildTodoContext(list: Todo[]) {
-    if (!list.length) return 'No to-dos.';
-    return list
+    const active = list.filter((t) => !t.completed);
+    if (!active.length) return 'No to-dos.';
+    const now = Date.now();
+    return active
       .slice(0, 10)
-      .map(
-        (t) =>
-          `${t.title}${t.description ? ` - ${t.description}` : ''} (priority: ${t.priority})`,
-      )
+      .map((t) => {
+        const due = t.dueAt ? formatTimeUntil(t.dueAt, now) : null;
+        return (
+          `${t.title}${t.description ? ` - ${t.description}` : ''} (priority: ${t.priority}` +
+          `${due ? `, ${due}` : ''})`
+        );
+      })
       .join('; ');
+  }
+
+  function formatTimeUntil(dueAt: string, now: number) {
+    const diff = new Date(dueAt).getTime() - now;
+    const abs = Math.abs(diff);
+    const mins = Math.round(abs / 60000);
+    if (mins < 60) {
+      return diff >= 0
+        ? `due in ${mins} minute${mins === 1 ? '' : 's'}`
+        : `overdue by ${mins} minute${mins === 1 ? '' : 's'}`;
+    }
+    const hours = Math.round(mins / 60);
+    if (hours < 24) {
+      return diff >= 0
+        ? `due in ${hours} hour${hours === 1 ? '' : 's'}`
+        : `overdue by ${hours} hour${hours === 1 ? '' : 's'}`;
+    }
+    const days = Math.round(hours / 24);
+    return diff >= 0
+      ? `due in ${days} day${days === 1 ? '' : 's'}`
+      : `overdue by ${days} day${days === 1 ? '' : 's'}`;
   }
 
   function buildDailyAimContext() {
@@ -626,12 +652,14 @@ export default function EditorClient({
       .sort((a, b) => b.importance - a.importance)
       .map((f) => `${f.name} (${f.importance})`)
       .join(', ');
+    const todoStr = buildTodoContext(todos);
     return (
       `The goal/life ethos of the user is ${rational}; the guilty pleasure is ${guilty}. ` +
       `according to the rapports this is the direction of the user ${report}. ` +
       `The daily aim of the user is: ${aim}. ` +
       `The current time is ${nowStr}, currently the user is doing this activity ${curStr}. ` +
       `The activities the user already done today ${doneStr} , and these activities the user still has to do ${upStr}. ` +
+      `These are the user's to-dos: ${todoStr}. ` +
       `The ingredients the user has created ${ingredientStr}. ` +
       `And the main flavours of the user ${flavorStr}. ` +
       `Youre goal is to help the user with: ${prompt}`
