@@ -5,10 +5,19 @@ import { useState } from 'react';
 import IconPicker from '@/components/icon-picker';
 import type { Todo, TodoInput, Visibility } from '@/types/todo';
 import { useViewContext } from '@/lib/view-context';
-import { createTodo as createAction } from './actions';
+import {
+  createTodo as createAction,
+  updateTodo as updateAction,
+  deleteTodo as deleteAction,
+} from './actions';
 import { Button } from '@/components/ui/button';
 
-const VISIBILITIES: Visibility[] = ['private', 'followers', 'friends', 'public'];
+const VISIBILITIES: Visibility[] = [
+  'private',
+  'followers',
+  'friends',
+  'public',
+];
 
 function sortTodos(list: Todo[]) {
   return [...list].sort((a, b) => {
@@ -31,7 +40,7 @@ export default function TodosClient({
   initialTodos: Todo[];
 }) {
   const { editable } = useViewContext();
-  const [todos, setTodos] = useState(() => sortTodos(initialTodos));
+  const [todos, setTodos] = useState(() => initialTodos);
   const [form, setForm] = useState<TodoInput>({
     title: '',
     description: '',
@@ -51,7 +60,7 @@ export default function TodosClient({
     fd.append('icon', form.icon);
     fd.append('visibility', form.visibility || 'public');
     const todo = await createAction(Number(userId), fd);
-    setTodos((prev) => sortTodos([...prev, todo]));
+    setTodos((prev) => [...prev, todo]);
     setForm({
       title: '',
       description: '',
@@ -60,6 +69,24 @@ export default function TodosClient({
       visibility: 'public',
     });
     setOpen(false);
+  }
+
+  async function handleComplete(id: number) {
+    if (!editable) return;
+    const fd = new FormData();
+    fd.append('completed', 'true');
+    const todo = await updateAction(Number(userId), id, fd);
+    if (todo) {
+      setTodos((prev) => prev.map((t) => (t.id === id ? todo : t)));
+    }
+  }
+
+  async function handleDelete(id: number) {
+    if (!editable) return;
+    const ok = await deleteAction(Number(userId), id);
+    if (ok) {
+      setTodos((prev) => prev.filter((t) => t.id !== id));
+    }
   }
 
   return (
@@ -77,7 +104,10 @@ export default function TodosClient({
             className="w-full max-w-sm space-y-2 rounded bg-white p-6 shadow-lg"
           >
             <div>
-              <label className="block text-sm font-medium" htmlFor={`todo-title-${userId}`}>
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`todo-title-${userId}`}
+              >
                 Title
               </label>
               <input
@@ -90,7 +120,10 @@ export default function TodosClient({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium" htmlFor={`todo-desc-${userId}`}>
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`todo-desc-${userId}`}
+              >
                 Description
               </label>
               <textarea
@@ -98,11 +131,16 @@ export default function TodosClient({
                 className="w-full border p-1"
                 value={form.description}
                 rows={3}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
               />
             </div>
             <div>
-              <label className="block text-sm font-medium" htmlFor={`todo-pri-${userId}`}>
+              <label
+                className="block text-sm font-medium"
+                htmlFor={`todo-pri-${userId}`}
+              >
                 Priority ({form.priority})
               </label>
               <input
@@ -111,7 +149,9 @@ export default function TodosClient({
                 min={0}
                 max={100}
                 value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}
+                onChange={(e) =>
+                  setForm({ ...form, priority: Number(e.target.value) })
+                }
               />
             </div>
             <div>
@@ -153,27 +193,89 @@ export default function TodosClient({
           </form>
         </div>
       )}
-      <ul className="space-y-2">
-        {todos.map((t) => (
-          <li
-            key={t.id}
-            className="flex items-center gap-2 rounded border p-2"
-          >
-            {iconSrc(t.icon) ? (
-              <img
-                src={iconSrc(t.icon) as string}
-                alt="icon"
-                className="h-6 w-6 rounded object-cover"
-              />
-            ) : (
-              <span>{t.icon}</span>
+      {(() => {
+        const active = sortTodos(todos.filter((t) => !t.completed));
+        const done = sortTodos(todos.filter((t) => t.completed));
+        return (
+          <>
+            <ul className="space-y-2">
+              {active.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center gap-2 rounded border p-2"
+                >
+                  {iconSrc(t.icon) ? (
+                    <img
+                      src={iconSrc(t.icon) as string}
+                      alt="icon"
+                      className="h-6 w-6 rounded object-cover"
+                    />
+                  ) : (
+                    <span>{t.icon}</span>
+                  )}
+                  <span className="flex-1 font-medium">{t.title}</span>
+                  <span className="text-xs text-gray-500">{t.priority}</span>
+                  {editable && (
+                    <>
+                      {!t.completed && (
+                        <Button size="sm" onClick={() => handleComplete(t.id)}>
+                          Completed
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDelete(t.id)}
+                      >
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {done.length > 0 && (
+              <>
+                <h3 className="mt-4 font-semibold">Completed</h3>
+                <ul className="space-y-2">
+                  {done.map((t) => (
+                    <li
+                      key={t.id}
+                      className="flex items-center gap-2 rounded border p-2 bg-green-100"
+                    >
+                      {iconSrc(t.icon) ? (
+                        <img
+                          src={iconSrc(t.icon) as string}
+                          alt="icon"
+                          className="h-6 w-6 rounded object-cover"
+                        />
+                      ) : (
+                        <span>{t.icon}</span>
+                      )}
+                      <span className="flex-1 font-medium">{t.title}</span>
+                      <span className="text-xs text-gray-500">
+                        {t.priority}
+                      </span>
+                      {editable && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(t.id)}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
-            <span className="font-medium">{t.title}</span>
-            <span className="text-xs text-gray-500">{t.priority}</span>
-          </li>
-        ))}
-      </ul>
-      {todos.length === 0 && <p id={`todo-empty-${userId}`}>No to-dos yet.</p>}
+            {todos.length === 0 && (
+              <p id={`todo-empty-${userId}`}>No to-dos yet.</p>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

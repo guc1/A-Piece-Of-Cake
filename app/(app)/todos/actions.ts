@@ -11,18 +11,28 @@ import { revalidatePath } from 'next/cache';
 
 function sanitize(form: FormData) {
   const obj: any = {};
-  for (const [key, value] of form.entries()) {
-    obj[key] = value as any;
+  if (form.has('title')) {
+    obj.title = String(form.get('title') || '').slice(0, 80);
   }
-  obj.priority = clamp(Number(obj.priority));
-  obj.title = String(obj.title || '').slice(0, 80);
-  obj.description = (obj.description || '').toString();
-  obj.icon = typeof obj.icon === 'string' ? obj.icon : '✅';
-  obj.visibility = ['private', 'followers', 'friends', 'public'].includes(
-    obj.visibility,
-  )
-    ? obj.visibility
-    : 'public';
+  if (form.has('description')) {
+    obj.description = (form.get('description') || '').toString();
+  }
+  if (form.has('priority')) {
+    obj.priority = clamp(Number(form.get('priority')));
+  }
+  if (form.has('icon')) {
+    const ic = form.get('icon');
+    obj.icon = typeof ic === 'string' ? ic : '✅';
+  }
+  if (form.has('visibility')) {
+    const vis = form.get('visibility') as string;
+    obj.visibility = ['private', 'followers', 'friends', 'public'].includes(vis)
+      ? vis
+      : 'public';
+  }
+  if (form.has('completed')) {
+    obj.completed = form.get('completed') === 'true';
+  }
   return obj;
 }
 
