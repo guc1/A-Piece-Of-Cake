@@ -155,8 +155,7 @@
       "when": 1756284819554,
       "tag": "0021_force_daily_reports_content_json",
       "breakpoints": true
-    }
-    ,
+    },
     {
       "idx": 22,
       "version": "7",
@@ -197,6 +196,13 @@
       "version": "7",
       "when": 1756284819560,
       "tag": "0029_create_todos",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1756284819561,
+      "tag": "0030_add_todo_completed",
       "breakpoints": true
     }
   ]

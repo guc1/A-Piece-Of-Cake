@@ -23,6 +23,9 @@ function sanitize(form: FormData) {
   )
     ? obj.visibility
     : 'public';
+  if (obj.completed !== undefined) {
+    obj.completed = String(obj.completed) === 'true';
+  }
   return obj;
 }
 
