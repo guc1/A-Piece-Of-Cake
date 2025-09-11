@@ -291,3 +291,4 @@
 - 2025-10-29: Added exact due times to to-do context and noted planning date with pre-deadline scheduling guidance for planning agent.
 - 2025-10-29: Displayed original activity description during planning review to aid feedback writing and added test coverage.
 - 2025-10-29: Displayed error message on failed login attempts and added test coverage.
+- 2025-10-30: Added script and helper to reset user passwords by ID and documented usage.

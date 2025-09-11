@@ -27,6 +27,23 @@ export function verifyPassword(password: string, hash: string): boolean {
   return timingSafeEqual(derived, keyBuf);
 }
 
+/**
+ * Manually reset a user's password.
+ * Intended for administrative scripts where the user has been identified
+ * by their numeric database ID.
+ */
+export async function resetUserPassword(userId: number, newPassword: string) {
+  if (!newPassword) throw new Error('New password required');
+  const passwordHash = hashPassword(newPassword);
+  const [user] = await db
+    .update(users)
+    .set({ passwordHash })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id });
+  if (!user) throw new Error('User not found');
+  return user;
+}
+
 export async function createUser(input: NewUser) {
   const passwordHash = hashPassword(input.password);
   const [user] = await db

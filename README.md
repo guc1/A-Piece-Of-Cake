@@ -31,3 +31,15 @@
 
 1. Place your favicon image at `public/Favicon_pieceofcake.png`.
 2. The app automatically references this file, so ensure the filename matches when deploying.
+
+## Manual password reset
+
+Use the provided script to set a new password for a user when you know their
+database ID.
+
+```
+pnpm tsx scripts/reset-password.ts <userId> <newPassword>
+```
+
+The script hashes the supplied password and updates the user record in the
+database.
