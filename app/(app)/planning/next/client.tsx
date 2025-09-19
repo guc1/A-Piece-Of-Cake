@@ -128,6 +128,7 @@ export default function EditorClient({
   // library instead of the plan owner's.
   const currentUserId = viewerId != null ? String(viewerId) : userId;
   const mode = live ? 'live' : 'next';
+  const reviewDayHasPassed = review && today > date;
   // Persist plans per-user and per-date. Live and review modes share the
   // same key while future planning uses its own so adjustments remain across
   // calendar days even if the network request fails.
@@ -919,7 +920,7 @@ export default function EditorClient({
   }, [blocks, review]);
 
   useEffect(() => {
-    if (!review) return;
+    if (!review || reviewDayHasPassed) return;
     const now = nowMinute;
     setReviews((prev) => {
       const next: Record<
@@ -935,7 +936,7 @@ export default function EditorClient({
       }
       return next;
     });
-  }, [nowMinute, blocks, review, minutesFromIso]);
+  }, [nowMinute, blocks, review, minutesFromIso, reviewDayHasPassed]);
 
   function updateBlock(id: string, updates: Partial<PlanBlock>) {
     if (review) return;
@@ -1602,7 +1603,7 @@ export default function EditorClient({
                       zIndex: z,
                       color: textColor,
                       cursor: review
-                        ? !live || nowMinute >= minutesFromIso(b.end)
+                        ? !live || reviewDayHasPassed || nowMinute >= minutesFromIso(b.end)
                           ? 'pointer'
                           : 'not-allowed'
                         : editable
@@ -1642,7 +1643,12 @@ export default function EditorClient({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (draggingRef.current) return;
-                      if (review && live && nowMinute < minutesFromIso(b.end))
+                      if (
+                        review &&
+                        live &&
+                        !reviewDayHasPassed &&
+                        nowMinute < minutesFromIso(b.end)
+                      )
                         return;
                       openMeta(b.id);
                     }}

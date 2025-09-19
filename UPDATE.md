@@ -292,3 +292,6 @@
 - 2025-10-29: Displayed original activity description during planning review to aid feedback writing and added test coverage.
 - 2025-10-29: Displayed error message on failed login attempts and added test coverage.
 - 2025-10-30: Added script and helper to reset user passwords by ID and documented usage.
+- 2025-10-30: Added 12H extra review time setting with reason capture, froze review/daily rapport date until noon when active, and surfaced status with a clickable indicator across owner, viewer, and historical views.
+- 2025-10-30: Tweaked 12H extra review time so activating it locks today’s review for tomorrow morning instead of reaching back to yesterday.
+- 2025-10-30: Allowed 12H extra review time days to review every block once the calendar moves to the next day.
