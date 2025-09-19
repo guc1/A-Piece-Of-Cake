@@ -296,3 +296,7 @@
 - 2025-10-30: Tweaked 12H extra review time so activating it locks today’s review for tomorrow morning instead of reaching back to yesterday.
 - 2025-10-30: Allowed 12H extra review time days to review every block once the calendar moves to the next day.
 - 2025-10-30: Pointed daily rapport generation at the frozen review date during active extra time and returned to today once that report is saved.
+- 2025-10-30: Added collaborative progress highlights with color picker, instant text selection, and chronological highlight feeds across daily, weekly, monthly, and yearly overviews (including viewer mode support).
+- 2025-10-30: Added highlight removal brush, wired absolute highlight list links, and ensured overview pages share updated highlight state instantly.
+- 2025-10-30: Fixed highlight "View in context" routes for owners and viewers and resynced saved markup so overlays persist after revisiting overview pages.
+- 2025-10-30: Forced overview caches to refresh after highlight edits and lit up detail pages with the saved markup so "View in context" immediately shows colored snippets.
