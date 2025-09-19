@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
 import { redirect } from 'next/navigation';
@@ -9,6 +8,12 @@ import { listDailyReportDates } from '@/lib/daily-report-store';
 import { getCoachTone } from '@/lib/ai/coach-tone';
 import { getDifficultyLabel } from '@/lib/ai/difficulty';
 import BackButton from '@/components/back-button';
+import { listHighlightsForTargets } from '@/lib/report-highlights';
+import type {
+  ReportOverviewItem,
+  ReportOverviewReportItem,
+} from '@/types/report-overview';
+import ReportOverviewClient from '@/components/progress/report-overview-client';
 
 function slugFromRange(start: string, end: string): string {
   const [ys, ms, ds] = start.split('-');
@@ -16,7 +21,13 @@ function slugFromRange(start: string, end: string): string {
   return `${ds}${ms}${ys}-${de}${me}${ye}`;
 }
 
-export async function YearlyReportsHome({ userId }: { userId: number }) {
+export async function YearlyReportsHome({
+  userId,
+  highlightLink,
+}: {
+  userId: number;
+  highlightLink: string;
+}) {
   const [reports, monthly, weekly, dailyDates] = await Promise.all([
     listYearlyReports(userId),
     listMonthlyReports(userId),
@@ -49,126 +60,53 @@ export async function YearlyReportsHome({ userId }: { userId: number }) {
     list.push({ start, end, report: reportMap.get(String(y)) });
   }
 
+  const items: ReportOverviewItem[] = [];
+  for (const y of list) {
+    if (y.report) {
+      const r = y.report;
+      items.push({
+        type: 'report',
+        key: r.slug,
+        slug: r.slug,
+        title: `${r.startDate} – ${r.endDate}`,
+        version: r.version,
+        summary: r.summary,
+        good: r.good,
+        bad: r.bad,
+        observations: r.observations,
+        toneName: getCoachTone(r.coachTone).name,
+        score: r.score,
+        difficultyLabel: getDifficultyLabel(r.score),
+        linkHref: r.slug,
+      } as ReportOverviewItem);
+      continue;
+    }
+    const year = y.start.slice(0, 4);
+    if (Number(year) === currentYear - 1 && now.getUTCMonth() === 0) continue;
+    const slug = slugFromRange(y.start, y.end);
+    items.push({
+      type: 'missing',
+      key: slug,
+      title: `${y.start} – ${y.end}`,
+      message: 'This year the user did not generate a yearly assessment.',
+    } as ReportOverviewItem);
+  }
+  const slugs = items
+    .filter((item) => item.type === 'report')
+    .map((item) => (item as ReportOverviewReportItem).slug);
+  const highlights = await listHighlightsForTargets(userId, 'yearly', slugs);
   return (
     <main className="p-6">
       <BackButton />
       <h1 className="mb-4 text-2xl font-bold">Yearly Reports</h1>
-      <ul className="space-y-4" id={`y3arlyrep-list-${userId}`}>
-        {list.map((y) => {
-          if (y.report) {
-            const r = y.report;
-            return (
-              <li
-                key={r.slug}
-                className="rounded border p-4"
-                id={`y3arlyrep-item-${r.slug}-${userId}`}
-              >
-                <div className="flex items-center justify-between">
-                  <h2
-                    className="font-semibold"
-                    id={`y3arlyrep-date-${r.slug}-${userId}`}
-                  >
-                    {r.startDate} – {r.endDate}
-                    {r.version > 1 && <span className="ml-1">(v{r.version})</span>}
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="font-semibold"
-                      id={`y3arlyrep-tone-${r.slug}-${userId}`}
-                    >
-                      {getCoachTone(r.coachTone).name}
-                    </span>
-                    <span
-                      className="font-semibold"
-                      id={`y3arlyrep-score-${r.slug}-${userId}`}
-                    >
-                      {r.score}
-                    </span>
-                    <span
-                      className="ml-1 text-sm text-zinc-600"
-                      id={`y3arlyrep-diff-${r.slug}-${userId}`}
-                    >
-                      {getDifficultyLabel(r.score)}
-                    </span>
-                  </div>
-                </div>
-                {r.summary && (
-                  <p
-                    className="mt-2 whitespace-pre-wrap"
-                    id={`y3arlyrep-sum-${r.slug}-${userId}`}
-                  >
-                    {r.summary}
-                  </p>
-                )}
-                {r.good.length > 0 && (
-                  <div className="mt-2" id={`y3arlyrep-good-${r.slug}-${userId}`}>
-                    <h3 className="font-semibold">What went well</h3>
-                    <ul className="list-disc pl-4">
-                      {r.good.map((g, i) => (
-                        <li key={i} id={`y3arlyrep-good-${i}-${r.slug}-${userId}`}>
-                          {g}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {r.bad.length > 0 && (
-                  <div className="mt-2" id={`y3arlyrep-bad-${r.slug}-${userId}`}>
-                    <h3 className="font-semibold">What went bad</h3>
-                    <ul className="list-disc pl-4">
-                      {r.bad.map((b, i) => (
-                        <li key={i} id={`y3arlyrep-bad-${i}-${r.slug}-${userId}`}>
-                          {b}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {r.observations.length > 0 && (
-                  <div className="mt-2" id={`y3arlyrep-obs-${r.slug}-${userId}`}>
-                    <h3 className="font-semibold">Observations</h3>
-                    <ul className="list-disc pl-4">
-                      {r.observations.map((o, i) => (
-                        <li key={i} id={`y3arlyrep-obs-${i}-${r.slug}-${userId}`}>
-                          {o}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <Link
-                  href={r.slug}
-                  className="mt-2 block text-sm text-orange-600 hover:underline"
-                  id={`y3arlyrep-link-${r.slug}-${userId}`}
-                >
-                  View details
-                </Link>
-              </li>
-            );
-          }
-          const year = y.start.slice(0, 4);
-          if (Number(year) === currentYear - 1 && now.getUTCMonth() === 0)
-            return null;
-          const slug = slugFromRange(y.start, y.end);
-          return (
-            <li
-              key={slug}
-              className="rounded border p-4"
-              id={`y3arlyrep-miss-${slug}-${userId}`}
-            >
-              <h2
-                className="font-semibold"
-                id={`y3arlyrep-date-${slug}-${userId}`}
-              >
-                {y.start} – {y.end}
-              </h2>
-              <p className="mt-2" id={`y3arlyrep-miss-msg-${slug}-${userId}`}>
-                This year the user did not generate a yearly assessment.
-              </p>
-            </li>
-          );
-        })}
-      </ul>
+      <ReportOverviewClient
+        userId={userId}
+        reportType="yearly"
+        idPrefix="y3arlyrep"
+        items={items}
+        initialHighlights={highlights}
+        highlightLink={highlightLink}
+      />
     </main>
   );
 }
@@ -177,5 +115,10 @@ export default async function YearlyReportsPage() {
   const session = await auth();
   if (!session) redirect('/signin');
   const me = await ensureUser(session);
-  return <YearlyReportsHome userId={me.id} />;
+  return (
+    <YearlyReportsHome
+      userId={me.id}
+      highlightLink="/progress/overview/yearly/highlights"
+    />
+  );
 }
