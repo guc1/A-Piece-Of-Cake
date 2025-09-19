@@ -3,9 +3,9 @@ import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { buildViewContext } from '@/lib/profile';
 import { ViewContextProvider } from '@/lib/view-context';
-import { DailyReportsHome } from '@/app/progress/overview/daily/page';
+import { WeeklyHighlightsSection } from '@/app/progress/overview/weekly/highlights/page';
 
-export default async function ViewDailyReportsPage({
+export default async function ViewWeeklyHighlightsPage({
   params,
   searchParams,
 }: {
@@ -28,10 +28,10 @@ export default async function ViewDailyReportsPage({
   });
   return (
     <ViewContextProvider value={ctx}>
-      <section id={`v13w-progress-daily-${user.id}`}>
-        <DailyReportsHome
+      <section id={`v13w-progress-weekly-highlights-${user.id}`}>
+        <WeeklyHighlightsSection
           userId={user.id}
-          highlightLink={`/view/${user.viewId}/progress/overview/daily/highlights`}
+          basePath={`/view/${user.viewId}/progress/overview/weekly`}
         />
       </section>
     </ViewContextProvider>

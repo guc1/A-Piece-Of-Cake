@@ -29,7 +29,10 @@ export default async function ViewYearlyReportsPage({
   return (
     <ViewContextProvider value={ctx}>
       <section id={`v13w-progress-yearly-${user.id}`}>
-        <YearlyReportsHome userId={user.id} />
+        <YearlyReportsHome
+          userId={user.id}
+          highlightLink={`/view/${user.viewId}/progress/overview/yearly/highlights`}
+        />
       </section>
     </ViewContextProvider>
   );

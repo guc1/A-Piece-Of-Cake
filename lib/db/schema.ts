@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   uniqueIndex,
+  index,
   json,
   jsonb,
   boolean,
@@ -30,6 +31,13 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'follow_accepted',
   'follow_declined',
   'unfollow',
+]);
+
+export const reportHighlightTypeEnum = pgEnum('report_highlight_type', [
+  'daily',
+  'weekly',
+  'monthly',
+  'yearly',
 ]);
 
 export const users = pgTable('users', {
@@ -383,6 +391,39 @@ export const yearlyReports = pgTable(
     uniqueUserYearVersion: uniqueIndex(
       'yearly_reports_user_year_version_unique',
     ).on(table.userId, table.startDate, table.version),
+  }),
+);
+
+export const reportHighlights = pgTable(
+  'report_highlights',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    reportType: reportHighlightTypeEnum('report_type').notNull(),
+    targetSlug: text('target_slug').notNull(),
+    blockId: text('block_id').notNull(),
+    startOffset: integer('start_offset').notNull(),
+    endOffset: integer('end_offset').notNull(),
+    color: text('color').notNull(),
+    snippet: text('snippet').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserTargetRange: uniqueIndex('report_highlights_unique_idx').on(
+      table.userId,
+      table.reportType,
+      table.targetSlug,
+      table.blockId,
+      table.startOffset,
+      table.endOffset,
+    ),
+    userTypeCreatedIdx: index('report_highlights_user_type_created_idx').on(
+      table.userId,
+      table.reportType,
+      table.createdAt,
+    ),
   }),
 );
 
