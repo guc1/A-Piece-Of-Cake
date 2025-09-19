@@ -11,6 +11,7 @@ import { getCoachTone } from '@/lib/ai/coach-tone';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getActiveReviewExtraTime } from '@/lib/review-extra-time-store';
 
 function buildSystemPrompt(toneId: string) {
   const tone = getCoachTone(toneId);
@@ -44,7 +45,11 @@ export async function POST(req: NextRequest) {
   const toneId =
     body.toneId || body.tone || userRow?.coachTone || 'tone_medium';
 
-  const { date: dateObj, tz } = resolvePlanDate('live', session?.user as any, {
+  const extraTime = await getActiveReviewExtraTime(userId);
+  const reviewUser = session?.user
+    ? { ...(session.user as any), reviewExtraTime: extraTime }
+    : { reviewExtraTime: extraTime };
+  const { date: dateObj, tz } = resolvePlanDate('review', reviewUser, {
     cookies: req.cookies,
     searchParams: Object.fromEntries(req.nextUrl.searchParams),
   });
