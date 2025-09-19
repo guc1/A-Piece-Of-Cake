@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useLogs } from '@/components/dev/logs-provider';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import type { ReviewExtraTimeRecord } from '@/lib/review-extra-time-store';
 
 export function GenerateDailyReportButton({
   userId,
@@ -20,12 +21,59 @@ export function GenerateDailyReportButton({
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [needsCode, setNeedsCode] = useState(false);
+  const [extraTime, setExtraTime] =
+    useState<ReviewExtraTimeRecord | null>(null);
+  const [reviewDateOverride, setReviewDateOverride] =
+    useState<string | null>(null);
+
+  const computeOverride = useCallback(
+    (record: ReviewExtraTimeRecord | null) => {
+      if (!record || !record.active || !record.frozenDate) return null;
+      if (typeof window === 'undefined') return record.frozenDate;
+      const key = `daily-report-generated-${userId}-${record.frozenDate}`;
+      const generated = window.localStorage.getItem(key) === 'true';
+      return generated ? null : record.frozenDate;
+    },
+    [userId],
+  );
+
+  const syncExtraTime = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ userId: String(userId) });
+      const res = await fetch(
+        `/api/account/review-extra-time?${params.toString()}`,
+      );
+      if (!res.ok) {
+        setExtraTime(null);
+        setReviewDateOverride(null);
+        return null;
+      }
+      const data = await res.json();
+      const record = (data?.reviewExtraTime ?? null) as
+        | ReviewExtraTimeRecord
+        | null;
+      setExtraTime(record);
+      setReviewDateOverride(computeOverride(record));
+      return record;
+    } catch {
+      setExtraTime(null);
+      setReviewDateOverride(null);
+      return null;
+    }
+  }, [computeOverride, userId]);
 
   const currentDate = useCallback(() => {
+    if (typeof window === 'undefined') {
+      const params = new URLSearchParams();
+      params.set('userId', String(userId));
+      const date =
+        reviewDateOverride || new Date().toISOString().slice(0, 10);
+      return { date, params };
+    }
     const params = new URLSearchParams(window.location.search);
     params.set('userId', String(userId));
     const dateParam = params.get('apoc_date');
-    let date = dateParam || '';
+    let date = reviewDateOverride || dateParam || '';
     if (!date) {
       const match = document.cookie.match(/apoc_clock=([^;]+)/);
       if (match) {
@@ -34,14 +82,54 @@ export function GenerateDailyReportButton({
       }
       if (!date) date = new Date().toISOString().slice(0, 10);
     }
+    if (reviewDateOverride) {
+      params.set('apoc_date', reviewDateOverride);
+    }
     return { date, params };
-  }, [userId]);
+  }, [reviewDateOverride, userId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const tick = async () => {
+      const record = await syncExtraTime();
+      if (cancelled) return;
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      if (
+        record?.active &&
+        record.expiresAt &&
+        typeof window !== 'undefined'
+      ) {
+        const diff = new Date(record.expiresAt).getTime() - Date.now();
+        if (diff > 0) {
+          timer = setTimeout(tick, diff + 1000);
+        }
+      }
+    };
+    tick();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [syncExtraTime]);
 
   useEffect(() => {
     const { date } = currentDate();
     const key = `daily-report-generated-${userId}-${date}`;
     setNeedsCode(window.localStorage.getItem(key) === 'true');
   }, [currentDate, userId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = () => {
+      setReviewDateOverride(computeOverride(extraTime));
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, [computeOverride, extraTime]);
 
   const onClick = async () => {
     const { date, params } = currentDate();
@@ -91,6 +179,9 @@ export function GenerateDailyReportButton({
       const key = `daily-report-generated-${userId}-${date}`;
       window.localStorage.setItem(key, 'true');
       setNeedsCode(true);
+      if (extraTime?.active && extraTime.frozenDate === date) {
+        setReviewDateOverride(null);
+      }
       router.refresh();
     }
   };

@@ -73,6 +73,11 @@ export async function getUserByHandle(handle: string) {
   return user ?? null;
 }
 
+export async function getUserById(id: number) {
+  const [user] = await db.select().from(users).where(eq(users.id, id));
+  return user ?? null;
+}
+
 export async function getUserByViewId(viewId: string) {
   const [user] = await db.select().from(users).where(eq(users.viewId, viewId));
   return user ?? null;

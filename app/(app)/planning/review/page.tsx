@@ -9,6 +9,7 @@ import EditorClient from '../next/client';
 import { listIngredients } from '@/lib/ingredients-store';
 import { listFlavors } from '@/lib/flavors-store';
 import { listAllSubflavors } from '@/lib/subflavors-store';
+import { getActiveReviewExtraTime } from '@/lib/review-extra-time-store';
 
 export const revalidate = 0;
 
@@ -23,7 +24,8 @@ export default async function PlanningReviewPage({
   const cookieStore = await cookies();
   const params = searchParams ? await searchParams : undefined;
   const showDailyAim = params?.showDailyAim === '1';
-  const info = resolvePlanDate('review', me, {
+  const extraTime = await getActiveReviewExtraTime(me.id);
+  const info = resolvePlanDate('review', { ...me, reviewExtraTime: extraTime }, {
     cookies: cookieStore,
     searchParams: params,
   });
