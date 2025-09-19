@@ -53,6 +53,17 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+export const reviewExtraTime = pgTable('review_extra_time', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
+  reason: text('reason').notNull(),
+  frozenDate: date('frozen_date').notNull(),
+  activatedAt: timestamp('activated_at').defaultNow(),
+  expiresAt: timestamp('expires_at').notNull(),
+});
+
 export const flavors = pgTable('flavors', {
   id: text('id').primaryKey(),
   userId: integer('user_id').references(() => users.id),
