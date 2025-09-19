@@ -79,6 +79,9 @@ export async function WeeklyReportsHome({
   for (const w of weeks) {
     if (w.report) {
       const r = w.report;
+      const toneName = getCoachTone(r.coachTone).name;
+      const toneCustom =
+        r.coachTone === 'tone_custom' ? r.coachToneCustom : '';
       items.push({
         type: 'report',
         key: r.slug,
@@ -89,7 +92,8 @@ export async function WeeklyReportsHome({
         good: r.good,
         bad: r.bad,
         observations: r.observations,
-        toneName: getCoachTone(r.coachTone).name,
+        toneName,
+        coachToneCustom: toneCustom,
         score: r.score,
         difficultyLabel: getDifficultyLabel(r.score),
         linkHref: r.slug,

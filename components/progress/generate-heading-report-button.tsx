@@ -80,7 +80,27 @@ export function GenerateHeadingReportButton({
       window.localStorage.setItem(key, 'true');
       setNeedsCode(true);
       router.refresh();
-      onGenerated?.(data.report as HeadingReport);
+      onGenerated?.({
+        id: 0,
+        userId,
+        date,
+        version: 1,
+        overview: (data.report as HeadingReport | undefined)?.overview ?? '',
+        shortTerm:
+          (data.report as HeadingReport | undefined)?.shortTerm ?? [],
+        longTerm:
+          (data.report as HeadingReport | undefined)?.longTerm ?? [],
+        feedback:
+          (data.report as HeadingReport | undefined)?.feedback ?? [],
+        scoreProgress: data.scoreProgress,
+        scoreProbability: data.scoreProbability,
+        coachTone: (data.toneId as string) ?? 'tone_medium',
+        coachToneCustom:
+          data.toneId === 'tone_custom'
+            ? (data.toneCustom as string) ?? ''
+            : '',
+        createdAt: new Date().toISOString(),
+      } as HeadingReport);
     }
   };
 

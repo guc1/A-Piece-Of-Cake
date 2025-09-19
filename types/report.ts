@@ -16,6 +16,7 @@ export interface DailyReport {
   observations: string[];
   score: number;
   coachTone: string;
+  coachToneCustom: string;
   createdAt: string;
 }
 
@@ -31,6 +32,7 @@ export interface WeeklyReport {
   observations: string[];
   score: number;
   coachTone: string;
+  coachToneCustom: string;
   createdAt: string;
 }
 
@@ -46,6 +48,7 @@ export interface MonthlyReport {
   observations: string[];
   score: number;
   coachTone: string;
+  coachToneCustom: string;
   createdAt: string;
 }
 
@@ -61,6 +64,7 @@ export interface YearlyReport {
   observations: string[];
   score: number;
   coachTone: string;
+  coachToneCustom: string;
   createdAt: string;
 }
 
@@ -76,5 +80,6 @@ export interface HeadingReport {
   scoreProgress: number;
   scoreProbability: number;
   coachTone: string;
+  coachToneCustom: string;
   createdAt: string;
 }

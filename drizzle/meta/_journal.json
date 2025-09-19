@@ -218,6 +218,13 @@
       "when": 1756284819563,
       "tag": "0032_create_review_extra_time",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1756284819564,
+      "tag": "0034_add_coach_tone_custom",
+      "breakpoints": true
     }
   ]
 }

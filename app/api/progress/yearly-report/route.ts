@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { createYearlyReport } from '@/lib/yearly-report-store';
 import { listMonthlyReports } from '@/lib/monthly-report-store';
 import { DEFAULT_LLM_SETUP } from '@/lib/llm/config';
-import { getCoachTone } from '@/lib/ai/coach-tone';
+import { getCoachTonePrompt } from '@/lib/ai/coach-tone';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -12,9 +12,9 @@ function toYMD(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function buildSystemPrompt(toneId: string) {
-  const tone = getCoachTone(toneId);
-  return `You are the yearly Assessment agent for the Piece of Cake framework, you will receive context from every month on how the user had performed that month, your goal is to evaluate the week and output an assessment based on it. Flavors are life domains and ingredients are the habits that add them; when combined, the flavors form the user's Cake—their ethos—which guides direction without a fixed destination.Evaluate the provided months: judge the plan's difficulty, focus, and potential they had on the day, then how execution aligned with it. Be firm yet fair—higher ambitions merit tougher grading, acknowledge wins, and call out self-sabotage, also provide an analysis how the progress was thru the year, include this in summary. The tone of your assessment should be: ${JSON.stringify(tone, null, 2)} Keep the tone wise and constructive.Respond ONLY with JSON of the form {"summary":string,"good":string[],"bad":string[],"observations":string[],"score":0-100}.`;
+function buildSystemPrompt(toneId: string, customInstructions: string) {
+  const toneDescription = getCoachTonePrompt(toneId, customInstructions);
+  return `You are the yearly Assessment agent for the Piece of Cake framework, you will receive context from every month on how the user had performed that month, your goal is to evaluate the week and output an assessment based on it. Flavors are life domains and ingredients are the habits that add them; when combined, the flavors form the user's Cake—their ethos—which guides direction without a fixed destination.Evaluate the provided months: judge the plan's difficulty, focus, and potential they had on the day, then how execution aligned with it. Be firm yet fair—higher ambitions merit tougher grading, acknowledge wins, and call out self-sabotage, also provide an analysis how the progress was thru the year, include this in summary. The tone of your assessment should be: ${toneDescription} Keep the tone wise and constructive.Respond ONLY with JSON of the form {"summary":string,"good":string[],"bad":string[],"observations":string[],"score":0-100}.`;
 }
 
 export async function POST(req: NextRequest) {
@@ -35,12 +35,21 @@ export async function POST(req: NextRequest) {
 
   const [userRow, monthly] = await Promise.all([
     db
-      .select({ coachTone: users.coachTone, createdAt: users.createdAt })
+      .select({
+        coachTone: users.coachTone,
+        coachToneCustom: users.coachToneCustom,
+        createdAt: users.createdAt,
+      })
       .from(users)
       .where(eq(users.id, userId)),
     listMonthlyReports(userId),
   ]);
   const toneId = body.toneId || userRow?.[0]?.coachTone || 'tone_medium';
+  const storedCustom = (userRow?.[0]?.coachToneCustom ?? '').trim();
+  const toneCustom =
+    toneId === 'tone_custom' && storedCustom ? storedCustom : '';
+  const promptToneId =
+    toneId === 'tone_custom' && !toneCustom ? 'tone_medium' : toneId;
   const userCreated = userRow?.[0]?.createdAt
     ? toYMD(new Date(userRow[0].createdAt))
     : null;
@@ -82,7 +91,7 @@ export async function POST(req: NextRequest) {
 
   const context = lines.join('\n');
   const setup = DEFAULT_LLM_SETUP;
-  const systemPrompt = buildSystemPrompt(toneId);
+  const systemPrompt = buildSystemPrompt(promptToneId, toneCustom);
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'Missing OpenAI API key' }, { status: 500 });
@@ -129,9 +138,30 @@ export async function POST(req: NextRequest) {
         ? parsed.observations
         : [],
     };
-    await createYearlyReport(userId, startStr, endStr, content, score, toneId);
-    console.log('yearly report saved', { userId, start: startStr, end: endStr, score });
-    return NextResponse.json({ report: parsed, score, context });
+    await createYearlyReport(
+      userId,
+      startStr,
+      endStr,
+      content,
+      score,
+      toneId,
+      toneCustom,
+    );
+    console.log('yearly report saved', {
+      userId,
+      start: startStr,
+      end: endStr,
+      score,
+      toneId,
+      customInstructionsUsed: Boolean(toneCustom),
+    });
+    return NextResponse.json({
+      report: parsed,
+      score,
+      context,
+      toneId,
+      toneCustom,
+    });
   } catch (e: any) {
     console.error('yearly-report generation failed', e);
     return NextResponse.json(

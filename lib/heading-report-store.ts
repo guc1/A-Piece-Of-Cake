@@ -86,6 +86,7 @@ export async function getHeadingReport(
     scoreProgress: row.scoreProgress ?? 0,
     scoreProbability: row.scoreProbability ?? 0,
     coachTone: row.coachTone ?? 'tone_medium',
+    coachToneCustom: String(row.coachToneCustom ?? ''),
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
 }
@@ -112,6 +113,7 @@ export async function getLatestHeadingReport(
     scoreProgress: row.scoreProgress ?? 0,
     scoreProbability: row.scoreProbability ?? 0,
     coachTone: row.coachTone ?? 'tone_medium',
+    coachToneCustom: String(row.coachToneCustom ?? ''),
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
 }
@@ -146,6 +148,7 @@ export async function getHeadingReportAt(
     scoreProgress: row.scoreProgress ?? 0,
     scoreProbability: row.scoreProbability ?? 0,
     coachTone: row.coachTone ?? 'tone_medium',
+    coachToneCustom: String(row.coachToneCustom ?? ''),
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
 }
@@ -162,6 +165,7 @@ export async function createHeadingReport(
   scoreProgress: number,
   scoreProbability: number,
   coachTone: string,
+  coachToneCustom: string,
 ): Promise<void> {
   const ymd = new Date(date).toISOString().slice(0, 10);
   try {
@@ -184,6 +188,7 @@ export async function createHeadingReport(
       scoreProgress,
       scoreProbability,
       coachTone,
+      coachToneCustom,
       version: nextVersion,
     });
     console.log('createHeadingReport inserted', {
@@ -193,6 +198,7 @@ export async function createHeadingReport(
       scoreProgress,
       scoreProbability,
       coachTone,
+      coachToneCustom,
     });
   } catch (error) {
     console.error('createHeadingReport failed', {
@@ -201,6 +207,7 @@ export async function createHeadingReport(
       scoreProgress,
       scoreProbability,
       coachTone,
+      coachToneCustom,
       content,
       error,
     });

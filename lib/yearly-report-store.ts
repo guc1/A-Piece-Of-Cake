@@ -43,6 +43,7 @@ export async function listYearlyReports(userId: number): Promise<
     version: number;
     score: number;
     coachTone: string;
+    coachToneCustom: string;
     summary: string;
     good: string[];
     bad: string[];
@@ -60,6 +61,7 @@ export async function listYearlyReports(userId: number): Promise<
       observations: yearlyReports.observations,
       version: yearlyReports.version,
       coachTone: yearlyReports.coachTone,
+      coachToneCustom: yearlyReports.coachToneCustom,
     })
     .from(yearlyReports)
     .where(eq(yearlyReports.userId, userId))
@@ -75,6 +77,7 @@ export async function listYearlyReports(userId: number): Promise<
       version,
       score: r.score ?? 0,
       coachTone: r.coachTone ?? 'tone_medium',
+      coachToneCustom: String(r.coachToneCustom ?? ''),
       summary: r.summary ?? '',
       good: parseList(r.good),
       bad: parseList(r.bad),
@@ -111,6 +114,7 @@ export async function getYearlyReport(
     observations: parseList(row.observations),
     score: row.score ?? 0,
     coachTone: row.coachTone ?? 'tone_medium',
+    coachToneCustom: String(row.coachToneCustom ?? ''),
     createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
   };
 }
@@ -122,6 +126,7 @@ export async function createYearlyReport(
   content: ReportContent,
   score: number,
   coachTone: string,
+  coachToneCustom: string,
 ): Promise<void> {
   try {
     const [{ maxVersion }] = await db
@@ -145,6 +150,7 @@ export async function createYearlyReport(
       bad: JSON.stringify(content.bad ?? []),
       observations: JSON.stringify(content.observations ?? []),
       coachTone,
+      coachToneCustom,
       score,
       version: nextVersion,
     });
@@ -155,6 +161,7 @@ export async function createYearlyReport(
       version: nextVersion,
       score,
       coachTone,
+      coachToneCustom,
     });
   } catch (error) {
     console.error('createYearlyReport failed', {
@@ -163,6 +170,7 @@ export async function createYearlyReport(
       endDate,
       score,
       coachTone,
+      coachToneCustom,
       content,
       error,
     });
