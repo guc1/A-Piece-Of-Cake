@@ -1,11 +1,12 @@
 import { getUserByViewId } from '@/lib/users';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { resolvePlanDate, toYMD } from '@/lib/plan-date';
+import { toYMD } from '@/lib/plan-date';
 import { getPlanStrict } from '@/lib/plans-store';
 import TimeOverrideBadge from '@/components/time-override-badge';
 import EditorClient from '@/app/(app)/planning/next/client';
 import { listIngredients } from '@/lib/ingredients-store';
+import { resolveReviewDate } from '@/lib/review-date';
 
 export const revalidate = 0;
 
@@ -21,11 +22,11 @@ export default async function ViewPlanningReviewPage({
   if (!user) notFound();
   const cookieStore = await cookies();
   const paramsObj = searchParams ? await searchParams : undefined;
-  const info = resolvePlanDate('review', user, {
+  const info = await resolveReviewDate(user, user.id, {
     cookies: cookieStore,
     searchParams: paramsObj,
   });
-  const dateStr = toYMD(info.date, info.tz);
+  const dateStr = info.reviewYMD;
   const todayStr = toYMD(info.today, info.tz);
   const plan = await getPlanStrict(user.id, dateStr);
   const ingredients = await listIngredients(String(user.id), null);
