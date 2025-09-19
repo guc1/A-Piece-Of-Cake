@@ -276,6 +276,26 @@ export const profileSnapshots = pgTable(
   }),
 );
 
+export const reviewExtensions = pgTable(
+  'review_extensions',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    targetDate: date('target_date').notNull(),
+    reason: text('reason').notNull(),
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserTarget: uniqueIndex('review_extensions_user_target_unique').on(
+      table.userId,
+      table.targetDate,
+    ),
+  }),
+);
+
 export const dailyReports = pgTable(
   'daily_reports',
   {

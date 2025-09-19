@@ -4,6 +4,7 @@ import PlanningLanding from '@/app/(app)/planning/client';
 import { cookies } from 'next/headers';
 import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import TimeOverrideBadge from '@/components/time-override-badge';
+import { resolveReviewDate } from '@/lib/review-date';
 
 export default async function ViewPlanningPage({
   params,
@@ -20,6 +21,7 @@ export default async function ViewPlanningPage({
   const req = { cookies: cookieStore, searchParams: paramsObj };
   const liveInfo = resolvePlanDate('live', user, req);
   const nextInfo = resolvePlanDate('next', user, req);
+  const reviewInfo = await resolveReviewDate(user, user.id, req);
   const liveLabel = liveInfo.date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'short',
@@ -31,6 +33,12 @@ export default async function ViewPlanningPage({
     month: 'short',
     day: 'numeric',
     timeZone: nextInfo.tz,
+  });
+  const reviewLabel = reviewInfo.date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    timeZone: reviewInfo.tz,
   });
   const todayStr = toYMD(liveInfo.today, liveInfo.tz);
   const overrideLabel = liveInfo.override
@@ -45,7 +53,7 @@ export default async function ViewPlanningPage({
         today={todayStr}
         nextLabel={nextLabel}
         liveLabel={liveLabel}
-        reviewLabel={liveLabel}
+        reviewLabel={reviewLabel}
       />
     </section>
   );

@@ -5,12 +5,12 @@ import { getPlanStrict } from '@/lib/plans-store';
 import { getIngredient } from '@/lib/ingredients-store';
 import { getFlavor } from '@/lib/flavors-store';
 import { getSubflavor } from '@/lib/subflavors-store';
-import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { DEFAULT_LLM_SETUP } from '@/lib/llm/config';
 import { getCoachTone } from '@/lib/ai/coach-tone';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { resolveReviewDate } from '@/lib/review-date';
 
 function buildSystemPrompt(toneId: string) {
   const tone = getCoachTone(toneId);
@@ -44,13 +44,19 @@ export async function POST(req: NextRequest) {
   const toneId =
     body.toneId || body.tone || userRow?.coachTone || 'tone_medium';
 
-  const { date: dateObj, tz } = resolvePlanDate('live', session?.user as any, {
+  const reqInit = {
     cookies: req.cookies,
     searchParams: Object.fromEntries(req.nextUrl.searchParams),
-  });
-  const today = toYMD(dateObj, tz);
+  };
+  const reviewInfo = await resolveReviewDate(
+    (session?.user as any) || {},
+    userId,
+    reqInit,
+  );
+  const tz = reviewInfo.tz;
+  const defaultTarget = reviewInfo.reviewYMD;
   const targetDate =
-    typeof body.date === 'string' && body.date ? body.date : today;
+    typeof body.date === 'string' && body.date ? body.date : defaultTarget;
 
   const formatTime = (iso: string) =>
     new Intl.DateTimeFormat('en-US', {
