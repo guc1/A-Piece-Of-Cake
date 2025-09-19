@@ -6,6 +6,7 @@ import { getPlanStrict } from '@/lib/plans-store';
 import TimeOverrideBadge from '@/components/time-override-badge';
 import EditorClient from '@/app/(app)/planning/next/client';
 import { listIngredients } from '@/lib/ingredients-store';
+import { getActiveReviewExtraTime } from '@/lib/review-extra-time-store';
 
 export const revalidate = 0;
 
@@ -21,7 +22,8 @@ export default async function ViewPlanningReviewPage({
   if (!user) notFound();
   const cookieStore = await cookies();
   const paramsObj = searchParams ? await searchParams : undefined;
-  const info = resolvePlanDate('review', user, {
+  const extraTime = await getActiveReviewExtraTime(user.id);
+  const info = resolvePlanDate('review', { ...user, reviewExtraTime: extraTime }, {
     cookies: cookieStore,
     searchParams: paramsObj,
   });

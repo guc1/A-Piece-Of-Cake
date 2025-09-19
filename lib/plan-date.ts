@@ -26,6 +26,19 @@ export function resolvePlanDate(
   const tomorrow = addDays(today, 1, tz);
   let date = kind === 'next' ? tomorrow : today;
   let clamped = false;
+  if (kind === 'review') {
+    const extra = (user as any)?.reviewExtraTime as
+      | { frozenDate?: string; expiresAt?: string }
+      | undefined;
+    const expiresAt = extra?.expiresAt ? new Date(extra.expiresAt) : null;
+    if (extra?.frozenDate && (!expiresAt || expiresAt.getTime() > now.getTime())) {
+      try {
+        date = parseYMD(extra.frozenDate, tz);
+      } catch {
+        // ignore invalid frozen date
+      }
+    }
+  }
   if (kind === 'next') {
     const raw = first(req?.searchParams?.['date']);
     if (raw) {
