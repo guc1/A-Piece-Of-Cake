@@ -300,3 +300,4 @@
 - 2025-10-30: Added highlight removal brush, wired absolute highlight list links, and ensured overview pages share updated highlight state instantly.
 - 2025-10-30: Fixed highlight "View in context" routes for owners and viewers and resynced saved markup so overlays persist after revisiting overview pages.
 - 2025-10-30: Forced overview caches to refresh after highlight edits and lit up detail pages with the saved markup so "View in context" immediately shows colored snippets.
+- 2025-10-30: Added custom coach tone saving with completion feedback, fed custom briefs into all rapport prompts, and surfaced the stored tone snapshot on review and planning pages so users (and viewers) see the exact instructions used.

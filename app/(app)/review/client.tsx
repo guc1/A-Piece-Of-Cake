@@ -2,9 +2,10 @@
 
 import Textarea from '@/components/ui/textarea';
 import { useViewContext } from '@/lib/view-context';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GenerateHeadingReportButton } from '@/components/progress/generate-heading-report-button';
 import type { HeadingReport } from '@/types/report';
+import { getCoachTone } from '@/lib/ai/coach-tone';
 
 export function ReviewHome({
   userId,
@@ -17,6 +18,19 @@ export function ReviewHome({
   const [rational, setRational] = useState('');
   const [guilty, setGuilty] = useState('');
   const [report, setReport] = useState<HeadingReport | null>(initialReport);
+
+  useEffect(() => {
+    setReport(initialReport);
+  }, [initialReport]);
+
+  const toneName = useMemo(
+    () => (report ? getCoachTone(report.coachTone).name : null),
+    [report],
+  );
+  const toneCustom = useMemo(() => {
+    if (report?.coachTone !== 'tone_custom') return '';
+    return report.coachToneCustom?.trim() ?? '';
+  }, [report]);
 
   // Load saved notes from localStorage on mount
   useEffect(() => {
@@ -73,11 +87,64 @@ export function ReviewHome({
         {editable && (
           <GenerateHeadingReportButton
             userId={userId}
-            onGenerated={(r) => setReport(r as any)}
+            onGenerated={(partial) =>
+              setReport((prev) => {
+                if (!partial) return prev;
+                const now = new Date().toISOString();
+                if (!prev) {
+                  return {
+                    id: 0,
+                    userId,
+                    date: now.slice(0, 10),
+                    version: 1,
+                    overview: partial.overview ?? '',
+                    shortTerm: partial.shortTerm ?? [],
+                    longTerm: partial.longTerm ?? [],
+                    feedback: partial.feedback ?? [],
+                    scoreProgress: partial.scoreProgress ?? 0,
+                    scoreProbability: partial.scoreProbability ?? 0,
+                    coachTone: partial.coachTone ?? 'tone_medium',
+                    coachToneCustom: partial.coachToneCustom ?? '',
+                    createdAt: now,
+                  };
+                }
+                return {
+                  ...prev,
+                  ...partial,
+                  overview: partial.overview ?? prev.overview,
+                  shortTerm: partial.shortTerm ?? prev.shortTerm,
+                  longTerm: partial.longTerm ?? prev.longTerm,
+                  feedback: partial.feedback ?? prev.feedback,
+                  scoreProgress:
+                    partial.scoreProgress ?? prev.scoreProgress,
+                  scoreProbability:
+                    partial.scoreProbability ?? prev.scoreProbability,
+                  coachTone: partial.coachTone ?? prev.coachTone,
+                  coachToneCustom:
+                    partial.coachToneCustom ?? prev.coachToneCustom,
+                };
+              })
+            }
           />
         )}
         {report ? (
           <div className="mt-4 space-y-4">
+            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <span className="font-semibold text-orange-600">
+                  Coach tone: {toneName ?? 'Medium'}
+                </span>
+              </div>
+              {toneCustom ? (
+                <p className="mt-2 whitespace-pre-wrap text-orange-700">
+                  {toneCustom}
+                </p>
+              ) : (
+                <p className="mt-2 text-xs text-orange-600/80">
+                  Using preset guidance for this tone.
+                </p>
+              )}
+            </div>
             <div>
               <h3 className="font-semibold">Overview</h3>
               <p className="whitespace-pre-wrap">{report.overview}</p>

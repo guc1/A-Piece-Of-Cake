@@ -9,6 +9,7 @@ export interface ReportOverviewReportItem {
   bad: string[];
   observations: string[];
   toneName: string;
+  coachToneCustom?: string;
   score: number;
   difficultyLabel: string;
   linkHref: string;

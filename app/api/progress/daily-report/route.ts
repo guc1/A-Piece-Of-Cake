@@ -7,18 +7,18 @@ import { getFlavor } from '@/lib/flavors-store';
 import { getSubflavor } from '@/lib/subflavors-store';
 import { resolvePlanDate, toYMD } from '@/lib/plan-date';
 import { DEFAULT_LLM_SETUP } from '@/lib/llm/config';
-import { getCoachTone } from '@/lib/ai/coach-tone';
+import { getCoachTonePrompt } from '@/lib/ai/coach-tone';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getActiveReviewExtraTime } from '@/lib/review-extra-time-store';
 
-function buildSystemPrompt(toneId: string) {
-  const tone = getCoachTone(toneId);
+function buildSystemPrompt(toneId: string, customInstructions: string) {
+  const toneDescription = getCoachTonePrompt(toneId, customInstructions);
   return `You are the Daily Assessment agent for the Piece of Cake framework. Flavors are life domains and ingredients are the habits that add them; when combined, the flavors form the user's Cake—their ethos—which guides direction without a fixed destination.
 
 Evaluate the provided day: judge the plan's difficulty, focus, and potential they had on the day, then how execution aligned with it. Be firm yet fair—higher ambitions merit tougher grading, acknowledge wins, and call out self-sabotage. The tone of your assessment should be:
-${JSON.stringify(tone, null, 2)}
+${toneDescription}
 Keep the tone wise and constructive.
 
 Respond ONLY with JSON of the form {"summary":string,"good":string[],"bad":string[],"observations":string[],"score":0-100}.`;
@@ -39,11 +39,19 @@ export async function POST(req: NextRequest) {
   const reviews = body.reviews || {};
   const ethos = body.ethos || body.rational || '';
   const [userRow] = await db
-    .select({ coachTone: users.coachTone })
+    .select({
+      coachTone: users.coachTone,
+      coachToneCustom: users.coachToneCustom,
+    })
     .from(users)
     .where(eq(users.id, userId));
   const toneId =
     body.toneId || body.tone || userRow?.coachTone || 'tone_medium';
+  const storedCustom = (userRow?.coachToneCustom ?? '').trim();
+  const toneCustom =
+    toneId === 'tone_custom' && storedCustom ? storedCustom : '';
+  const promptToneId =
+    toneId === 'tone_custom' && !toneCustom ? 'tone_medium' : toneId;
 
   const extraTime = await getActiveReviewExtraTime(userId);
   const reviewUser = session?.user
@@ -233,7 +241,7 @@ export async function POST(req: NextRequest) {
   const context = lines.join('\n');
 
   const setup = DEFAULT_LLM_SETUP;
-  const systemPrompt = buildSystemPrompt(toneId);
+  const systemPrompt = buildSystemPrompt(promptToneId, toneCustom);
   console.log('daily report system prompt', systemPrompt);
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -285,9 +293,28 @@ export async function POST(req: NextRequest) {
         ? parsed.observations
         : [],
     };
-    await createDailyReport(userId, targetDate, content, score, toneId);
-    console.log('daily report saved', { userId, date: targetDate, score });
-    return NextResponse.json({ report: parsed, score, context });
+    await createDailyReport(
+      userId,
+      targetDate,
+      content,
+      score,
+      toneId,
+      toneCustom,
+    );
+    console.log('daily report saved', {
+      userId,
+      date: targetDate,
+      score,
+      toneId,
+      customInstructionsUsed: Boolean(toneCustom),
+    });
+    return NextResponse.json({
+      report: parsed,
+      score,
+      context,
+      toneId,
+      toneCustom,
+    });
   } catch (e: any) {
     console.error('daily-report generation failed', e);
     return NextResponse.json(

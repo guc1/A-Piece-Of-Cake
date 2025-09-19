@@ -62,11 +62,56 @@ export const COACH_TONES: CoachTone[] = [
     sampleLine:
       '“Plan 60, delivered 15. At 05:30 tomorrow, do 45 focused. Send proof after. No slip.”',
   },
+  {
+    id: 'tone_custom',
+    name: 'Custom',
+    intent: 'Use the instructions you wrote below to define the tone.',
+    comparisonStandard:
+      'Follow the standards described in the custom instructions.',
+    scoringPolicy:
+      'Grade exactly how the custom instructions specify; ignore presets.',
+    feedbackStyle:
+      'Match the language, empathy, or edge described in the custom brief.',
+    accountability:
+      'Honor the accountability rules detailed in the custom instructions.',
+    sampleLine:
+      '“This tone is fully driven by the custom brief you provide in settings.”',
+  },
 ];
+
+export const CUSTOM_COACH_TEMPLATE = `{
+  "id": "tone_custom",
+  "name": "Custom",
+  "intent": "Describe the core intent or philosophy for your coach.",
+  "comparisonStandard": "Explain what progress is measured against.",
+  "scoringPolicy": "Detail how the coach should grade wins and misses.",
+  "feedbackStyle": "Share the voice, language, and energy you want.",
+  "accountability": "Clarify follow-up expectations and commitments.",
+  "sampleLine": "Write an example line your coach might say."
+}`;
 
 export function getCoachTone(id: string): CoachTone {
   return (
     COACH_TONES.find((t) => t.id === id) ||
     COACH_TONES.find((t) => t.id === 'tone_medium')!
   );
+}
+
+export function isCustomTone(id: string): boolean {
+  return id === 'tone_custom';
+}
+
+export function getCoachTonePrompt(
+  id: string,
+  customInstructions?: string,
+): string {
+  if (isCustomTone(id)) {
+    const trimmed = customInstructions?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+    // Fall back to medium tone instructions if no custom text is available.
+    return JSON.stringify(getCoachTone('tone_medium'), null, 2);
+  }
+  return JSON.stringify(getCoachTone(id), null, 2);
 }

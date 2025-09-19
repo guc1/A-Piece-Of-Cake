@@ -55,6 +55,7 @@ export async function createUser(input: NewUser) {
       avatarUrl: input.avatarUrl,
       accountVisibility: input.accountVisibility ?? 'open',
       coachTone: 'tone_medium',
+      coachToneCustom: '',
       name: input.name,
       passwordHash,
       viewId: randomUUID(),

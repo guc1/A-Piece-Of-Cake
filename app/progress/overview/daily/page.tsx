@@ -42,6 +42,8 @@ export async function DailyReportsHome({
       } as ReportOverviewItem;
     }
     const tone = getCoachTone(report.coachTone).name;
+    const toneCustom =
+      report.coachTone === 'tone_custom' ? report.coachToneCustom : '';
     const difficulty = getDifficultyLabel(report.score);
     return {
       type: 'report',
@@ -54,6 +56,7 @@ export async function DailyReportsHome({
       bad: report.bad,
       observations: report.observations,
       toneName: tone,
+      coachToneCustom: toneCustom,
       score: report.score,
       difficultyLabel: difficulty,
       linkHref: report.slug,

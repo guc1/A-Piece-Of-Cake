@@ -1,28 +1,59 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useViewContext } from '@/lib/view-context';
-import { COACH_TONES } from '@/lib/ai/coach-tone';
+import { COACH_TONES, CUSTOM_COACH_TEMPLATE } from '@/lib/ai/coach-tone';
 import type { ReviewExtraTimeRecord } from '@/lib/review-extra-time-store';
 import { cn } from '@/lib/utils';
 
 export default function AccountSettingsPage() {
   const { editable } = useViewContext();
+  const router = useRouter();
   const [visibility, setVisibility] = useState<'open' | 'closed' | 'private'>('open');
   const [coachTone, setCoachTone] = useState('tone_medium');
+  const [toneLoaded, setToneLoaded] = useState(false);
+  const [customInstructions, setCustomInstructions] = useState('');
   const [saving, setSaving] = useState(false);
   const [extraTime, setExtraTime] = useState<ReviewExtraTimeRecord | null>(null);
   const [showExtraModal, setShowExtraModal] = useState(false);
   const [extraReason, setExtraReason] = useState('');
   const [activating, setActivating] = useState(false);
   const [extraError, setExtraError] = useState('');
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusType, setStatusType] = useState<'idle' | 'saving' | 'success' | 'error'>(
+    'idle',
+  );
+  const [formError, setFormError] = useState<string | null>(null);
+  const trimmedCustom = customInstructions.trim();
+  const wordCount = trimmedCustom ? trimmedCustom.split(/\s+/).filter(Boolean).length : 0;
+  const customTooLong = wordCount > 250;
+  const requiresCustom = coachTone === 'tone_custom';
+  const disableSave =
+    saving ||
+    !editable ||
+    !toneLoaded ||
+    (requiresCustom && !trimmedCustom) ||
+    customTooLong;
   useEffect(() => {
     fetch('/api/account/visibility')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setVisibility(data?.accountVisibility ?? 'open'));
     fetch('/api/account/coach-tone')
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setCoachTone(data?.coachTone ?? 'tone_medium'));
+      .then((data) => {
+        setCoachTone(data?.coachTone ?? 'tone_medium');
+        setCustomInstructions(
+          typeof data?.customInstructions === 'string'
+            ? data.customInstructions
+            : '',
+        );
+        setToneLoaded(true);
+      })
+      .catch(() => {
+        setCustomInstructions('');
+        setToneLoaded(true);
+      });
     fetch('/api/account/review-extra-time')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setExtraTime(data?.reviewExtraTime ?? null))
@@ -30,20 +61,79 @@ export default function AccountSettingsPage() {
   }, []);
 
   async function save() {
+    resetStatus();
+    if (!toneLoaded) return;
+    if (requiresCustom && !trimmedCustom) {
+      setFormError('Please describe how you want your custom coach to behave.');
+      return;
+    }
+    if (customTooLong) {
+      setFormError('Custom coach instructions must be 250 words or fewer.');
+      return;
+    }
+    setFormError(null);
     setSaving(true);
-    await Promise.all([
-      fetch('/api/account/visibility', {
+    setStatusType('saving');
+    setStatusMessage('Saving…');
+    try {
+      const visibilityPromise = fetch('/api/account/visibility', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountVisibility: visibility }),
-      }),
-      fetch('/api/account/coach-tone', {
+      }).then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(
+            typeof data?.error === 'string'
+              ? data.error
+              : 'Unable to update visibility.',
+          );
+        }
+      });
+      const tonePromise = fetch('/api/account/coach-tone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coachTone }),
-      }),
-    ]);
-    setSaving(false);
+        body: JSON.stringify({
+          coachTone,
+          customInstructions: trimmedCustom,
+        }),
+      }).then(async (res) => {
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(
+            typeof data?.error === 'string'
+              ? data.error
+              : 'Unable to update coach tone.',
+          );
+        }
+        setCoachTone(data?.coachTone ?? coachTone);
+        setCustomInstructions(
+          typeof data?.customInstructions === 'string'
+            ? data.customInstructions
+            : trimmedCustom,
+        );
+      });
+      await Promise.all([visibilityPromise, tonePromise]);
+      setStatusType('success');
+      setStatusMessage('Completed!');
+      window.setTimeout(() => {
+        router.back();
+      }, 650);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to save account settings.';
+      setStatusType('error');
+      setStatusMessage(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function resetStatus() {
+    setStatusType('idle');
+    setStatusMessage(null);
   }
 
   async function activateExtraTime() {
@@ -88,9 +178,10 @@ export default function AccountSettingsPage() {
         <span>Account visibility</span>
         <select
           value={visibility}
-          onChange={(e) =>
-            setVisibility(e.target.value as 'open' | 'closed' | 'private')
-          }
+          onChange={(e) => {
+            resetStatus();
+            setVisibility(e.target.value as 'open' | 'closed' | 'private');
+          }}
           disabled={!editable}
           className="rounded border px-2 py-1"
         >
@@ -99,28 +190,110 @@ export default function AccountSettingsPage() {
           <option value="private">private</option>
         </select>
       </label>
-      <label className="flex items-center justify-between">
-        <span>Coach tone</span>
-        <select
-          value={coachTone}
-          onChange={(e) => setCoachTone(e.target.value)}
-          disabled={!editable}
-          className="rounded border px-2 py-1"
+      <div>
+        <label className="flex items-center justify-between">
+          <span>Coach tone</span>
+          <select
+            value={toneLoaded ? coachTone : ''}
+            onChange={(e) => {
+              resetStatus();
+              setFormError(null);
+              setCoachTone(e.target.value);
+            }}
+            disabled={!editable || !toneLoaded}
+            className="rounded border px-2 py-1"
+          >
+            {!toneLoaded && (
+              <option value="" disabled>
+                Loading…
+              </option>
+            )}
+            {COACH_TONES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="mt-2 text-sm text-neutral-600">
+          Choose the tone your AI coach should use when scoring your reports.
+        </p>
+      </div>
+      <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-orange-600">Custom coach</h2>
+            <p className="text-sm text-orange-800/80">
+              Write specific instructions for your coach. When you select the
+              custom tone above, these notes replace the presets everywhere in the
+              app.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={
+              editable
+                ? () => {
+                    resetStatus();
+                    setFormError(null);
+                    setCustomInstructions(CUSTOM_COACH_TEMPLATE);
+                  }
+                : undefined
+            }
+            disabled={!editable}
+            className="rounded-full border border-orange-300 px-3 py-1 text-sm font-medium text-orange-700 transition hover:bg-orange-100 disabled:opacity-40"
+          >
+            Use template
+          </button>
+        </div>
+        <textarea
+          value={customInstructions}
+          onChange={(e) => {
+            resetStatus();
+            if (formError) setFormError(null);
+            setCustomInstructions(e.target.value);
+          }}
+          readOnly={!editable}
+          disabled={!toneLoaded}
+          className="mt-3 h-40 w-full resize-none rounded border border-orange-200 bg-white p-3 text-sm text-neutral-800 shadow-inner focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:cursor-not-allowed disabled:opacity-60"
+          placeholder="Describe exactly how your coach should coach you."
+        />
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className={customTooLong ? 'text-red-600' : 'text-orange-700'}>
+            {wordCount}/250 words
+          </span>
+          {formError && <span className="text-red-600">{formError}</span>}
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={editable ? save : undefined}
+          disabled={disableSave}
+          className="flex items-center gap-2 rounded bg-[var(--accent)] px-4 py-1 text-white hover:opacity-90 disabled:opacity-50"
         >
-          {COACH_TONES.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button
-        onClick={editable ? save : undefined}
-        disabled={saving || !editable}
-        className="rounded bg-[var(--accent)] px-4 py-1 text-white hover:opacity-90 disabled:opacity-50"
-      >
-        Save
-      </button>
+          {saving && (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          )}
+          Save
+        </button>
+        {statusMessage && (
+          <span
+            role="status"
+            aria-live="polite"
+            className={cn(
+              'text-sm',
+              statusType === 'success'
+                ? 'text-green-600'
+                : statusType === 'error'
+                  ? 'text-red-600'
+                  : 'text-neutral-600',
+            )}
+          >
+            {statusMessage}
+          </span>
+        )}
+      </div>
       <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>

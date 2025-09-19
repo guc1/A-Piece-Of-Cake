@@ -25,6 +25,7 @@ interface ReportDetailClientProps {
   titlePrefix?: string;
   version?: number | null;
   toneName: string;
+  toneCustom?: string;
   score: number;
   difficultyLabel: string;
   summary?: string | null;
@@ -68,6 +69,7 @@ export default function ReportDetailClient({
   titlePrefix,
   version,
   toneName,
+  toneCustom,
   score,
   difficultyLabel,
   summary,
@@ -140,6 +142,20 @@ export default function ReportDetailClient({
             />
           </span>
         </p>
+        {toneCustom ? (
+          <div className="mb-4 rounded-md bg-orange-50 p-4 text-sm text-orange-700">
+            <h2 className="font-semibold text-orange-600">Custom coach brief</h2>
+            <HighlightableText
+              as="p"
+              id={`${idPrefix}-tone-custom-${slug}-${userId}`}
+              className="mt-2 whitespace-pre-wrap"
+              text={toneCustom}
+              targetSlug={slug}
+              blockId="tone-custom"
+              highlights={highlightMap['tone-custom']}
+            />
+          </div>
+        ) : null}
         {summary ? (
           <HighlightableText
             as="p"

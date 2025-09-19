@@ -20,6 +20,8 @@ export async function DailyReportDetailView({
   ]);
   if (!report) notFound();
   const toneName = getCoachTone(report.coachTone).name;
+  const toneCustom =
+    report.coachTone === 'tone_custom' ? report.coachToneCustom : '';
   const difficulty = getDifficultyLabel(report.score);
   return (
     <ReportDetailClient
@@ -30,6 +32,7 @@ export async function DailyReportDetailView({
       titlePrefix="Report for"
       version={report.version}
       toneName={toneName}
+      toneCustom={toneCustom}
       score={report.score}
       difficultyLabel={difficulty}
       summary={report.summary}

@@ -430,35 +430,46 @@ export default function ReportOverviewClient({
                   blockId="title"
                   highlights={slugHighlights.title}
                 />
-                <div className="flex items-center gap-2">
-                  <HighlightableText
-                    as="span"
-                    id={`${idPrefix}-tone-${item.slug}-${userId}`}
-                    className="font-semibold"
-                    text={item.toneName}
-                    targetSlug={item.slug}
-                    blockId="tone"
-                    highlights={slugHighlights.tone}
-                  />
-                  <HighlightableText
-                    as="span"
-                    id={`${idPrefix}-score-${item.slug}-${userId}`}
-                    className="font-semibold"
-                    text={String(item.score)}
-                    targetSlug={item.slug}
-                    blockId="score"
-                    highlights={slugHighlights.score}
-                  />
-                  <HighlightableText
-                    as="span"
-                    id={`${idPrefix}-diff-${item.slug}-${userId}`}
-                    className="ml-1 text-sm text-zinc-600"
-                    text={item.difficultyLabel}
-                    targetSlug={item.slug}
-                    blockId="difficulty"
-                    highlights={slugHighlights.difficulty}
-                  />
-                </div>
+              <div className="flex items-center gap-2">
+                <HighlightableText
+                  as="span"
+                  id={`${idPrefix}-tone-${item.slug}-${userId}`}
+                  className="font-semibold"
+                  text={item.toneName}
+                  targetSlug={item.slug}
+                  blockId="tone"
+                  highlights={slugHighlights.tone}
+                />
+                <HighlightableText
+                  as="span"
+                  id={`${idPrefix}-score-${item.slug}-${userId}`}
+                  className="font-semibold"
+                  text={String(item.score)}
+                  targetSlug={item.slug}
+                  blockId="score"
+                  highlights={slugHighlights.score}
+                />
+                <HighlightableText
+                  as="span"
+                  id={`${idPrefix}-diff-${item.slug}-${userId}`}
+                  className="ml-1 text-sm text-zinc-600"
+                  text={item.difficultyLabel}
+                  targetSlug={item.slug}
+                  blockId="difficulty"
+                  highlights={slugHighlights.difficulty}
+                />
+              </div>
+              {item.coachToneCustom ? (
+                <HighlightableText
+                  as="p"
+                  id={`${idPrefix}-tone-custom-${item.slug}-${userId}`}
+                  className="mt-2 rounded-md bg-orange-50 p-3 text-sm text-orange-700"
+                  text={item.coachToneCustom}
+                  targetSlug={item.slug}
+                  blockId="tone-custom"
+                  highlights={slugHighlights['tone-custom']}
+                />
+              ) : null}
               </div>
               {item.summary && (
                 <HighlightableText
