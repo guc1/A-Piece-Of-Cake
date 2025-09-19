@@ -29,7 +29,10 @@ export default async function ViewWeeklyReportsPage({
   return (
     <ViewContextProvider value={ctx}>
       <section id={`v13w-progress-weekly-${user.id}`}>
-        <WeeklyReportsHome userId={user.id} />
+        <WeeklyReportsHome
+          userId={user.id}
+          highlightLink={`/view/${user.viewId}/progress/overview/weekly/highlights`}
+        />
       </section>
     </ViewContextProvider>
   );
