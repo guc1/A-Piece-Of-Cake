@@ -25,6 +25,16 @@ export interface TrackingIngredientSummary {
   createdAt: string;
 }
 
+export type TrackingOverrideTarget = 'flavor' | 'subflavor' | 'ingredient';
+export type TrackingOverrideState = 'done' | 'missed';
+
+export interface TrackingOverride {
+  date: string;
+  targetType: TrackingOverrideTarget;
+  targetId: string;
+  state: TrackingOverrideState;
+}
+
 export interface TrackingDailyRecord {
   date: string;
   totalMinutes: number;
@@ -47,4 +57,5 @@ export interface TrackingDataset {
   subflavors: TrackingSubflavorSummary[];
   ingredients: TrackingIngredientSummary[];
   records: TrackingDailyRecord[];
+  overrides: TrackingOverride[];
 }

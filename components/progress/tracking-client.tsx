@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, Fragment } from 'react';
+import { useMemo, useState, useEffect, Fragment, useCallback } from 'react';
 import BackButton from '@/components/back-button';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor } from '@/lib/navigation';
@@ -8,6 +8,9 @@ import type {
   TrackingDataset,
   TrackingDailyRecord,
   TrackingFlavorSummary,
+  TrackingOverride,
+  TrackingOverrideState,
+  TrackingOverrideTarget,
   TrackingSubflavorSummary,
 } from '@/types/tracking';
 import {
@@ -38,6 +41,27 @@ type ChartDatum = {
   percent: number;
   helper?: string;
 };
+
+type OverrideKey = string;
+
+function makeOverrideKey(
+  date: string,
+  type: TrackingOverrideTarget,
+  id: string,
+): OverrideKey {
+  return `${date}|${type}:${id}`;
+}
+
+function buildOverrideMap(overrides: TrackingOverride[]) {
+  const map = new Map<OverrideKey, TrackingOverrideState>();
+  for (const override of overrides) {
+    map.set(
+      makeOverrideKey(override.date, override.targetType, override.targetId),
+      override.state,
+    );
+  }
+  return map;
+}
 
 function parseYmd(ymd: string): number {
   const [y, m, d] = ymd.split('-').map(Number);
@@ -76,52 +100,57 @@ function formatHours(minutes: number) {
 function StatusIndicator({
   state,
   label,
+  manual = false,
+  className = '',
+  ariaHidden = false,
+  showTitle = true,
 }: {
   state: DayState;
   label: string;
+  manual?: boolean;
+  className?: string;
+  ariaHidden?: boolean;
+  showTitle?: boolean;
 }) {
+  let symbol = '|||';
+  let stateClass = 'text-gray-400 text-base';
+  let announce = `${label}: tracking not started`;
   switch (state) {
     case 'done':
-      return (
-        <span
-          className="flex h-7 w-7 items-center justify-center text-lg font-semibold text-green-500"
-          title={`${label}: completed`}
-          aria-label={`${label}: completed`}
-        >
-          ●
-        </span>
-      );
+      symbol = '●';
+      stateClass = 'text-green-500 text-lg';
+      announce = `${label}: completed`;
+      break;
     case 'missed':
-      return (
-        <span
-          className="flex h-7 w-7 items-center justify-center text-lg font-semibold text-red-500"
-          title={`${label}: not completed`}
-          aria-label={`${label}: not completed`}
-        >
-          ×
-        </span>
-      );
+      symbol = '×';
+      stateClass = 'text-red-500 text-lg';
+      announce = `${label}: not completed`;
+      break;
     case 'planned':
-      return (
-        <span
-          className="flex h-7 w-7 items-center justify-center text-base font-semibold text-orange-500"
-          title={`${label}: planned for today`}
-          aria-label={`${label}: planned for today`}
-        >
-          ■
-        </span>
-      );
+      symbol = '■';
+      stateClass = 'text-orange-500 text-base';
+      announce = `${label}: planned for today`;
+      break;
     default:
-      return (
-        <span
-          className="flex h-7 w-7 items-center justify-center text-base font-semibold text-gray-400"
-          title={`${label}: tracking not started`}
-          aria-label={`${label}: tracking not started`}
-        >
-          |||
-        </span>
-      );
+      symbol = '|||';
+      stateClass = 'text-gray-400 text-base';
+      announce = `${label}: tracking not started`;
+      break;
   }
+  const manualClass = manual
+    ? 'ring-2 ring-orange-400 ring-offset-2 ring-offset-white shadow-sm'
+    : '';
+  const tooltip = showTitle ? announce : undefined;
+  return (
+    <span
+      className={`pointer-events-none flex h-7 w-7 items-center justify-center rounded-full font-semibold transition ${stateClass} ${manualClass} ${className}`.trim()}
+      title={tooltip}
+      aria-label={ariaHidden ? undefined : announce}
+      aria-hidden={ariaHidden || undefined}
+    >
+      {symbol}
+    </span>
+  );
 }
 
 function Legend() {
@@ -142,6 +171,10 @@ function Legend() {
       <div className="flex items-center gap-2">
         <StatusIndicator state="not-started" label="Not started" />
         <span>Tracking not started</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <StatusIndicator state="done" label="Manual override" manual />
+        <span>Manual override saved</span>
       </div>
     </div>
   );
@@ -172,7 +205,11 @@ function computeStatus(
   createdAt: string,
   id: string,
   type: 'flavor' | 'subflavor' | 'ingredient',
+  override?: TrackingOverrideState | null,
 ): DayState {
+  if (override) {
+    return override === 'done' ? 'done' : 'missed';
+  }
   const createdYmd = createdAt.slice(0, 10);
   if (record.date < createdYmd) return 'not-started';
   if (type === 'flavor') {
@@ -283,6 +320,167 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
   const [chartMode, setChartMode] = useState<'flavor' | 'subflavor'>('flavor');
   const [focusedFlavor, setFocusedFlavor] = useState<string | null>(null);
   const [activeSlice, setActiveSlice] = useState<string | null>(null);
+  const [showIngredients, setShowIngredients] = useState(true);
+  const [overrideMap, setOverrideMap] = useState(() =>
+    buildOverrideMap(dataset.overrides),
+  );
+  const [pendingOverrides, setPendingOverrides] = useState<Set<OverrideKey>>(
+    () => new Set(),
+  );
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const [overrideStatus, setOverrideStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOverrideMap(buildOverrideMap(dataset.overrides));
+  }, [dataset.overrides]);
+
+  useEffect(() => {
+    if (!overrideStatus) return;
+    const timeout = window.setTimeout(() => setOverrideStatus(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [overrideStatus]);
+
+  const handleToggleStatus = useCallback(
+    async ({
+      date,
+      targetType,
+      targetId,
+      currentState,
+    }: {
+      date: string;
+      targetType: TrackingOverrideTarget;
+      targetId: string;
+      currentState: DayState;
+    }) => {
+      if (!ctx.editable) return;
+      if (currentState !== 'done' && currentState !== 'missed') return;
+      const key = makeOverrideKey(date, targetType, targetId);
+      if (pendingOverrides.has(key)) return;
+      const previous = overrideMap.get(key);
+      const nextState: TrackingOverrideState =
+        currentState === 'done' ? 'missed' : 'done';
+
+      setOverrideError(null);
+      setOverrideStatus(null);
+      setOverrideMap((prev) => {
+        const next = new Map(prev);
+        next.set(key, nextState);
+        return next;
+      });
+      setPendingOverrides((prev) => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+
+      try {
+        const res = await fetch('/api/progress/tracking/override', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            date,
+            targetType,
+            targetId,
+            state: nextState,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          const message =
+            data && typeof data.error === 'string'
+              ? data.error
+              : 'Failed to save override';
+          throw new Error(message);
+        }
+        setOverrideStatus(
+          `Marked as ${
+            nextState === 'done' ? 'done' : 'missed'
+          }. We'll remember this override.`,
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to save override';
+        setOverrideError(message);
+        setOverrideMap((prev) => {
+          const next = new Map(prev);
+          if (previous) {
+            next.set(key, previous);
+          } else {
+            next.delete(key);
+          }
+          return next;
+        });
+      } finally {
+        setPendingOverrides((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }
+    },
+    [ctx.editable, overrideMap, pendingOverrides],
+  );
+
+  const renderStatusButton = (
+    record: TrackingDailyRecord,
+    targetType: TrackingOverrideTarget,
+    targetId: string,
+    createdAt: string,
+    label: string,
+  ) => {
+    const key = makeOverrideKey(record.date, targetType, targetId);
+    const overrideState = overrideMap.get(key) ?? null;
+    const status = computeStatus(
+      record,
+      dataset,
+      createdAt,
+      targetId,
+      targetType,
+      overrideState,
+    );
+    const manual = overrideMap.has(key);
+    const pending = pendingOverrides.has(key);
+    const toggleable = ctx.editable && (status === 'done' || status === 'missed');
+    const disabled = !toggleable || pending;
+    const baseLabel = manual ? `${label} — manual override saved.` : label;
+    const nextWord = status === 'done' ? 'missed' : 'done';
+    const title = disabled
+      ? baseLabel
+      : `${baseLabel} Click to mark as ${nextWord}.`;
+    const ariaLabel = disabled
+      ? baseLabel
+      : `${baseLabel} Activate to mark as ${nextWord}.`;
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() =>
+          handleToggleStatus({
+            date: record.date,
+            targetType,
+            targetId,
+            currentState: status,
+          })
+        }
+        className={`mx-auto flex h-10 w-10 items-center justify-center rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500 disabled:cursor-not-allowed disabled:opacity-60 ${
+          !disabled ? 'hover:bg-orange-50' : ''
+        } ${manual ? 'bg-orange-50/40' : ''}`}
+        title={title}
+        aria-label={ariaLabel}
+      >
+        <StatusIndicator
+          state={status}
+          label={label}
+          manual={manual}
+          ariaHidden
+          showTitle={false}
+          className={pending ? 'animate-pulse opacity-70' : ''}
+        />
+      </button>
+    );
+  };
 
   useEffect(() => {
     if (!autoExtend) {
@@ -540,6 +738,14 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
               />
               <span>Activate +1 day automatically</span>
             </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={showIngredients}
+                onChange={(event) => setShowIngredients(event.target.checked)}
+              />
+              <span>Show ingredient streaks</span>
+            </label>
             <div className="relative">
               <button
                 type="button"
@@ -605,6 +811,29 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
 
           <Legend />
 
+          {ctx.editable && (
+            <p className="text-xs text-gray-500">
+              Click a done or missed day to flip it. Manual overrides glow so you
+              always know what&apos;s locked in.
+            </p>
+          )}
+          {overrideStatus && (
+            <div
+              role="status"
+              className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs text-emerald-700"
+            >
+              {overrideStatus}
+            </div>
+          )}
+          {overrideError && (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-xs text-red-600"
+            >
+              {overrideError}
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-3xl border border-orange-100 bg-white shadow-sm">
             <table className="min-w-full border-separate border-spacing-y-2">
               <thead>
@@ -645,10 +874,13 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
                         </td>
                         {visibleRecords.map((record) => (
                           <td key={`${flavor.id}-${record.date}`} className="px-3 py-2 text-center">
-                            <StatusIndicator
-                              state={computeStatus(record, dataset, flavor.createdAt, flavor.id, 'flavor')}
-                              label={`${flavor.name} on ${record.date}`}
-                            />
+                            {renderStatusButton(
+                              record,
+                              'flavor',
+                              flavor.id,
+                              flavor.createdAt,
+                              `${flavor.name} on ${record.date}`,
+                            )}
                           </td>
                         ))}
                       </tr>
@@ -669,10 +901,13 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
                             </td>
                             {visibleRecords.map((record) => (
                               <td key={`${sf.id}-${record.date}`} className="px-3 py-2 text-center">
-                                <StatusIndicator
-                                  state={computeStatus(record, dataset, sf.createdAt, sf.id, 'subflavor')}
-                                  label={`${sf.name} on ${record.date}`}
-                                />
+                                {renderStatusButton(
+                                  record,
+                                  'subflavor',
+                                  sf.id,
+                                  sf.createdAt,
+                                  `${sf.name} on ${record.date}`,
+                                )}
                               </td>
                             ))}
                             </tr>
@@ -694,71 +929,70 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
               </tbody>
             </table>
           </div>
-          <div className="space-y-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Ingredient streaks</h3>
-              <span className="text-xs text-gray-500">
-                Ingredients don&apos;t add to time totals—just streak accountability.
-              </span>
-            </div>
-            <div className="overflow-x-auto rounded-3xl border border-orange-100 bg-white shadow-sm">
-              {dataset.ingredients.length === 0 ? (
-                <div className="px-6 py-8 text-center text-sm text-gray-500">
-                  Add ingredients to track how consistently you bring your habits into play.
-                </div>
-              ) : (
-                <table className="min-w-full border-separate border-spacing-y-2">
-                  <thead>
-                    <tr>
-                      <th className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-left text-sm font-semibold text-gray-600 backdrop-blur">
-                        Ingredient
-                      </th>
-                      {visibleRecords.map((record) => {
-                        const { day, weekday } = formatDay(record.date);
-                        return (
-                          <th
-                            key={`ingredient-head-${record.date}`}
-                            className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wide text-gray-500"
-                          >
-                            <div>{weekday}</div>
-                            <div className="text-gray-700">{day}</div>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dataset.ingredients.map((ingredient) => (
-                      <tr key={ingredient.id} className="align-middle">
-                        <td className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-sm font-semibold text-gray-800 backdrop-blur">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-lg">
-                              {ingredient.icon}
-                            </span>
-                            <span>{ingredient.title}</span>
-                          </div>
-                        </td>
-                        {visibleRecords.map((record) => (
-                          <td key={`${ingredient.id}-${record.date}`} className="px-3 py-2 text-center">
-                            <StatusIndicator
-                              state={computeStatus(
-                                record,
-                                dataset,
-                                ingredient.createdAt,
-                                ingredient.id,
-                                'ingredient',
-                              )}
-                              label={`${ingredient.title} on ${record.date}`}
-                            />
-                          </td>
-                        ))}
+          {showIngredients && (
+            <div className="space-y-3">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Ingredient streaks</h3>
+                <span className="text-xs text-gray-500">
+                  Ingredients don&apos;t add to time totals—just streak accountability.
+                </span>
+              </div>
+              <div className="overflow-x-auto rounded-3xl border border-orange-100 bg-white shadow-sm">
+                {dataset.ingredients.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-sm text-gray-500">
+                    Add ingredients to track how consistently you bring your habits into play.
+                  </div>
+                ) : (
+                  <table className="min-w-full border-separate border-spacing-y-2">
+                    <thead>
+                      <tr>
+                        <th className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-left text-sm font-semibold text-gray-600 backdrop-blur">
+                          Ingredient
+                        </th>
+                        {visibleRecords.map((record) => {
+                          const { day, weekday } = formatDay(record.date);
+                          return (
+                            <th
+                              key={`ingredient-head-${record.date}`}
+                              className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wide text-gray-500"
+                            >
+                              <div>{weekday}</div>
+                              <div className="text-gray-700">{day}</div>
+                            </th>
+                          );
+                        })}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    </thead>
+                    <tbody>
+                      {dataset.ingredients.map((ingredient) => (
+                        <tr key={ingredient.id} className="align-middle">
+                          <td className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-sm font-semibold text-gray-800 backdrop-blur">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-lg">
+                                {ingredient.icon}
+                              </span>
+                              <span>{ingredient.title}</span>
+                            </div>
+                          </td>
+                          {visibleRecords.map((record) => (
+                            <td key={`${ingredient.id}-${record.date}`} className="px-3 py-2 text-center">
+                              {renderStatusButton(
+                                record,
+                                'ingredient',
+                                ingredient.id,
+                                ingredient.createdAt,
+                                `${ingredient.title} on ${record.date}`,
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </section>
       ) : (
         <section className="space-y-6">

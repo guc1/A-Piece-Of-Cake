@@ -40,6 +40,16 @@ export const reportHighlightTypeEnum = pgEnum('report_highlight_type', [
   'yearly',
 ]);
 
+export const trackingOverrideTargetEnum = pgEnum(
+  'tracking_override_target',
+  ['flavor', 'subflavor', 'ingredient'],
+);
+
+export const trackingOverrideStateEnum = pgEnum(
+  'tracking_override_state',
+  ['done', 'missed'],
+);
+
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   handle: varchar('handle', { length: 50 }).notNull().unique(),
@@ -311,6 +321,31 @@ export const progressSnapshots = pgTable(
     uniqueUserDate: uniqueIndex('progress_snapshots_user_date_unique').on(
       table.userId,
       table.snapshotDate,
+    ),
+  }),
+);
+
+export const trackingOverrides = pgTable(
+  'tracking_overrides',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    targetType: trackingOverrideTargetEnum('target_type').notNull(),
+    targetId: text('target_id').notNull(),
+    date: date('date').notNull(),
+    state: trackingOverrideStateEnum('state').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserTargetDate: uniqueIndex(
+      'tracking_overrides_user_target_date_unique',
+    ).on(table.userId, table.targetType, table.targetId, table.date),
+    userDateIdx: index('tracking_overrides_user_date_idx').on(
+      table.userId,
+      table.date,
     ),
   }),
 );
