@@ -315,6 +315,31 @@ export const progressSnapshots = pgTable(
   }),
 );
 
+export const trackingOverrides = pgTable(
+  'tracking_overrides',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    targetType: varchar('target_type', { length: 20 }).notNull(),
+    targetId: text('target_id').notNull(),
+    overrideDate: date('override_date').notNull(),
+    state: varchar('state', { length: 10 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserTargetDate: uniqueIndex(
+      'tracking_overrides_user_target_date_unique',
+    ).on(table.userId, table.targetType, table.targetId, table.overrideDate),
+    userDateIndex: index('tracking_overrides_user_date_idx').on(
+      table.userId,
+      table.overrideDate,
+    ),
+  }),
+);
+
 export const dailyReports = pgTable(
   'daily_reports',
   {
