@@ -1,3 +1,27 @@
+export type TrackingOverrideTargetType = 'flavor' | 'subflavor' | 'ingredient';
+
+export type TrackingOverrideState = 'done' | 'missed';
+
+export type TrackingOverrideMap = Record<string, TrackingOverrideState>;
+
+export function makeTrackingOverrideKey(
+  type: TrackingOverrideTargetType,
+  targetId: string,
+  date: string,
+): string {
+  return `${type}:${targetId}:${date}`;
+}
+
+export function ingredientKey(id: number): string {
+  return `ingredient-${id}`;
+}
+
+export function parseIngredientKey(key: string): number | null {
+  if (!key.startsWith('ingredient-')) return null;
+  const value = Number.parseInt(key.slice('ingredient-'.length), 10);
+  return Number.isNaN(value) ? null : value;
+}
+
 export interface TrackingFlavorSummary {
   id: string;
   name: string;
@@ -47,4 +71,5 @@ export interface TrackingDataset {
   subflavors: TrackingSubflavorSummary[];
   ingredients: TrackingIngredientSummary[];
   records: TrackingDailyRecord[];
+  overrides: TrackingOverrideMap;
 }
