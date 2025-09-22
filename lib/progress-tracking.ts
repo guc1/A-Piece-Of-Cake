@@ -5,7 +5,12 @@ import { listFlavors } from './flavors-store';
 import { listAllSubflavors } from './subflavors-store';
 import { listIngredients } from './ingredients-store';
 import { addDays, getNow, startOfDay, toYMD } from './clock';
-import type { TrackingDataset, TrackingDailyRecord } from '@/types/tracking';
+import type {
+  TrackingDataset,
+  TrackingDailyRecord,
+  TrackingOverride,
+} from '@/types/tracking';
+import { listTrackingOverrides } from './tracking-overrides-store';
 
 type BuildOptions = {
   ownerId: number;
@@ -57,29 +62,32 @@ export async function buildTrackingDataset({
     viewerId === undefined
       ? listIngredients(String(ownerId), ownerId)
       : listIngredients(String(ownerId), viewerId ?? null);
-  const [flavors, subflavors, ingredients, rows] = await Promise.all([
-    flavorPromise,
-    subflavorPromise,
-    ingredientPromise,
-    db
-      .select({
-        date: plans.date,
-        start: planBlocks.start,
-        end: planBlocks.end,
-        flavorIds: planBlocks.flavorIds,
-        subflavorIds: planBlocks.subflavorIds,
-        ingredientIds: planBlocks.ingredientIds,
-      })
-      .from(planBlocks)
-      .innerJoin(plans, eq(planBlocks.planId, plans.id))
-      .where(
-        and(
-          eq(plans.userId, ownerId),
-          gte(plans.date, startStr),
-          lte(plans.date, todayStr),
+  const overridesPromise = listTrackingOverrides(ownerId, startStr, todayStr);
+  const [flavors, subflavors, ingredients, rows, overrides] =
+    await Promise.all([
+      flavorPromise,
+      subflavorPromise,
+      ingredientPromise,
+      db
+        .select({
+          date: plans.date,
+          start: planBlocks.start,
+          end: planBlocks.end,
+          flavorIds: planBlocks.flavorIds,
+          subflavorIds: planBlocks.subflavorIds,
+          ingredientIds: planBlocks.ingredientIds,
+        })
+        .from(planBlocks)
+        .innerJoin(plans, eq(planBlocks.planId, plans.id))
+        .where(
+          and(
+            eq(plans.userId, ownerId),
+            gte(plans.date, startStr),
+            lte(plans.date, todayStr),
+          ),
         ),
-      ),
-  ]);
+      overridesPromise,
+    ]);
   const allowedFlavors = new Set(flavors.map((f) => f.id));
   const visibleSubflavors = subflavors.filter((sf) => allowedFlavors.has(sf.flavorId));
   const allowedSubflavors = new Set(visibleSubflavors.map((s) => s.id));
@@ -171,6 +179,42 @@ export async function buildTrackingDataset({
       }
     }
   }
+  function applyOverride(record: TrackingDailyRecord, override: TrackingOverride) {
+    let doneList: string[];
+    let plannedList: string[];
+    switch (override.targetType) {
+      case 'flavor':
+        doneList = record.doneFlavors;
+        plannedList = record.plannedFlavors;
+        break;
+      case 'subflavor':
+        doneList = record.doneSubflavors;
+        plannedList = record.plannedSubflavors;
+        break;
+      case 'ingredient':
+      default:
+        doneList = record.doneIngredients;
+        plannedList = record.plannedIngredients;
+        break;
+    }
+    if (override.state === 'done') {
+      addUnique(doneList, override.targetId);
+      const index = plannedList.indexOf(override.targetId);
+      if (index >= 0) plannedList.splice(index, 1);
+    } else {
+      const doneIdx = doneList.indexOf(override.targetId);
+      if (doneIdx >= 0) doneList.splice(doneIdx, 1);
+      const plannedIdx = plannedList.indexOf(override.targetId);
+      if (plannedIdx >= 0) plannedList.splice(plannedIdx, 1);
+    }
+  }
+
+  for (const override of overrides) {
+    const record = recordMap.get(override.date);
+    if (!record) continue;
+    applyOverride(record, override);
+  }
+
   for (const record of records) {
     if (record.plannedFlavors.length) {
       record.plannedFlavors = record.plannedFlavors.filter(
@@ -218,5 +262,6 @@ export async function buildTrackingDataset({
       createdAt: ing.createdAt,
     })),
     records,
+    overrides,
   };
 }
