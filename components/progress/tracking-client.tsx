@@ -4,11 +4,15 @@ import { useMemo, useState, useEffect, Fragment } from 'react';
 import BackButton from '@/components/back-button';
 import { useViewContext } from '@/lib/view-context';
 import { hrefFor } from '@/lib/navigation';
-import type {
-  TrackingDataset,
-  TrackingDailyRecord,
-  TrackingFlavorSummary,
-  TrackingSubflavorSummary,
+import {
+  makeTrackingOverrideKey,
+  type TrackingDataset,
+  type TrackingDailyRecord,
+  type TrackingFlavorSummary,
+  type TrackingOverrideMap,
+  type TrackingOverrideState,
+  type TrackingOverrideTargetType,
+  type TrackingSubflavorSummary,
 } from '@/types/tracking';
 import {
   ResponsiveContainer,
@@ -76,15 +80,20 @@ function formatHours(minutes: number) {
 function StatusIndicator({
   state,
   label,
+  highlight = false,
 }: {
   state: DayState;
   label: string;
+  highlight?: boolean;
 }) {
+  const highlightClass = highlight
+    ? 'rounded-full ring-2 ring-orange-300 ring-offset-2 ring-offset-white'
+    : '';
   switch (state) {
     case 'done':
       return (
         <span
-          className="flex h-7 w-7 items-center justify-center text-lg font-semibold text-green-500"
+          className={`flex h-7 w-7 items-center justify-center text-lg font-semibold text-green-500 transition ${highlightClass}`}
           title={`${label}: completed`}
           aria-label={`${label}: completed`}
         >
@@ -94,7 +103,7 @@ function StatusIndicator({
     case 'missed':
       return (
         <span
-          className="flex h-7 w-7 items-center justify-center text-lg font-semibold text-red-500"
+          className={`flex h-7 w-7 items-center justify-center text-lg font-semibold text-red-500 transition ${highlightClass}`}
           title={`${label}: not completed`}
           aria-label={`${label}: not completed`}
         >
@@ -104,7 +113,7 @@ function StatusIndicator({
     case 'planned':
       return (
         <span
-          className="flex h-7 w-7 items-center justify-center text-base font-semibold text-orange-500"
+          className={`flex h-7 w-7 items-center justify-center text-base font-semibold text-orange-500 transition ${highlightClass}`}
           title={`${label}: planned for today`}
           aria-label={`${label}: planned for today`}
         >
@@ -114,7 +123,7 @@ function StatusIndicator({
     default:
       return (
         <span
-          className="flex h-7 w-7 items-center justify-center text-base font-semibold text-gray-400"
+          className={`flex h-7 w-7 items-center justify-center text-base font-semibold text-gray-400 transition ${highlightClass}`}
           title={`${label}: tracking not started`}
           aria-label={`${label}: tracking not started`}
         >
@@ -143,9 +152,14 @@ function Legend() {
         <StatusIndicator state="not-started" label="Not started" />
         <span>Tracking not started</span>
       </div>
+      <div className="flex items-center gap-2">
+        <StatusIndicator state="done" label="Manual override" highlight />
+        <span>Manual override</span>
+      </div>
     </div>
   );
 }
+
 
 function formatDayLabels(tz: string) {
   const dayFmt = new Intl.DateTimeFormat('en-US', {
@@ -171,10 +185,15 @@ function computeStatus(
   dataset: TrackingDataset,
   createdAt: string,
   id: string,
-  type: 'flavor' | 'subflavor' | 'ingredient',
+  type: TrackingOverrideTargetType,
+  overrides?: TrackingOverrideMap,
 ): DayState {
   const createdYmd = createdAt.slice(0, 10);
   if (record.date < createdYmd) return 'not-started';
+  const overrideState = overrides?.[
+    makeTrackingOverrideKey(type, id, record.date)
+  ];
+  if (overrideState) return overrideState;
   if (type === 'flavor') {
     if (record.doneFlavors.includes(id)) return 'done';
     if (record.date === dataset.today && record.plannedFlavors.includes(id)) {
@@ -269,6 +288,7 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
   const ctx = useViewContext();
   const backHref = hrefFor('/progress', ctx);
   const [view, setView] = useState<'streaks' | 'time'>('streaks');
+  const editable = ctx.editable;
   const [selectedDays, setSelectedDays] = useState(() => {
     const initial = Math.min(14, dataset.records.length || 1);
     return initial > 0 ? initial : 1;
@@ -283,6 +303,18 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
   const [chartMode, setChartMode] = useState<'flavor' | 'subflavor'>('flavor');
   const [focusedFlavor, setFocusedFlavor] = useState<string | null>(null);
   const [activeSlice, setActiveSlice] = useState<string | null>(null);
+  const [overrideMap, setOverrideMap] = useState<TrackingOverrideMap>(
+    () => ({ ...dataset.overrides }),
+  );
+  const [pendingOverrides, setPendingOverrides] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const [showIngredients, setShowIngredients] = useState(true);
+  const [hiddenIngredients, setHiddenIngredients] = useState<Set<string>>(
+    new Set(),
+  );
+  const [ingredientFilterOpen, setIngredientFilterOpen] = useState(false);
 
   useEffect(() => {
     if (!autoExtend) {
@@ -311,6 +343,30 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
   }, [dataset.records, resolvedDayCount]);
 
   const formatDay = useMemo(() => formatDayLabels(dataset.timezone), [dataset.timezone]);
+
+  useEffect(() => {
+    setHiddenIngredients((prev) => {
+      if (prev.size === 0) return prev;
+      const validIds = new Set(dataset.ingredients.map((ingredient) => ingredient.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (validIds.has(id)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      }
+      if (!changed && next.size === prev.size) return prev;
+      return next;
+    });
+  }, [dataset.ingredients]);
+
+  useEffect(() => {
+    if (!showIngredients) {
+      setIngredientFilterOpen(false);
+    }
+  }, [showIngredients]);
 
   const flavorTree = useMemo(() => {
     const map = new Map<string, TrackingSubflavorSummary[]>();
@@ -361,6 +417,11 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
     const range = Math.max(1, Math.min(timeRange, dataset.records.length));
     return dataset.records.slice(-range);
   }, [dataset.records, timeRange]);
+
+  const visibleIngredients = useMemo(() => {
+    if (hiddenIngredients.size === 0) return dataset.ingredients;
+    return dataset.ingredients.filter((ingredient) => !hiddenIngredients.has(ingredient.id));
+  }, [dataset.ingredients, hiddenIngredients]);
 
   const effectiveFocusFlavor = useMemo(() => {
     if (chartMode !== 'subflavor') return null;
@@ -437,6 +498,25 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
     setHidden(new Set());
   };
 
+  const handleToggleIngredientVisibility = (id: string) => {
+    setHiddenIngredients((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleShowAllIngredients = () => {
+    setHiddenIngredients((prev) => {
+      if (prev.size === 0) return prev;
+      return new Set();
+    });
+  };
+
   const handleShowFlavorMix = () => {
     setChartMode('flavor');
     if (focusedFlavor) {
@@ -470,6 +550,128 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
     if (chartMode === 'flavor' && value) {
       setActiveSlice(value);
     }
+  };
+
+  const toggleOverride = async (
+    type: TrackingOverrideTargetType,
+    targetId: string,
+    createdAt: string,
+    record: TrackingDailyRecord,
+  ) => {
+    if (!editable) return;
+    const key = makeTrackingOverrideKey(type, targetId, record.date);
+    if (pendingOverrides.has(key)) return;
+    const baseState = computeStatus(record, dataset, createdAt, targetId, type);
+    const effectiveState = computeStatus(
+      record,
+      dataset,
+      createdAt,
+      targetId,
+      type,
+      overrideMap,
+    );
+    if (effectiveState !== 'done' && effectiveState !== 'missed') return;
+    const nextState: TrackingOverrideState =
+      effectiveState === 'done' ? 'missed' : 'done';
+    const shouldClear = nextState === baseState;
+    const previousValue = overrideMap[key];
+    setOverrideError(null);
+    setPendingOverrides((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+    setOverrideMap((prev) => {
+      const next = { ...prev };
+      if (shouldClear) {
+        delete next[key];
+      } else {
+        next[key] = nextState;
+      }
+      return next;
+    });
+
+    try {
+      const response = await fetch('/api/progress/tracking/overrides', {
+        method: shouldClear ? 'DELETE' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          shouldClear
+            ? { targetType: type, targetId, date: record.date }
+            : { targetType: type, targetId, date: record.date, state: nextState },
+        ),
+      });
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Failed to update tracking override', error);
+      setOverrideMap((prev) => {
+        const next = { ...prev };
+        if (previousValue) {
+          next[key] = previousValue;
+        } else {
+          delete next[key];
+        }
+        return next;
+      });
+      setOverrideError('We couldn’t save that change. Please try again.');
+    } finally {
+      setPendingOverrides((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
+
+  const renderStatusCell = (
+    record: TrackingDailyRecord,
+    createdAt: string,
+    targetId: string,
+    type: TrackingOverrideTargetType,
+    label: string,
+  ) => {
+    const state = computeStatus(
+      record,
+      dataset,
+      createdAt,
+      targetId,
+      type,
+      overrideMap,
+    );
+    const key = makeTrackingOverrideKey(type, targetId, record.date);
+    const isOverridden = Boolean(overrideMap[key]);
+    const pending = pendingOverrides.has(key);
+    const interactive = editable && (state === 'done' || state === 'missed');
+    if (!interactive) {
+      return (
+        <StatusIndicator
+          state={state}
+          label={label}
+          highlight={isOverridden}
+        />
+      );
+    }
+    const action = state === 'done' ? 'mark as missed' : 'mark as done';
+    return (
+      <button
+        type="button"
+        onClick={() => toggleOverride(type, targetId, createdAt, record)}
+        className={`inline-flex items-center justify-center rounded-full p-0.5 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${
+          pending ? 'cursor-wait opacity-60' : 'hover:scale-105'
+        }`}
+        title={`${action[0].toUpperCase() + action.slice(1)} (manual override)`}
+        aria-label={`${label}: ${action}`}
+        disabled={pending}
+      >
+        <StatusIndicator
+          state={state}
+          label={label}
+          highlight={isOverridden}
+        />
+      </button>
+    );
   };
 
   return (
@@ -605,6 +807,20 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
 
           <Legend />
 
+          <div className="space-y-1 text-xs">
+            <p className="text-gray-500">Manual overrides glow with a peach ring.</p>
+            {editable && (
+              <p className="text-orange-600">
+                Click a done or missed marker to flip it—we&apos;ll remember your manual overrides.
+              </p>
+            )}
+            {overrideError && (
+              <p className="text-red-500" role="alert">
+                {overrideError}
+              </p>
+            )}
+          </div>
+
           <div className="overflow-x-auto rounded-3xl border border-orange-100 bg-white shadow-sm">
             <table className="min-w-full border-separate border-spacing-y-2">
               <thead>
@@ -643,14 +859,14 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
                             <span>{flavor.name}</span>
                           </div>
                         </td>
-                        {visibleRecords.map((record) => (
-                          <td key={`${flavor.id}-${record.date}`} className="px-3 py-2 text-center">
-                            <StatusIndicator
-                              state={computeStatus(record, dataset, flavor.createdAt, flavor.id, 'flavor')}
-                              label={`${flavor.name} on ${record.date}`}
-                            />
-                          </td>
-                        ))}
+                        {visibleRecords.map((record) => {
+                          const label = `${flavor.name} on ${record.date}`;
+                          return (
+                            <td key={`${flavor.id}-${record.date}`} className="px-3 py-2 text-center">
+                              {renderStatusCell(record, flavor.createdAt, flavor.id, 'flavor', label)}
+                            </td>
+                          );
+                        })}
                       </tr>
                         {subflavors.map((sf) => {
                           if (hidden.has(sf.id)) return null;
@@ -667,14 +883,14 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
                                 <span>{sf.name}</span>
                               </div>
                             </td>
-                            {visibleRecords.map((record) => (
-                              <td key={`${sf.id}-${record.date}`} className="px-3 py-2 text-center">
-                                <StatusIndicator
-                                  state={computeStatus(record, dataset, sf.createdAt, sf.id, 'subflavor')}
-                                  label={`${sf.name} on ${record.date}`}
-                                />
-                              </td>
-                            ))}
+                            {visibleRecords.map((record) => {
+                              const label = `${sf.name} on ${record.date}`;
+                              return (
+                                <td key={`${sf.id}-${record.date}`} className="px-3 py-2 text-center">
+                                  {renderStatusCell(record, sf.createdAt, sf.id, 'subflavor', label)}
+                                </td>
+                              );
+                            })}
                             </tr>
                           );
                         })}
@@ -695,69 +911,141 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
             </table>
           </div>
           <div className="space-y-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Ingredient streaks</h3>
-              <span className="text-xs text-gray-500">
-                Ingredients don&apos;t add to time totals—just streak accountability.
-              </span>
-            </div>
-            <div className="overflow-x-auto rounded-3xl border border-orange-100 bg-white shadow-sm">
-              {dataset.ingredients.length === 0 ? (
-                <div className="px-6 py-8 text-center text-sm text-gray-500">
-                  Add ingredients to track how consistently you bring your habits into play.
+              <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                <span>
+                  Ingredients don&apos;t add to time totals—just streak accountability.
+                </span>
+                <button
+                  type="button"
+                  className="font-medium text-orange-600 hover:text-orange-500"
+                  onClick={() => setShowIngredients((prev) => !prev)}
+                >
+                  {showIngredients ? 'Hide ingredient streaks' : 'Show ingredient streaks'}
+                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className={`rounded-full border px-4 py-2 text-sm font-medium text-orange-600 shadow-sm transition hover:bg-orange-50 ${
+                      ingredientFilterOpen || hiddenIngredients.size > 0
+                        ? 'border-orange-300 bg-orange-50'
+                        : 'border-orange-200'
+                    }`}
+                    onClick={() => setIngredientFilterOpen((prev) => !prev)}
+                  >
+                    {ingredientFilterOpen
+                      ? 'Close filters'
+                      : hiddenIngredients.size > 0
+                        ? `Hidden (${hiddenIngredients.size})`
+                        : 'Hide ingredients'}
+                  </button>
+                  {ingredientFilterOpen && (
+                    <div className="absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-orange-100 bg-white p-4 text-left shadow-lg">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-gray-800">Visible ingredients</h3>
+                        <button
+                          type="button"
+                          className="text-xs font-medium text-orange-600 hover:text-orange-500"
+                          onClick={handleShowAllIngredients}
+                        >
+                          Show all
+                        </button>
+                      </div>
+                      {dataset.ingredients.length === 0 ? (
+                        <p className="text-sm text-gray-500">No ingredients available yet.</p>
+                      ) : (
+                        <div className="max-h-72 space-y-2 overflow-y-auto pr-1 text-sm">
+                          {dataset.ingredients.map((ingredient) => (
+                            <label key={ingredient.id} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={!hiddenIngredients.has(ingredient.id)}
+                                onChange={() => handleToggleIngredientVisibility(ingredient.id)}
+                              />
+                              <span className="flex items-center gap-2">
+                                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-50 text-base">
+                                  {ingredient.icon}
+                                </span>
+                                {ingredient.title}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <table className="min-w-full border-separate border-spacing-y-2">
-                  <thead>
-                    <tr>
-                      <th className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-left text-sm font-semibold text-gray-600 backdrop-blur">
-                        Ingredient
-                      </th>
-                      {visibleRecords.map((record) => {
-                        const { day, weekday } = formatDay(record.date);
-                        return (
-                          <th
-                            key={`ingredient-head-${record.date}`}
-                            className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wide text-gray-500"
-                          >
-                            <div>{weekday}</div>
-                            <div className="text-gray-700">{day}</div>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dataset.ingredients.map((ingredient) => (
-                      <tr key={ingredient.id} className="align-middle">
-                        <td className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-sm font-semibold text-gray-800 backdrop-blur">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-lg">
-                              {ingredient.icon}
-                            </span>
-                            <span>{ingredient.title}</span>
-                          </div>
-                        </td>
-                        {visibleRecords.map((record) => (
-                          <td key={`${ingredient.id}-${record.date}`} className="px-3 py-2 text-center">
-                            <StatusIndicator
-                              state={computeStatus(
-                                record,
-                                dataset,
-                                ingredient.createdAt,
-                                ingredient.id,
-                                'ingredient',
-                              )}
-                              label={`${ingredient.title} on ${record.date}`}
-                            />
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              </div>
             </div>
+            {showIngredients ? (
+              <div className="overflow-x-auto rounded-3xl border border-orange-100 bg-white shadow-sm">
+                {dataset.ingredients.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-sm text-gray-500">
+                    Add ingredients to track how consistently you bring your habits into play.
+                  </div>
+                ) : visibleIngredients.length === 0 ? (
+                  <div className="px-6 py-8 text-center text-sm text-gray-500">
+                    All ingredient streaks are hidden. Use the filter button above to show them again.
+                  </div>
+                ) : (
+                  <table className="min-w-full border-separate border-spacing-y-2">
+                    <thead>
+                      <tr>
+                        <th className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-left text-sm font-semibold text-gray-600 backdrop-blur">
+                          Ingredient
+                        </th>
+                        {visibleRecords.map((record) => {
+                          const { day, weekday } = formatDay(record.date);
+                          return (
+                            <th
+                              key={`ingredient-head-${record.date}`}
+                              className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wide text-gray-500"
+                            >
+                              <div>{weekday}</div>
+                              <div className="text-gray-700">{day}</div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleIngredients.map((ingredient) => (
+                        <tr key={ingredient.id} className="align-middle">
+                          <td className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-sm font-semibold text-gray-800 backdrop-blur">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-lg">
+                                {ingredient.icon}
+                              </span>
+                              <span>{ingredient.title}</span>
+                            </div>
+                          </td>
+                          {visibleRecords.map((record) => {
+                            const label = `${ingredient.title} on ${record.date}`;
+                            return (
+                              <td key={`${ingredient.id}-${record.date}`} className="px-3 py-2 text-center">
+                                {renderStatusCell(record, ingredient.createdAt, ingredient.id, 'ingredient', label)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-orange-200 bg-orange-50/50 px-6 py-8 text-center text-sm text-gray-500">
+                Ingredient streaks are hidden right now.
+                <button
+                  type="button"
+                  className="ml-2 font-semibold text-orange-600 hover:text-orange-500"
+                  onClick={() => setShowIngredients(true)}
+                >
+                  Show them again
+                </button>
+              </div>
+            )}
           </div>
         </section>
       ) : (
