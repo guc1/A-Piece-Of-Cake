@@ -303,3 +303,4 @@
 - 2025-10-30: Added custom coach tone saving with completion feedback, fed custom briefs into all rapport prompts, and surfaced the stored tone snapshot on review and planning pages so users (and viewers) see the exact instructions used.
 - 2025-10-30: Added activity block presets with category tagging, save-from-metadata controls, and a custom timeslot library picker in the planner toolbar.
 - 2025-10-30: Launched a progress tracking dashboard with streak visualizations, time-spent charts, flavor visibility controls, and daily progress snapshots for owner and viewer access.
+- 2025-10-30: Extended progress tracking with ingredient streak tables and a focused subflavor time diagram with dedicated view toggles.

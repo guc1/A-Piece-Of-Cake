@@ -3,6 +3,7 @@ import { plans, planBlocks } from './db/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { listFlavors } from './flavors-store';
 import { listAllSubflavors } from './subflavors-store';
+import { listIngredients } from './ingredients-store';
 import { addDays, getNow, startOfDay, toYMD } from './clock';
 import type { TrackingDataset, TrackingDailyRecord } from '@/types/tracking';
 
@@ -29,6 +30,10 @@ function addUnique(list: string[], id: string) {
   if (!list.includes(id)) list.push(id);
 }
 
+function ingredientKey(id: number) {
+  return `ingredient-${id}`;
+}
+
 export async function buildTrackingDataset({
   ownerId,
   viewerId,
@@ -48,9 +53,14 @@ export async function buildTrackingDataset({
     viewerId === undefined
       ? listAllSubflavors(String(ownerId))
       : listAllSubflavors(String(ownerId), viewerId);
-  const [flavors, subflavors, rows] = await Promise.all([
+  const ingredientPromise =
+    viewerId === undefined
+      ? listIngredients(String(ownerId), ownerId)
+      : listIngredients(String(ownerId), viewerId ?? null);
+  const [flavors, subflavors, ingredients, rows] = await Promise.all([
     flavorPromise,
     subflavorPromise,
+    ingredientPromise,
     db
       .select({
         date: plans.date,
@@ -58,6 +68,7 @@ export async function buildTrackingDataset({
         end: planBlocks.end,
         flavorIds: planBlocks.flavorIds,
         subflavorIds: planBlocks.subflavorIds,
+        ingredientIds: planBlocks.ingredientIds,
       })
       .from(planBlocks)
       .innerJoin(plans, eq(planBlocks.planId, plans.id))
@@ -73,6 +84,7 @@ export async function buildTrackingDataset({
   const visibleSubflavors = subflavors.filter((sf) => allowedFlavors.has(sf.flavorId));
   const allowedSubflavors = new Set(visibleSubflavors.map((s) => s.id));
   const subById = new Map(visibleSubflavors.map((s) => [s.id, s]));
+  const allowedIngredients = new Set(ingredients.map((ing) => ing.id));
   const records: TrackingDailyRecord[] = [];
   const recordMap = new Map<string, TrackingDailyRecord>();
   for (let i = 0; i < maxDays; i++) {
@@ -88,6 +100,8 @@ export async function buildTrackingDataset({
       plannedFlavors: [],
       doneSubflavors: [],
       plannedSubflavors: [],
+      doneIngredients: [],
+      plannedIngredients: [],
     };
     records.push(record);
     recordMap.set(date, record);
@@ -111,11 +125,23 @@ export async function buildTrackingDataset({
           (sid): sid is string => typeof sid === 'string' && allowedSubflavors.has(sid),
         )
       : [];
+    const directIngredients = Array.isArray(row.ingredientIds)
+      ? row.ingredientIds.filter(
+          (iid): iid is number => typeof iid === 'number' && allowedIngredients.has(iid),
+        )
+      : [];
     const parentsFromSub = directSubflavors
       .map((sid) => subById.get(sid)?.flavorId)
       .filter((fid): fid is string => !!fid && allowedFlavors.has(fid));
     const flavorSet = new Set<string>([...directFlavors, ...parentsFromSub]);
-    if (flavorSet.size === 0 && directSubflavors.length === 0) continue;
+    const ingredientKeys = directIngredients.map((iid) => ingredientKey(iid));
+    const ingredientSet = new Set(ingredientKeys);
+    if (
+      flavorSet.size === 0 &&
+      directSubflavors.length === 0 &&
+      ingredientSet.size === 0
+    )
+      continue;
     record.totalMinutes += duration;
     if (flavorSet.size > 0) {
       const share = duration / flavorSet.size;
@@ -132,13 +158,16 @@ export async function buildTrackingDataset({
     if (dateStr < todayStr) {
       for (const fid of flavorSet) addUnique(record.doneFlavors, fid);
       for (const sid of directSubflavors) addUnique(record.doneSubflavors, sid);
+      for (const key of ingredientSet) addUnique(record.doneIngredients, key);
     } else if (dateStr === todayStr) {
       if (startAt.getTime() <= nowMs) {
         for (const fid of flavorSet) addUnique(record.doneFlavors, fid);
         for (const sid of directSubflavors) addUnique(record.doneSubflavors, sid);
+        for (const key of ingredientSet) addUnique(record.doneIngredients, key);
       } else {
         for (const fid of flavorSet) addUnique(record.plannedFlavors, fid);
         for (const sid of directSubflavors) addUnique(record.plannedSubflavors, sid);
+        for (const key of ingredientSet) addUnique(record.plannedIngredients, key);
       }
     }
   }
@@ -151,6 +180,11 @@ export async function buildTrackingDataset({
     if (record.plannedSubflavors.length) {
       record.plannedSubflavors = record.plannedSubflavors.filter(
         (id) => !record.doneSubflavors.includes(id),
+      );
+    }
+    if (record.plannedIngredients.length) {
+      record.plannedIngredients = record.plannedIngredients.filter(
+        (id) => !record.doneIngredients.includes(id),
       );
     }
   }
@@ -175,6 +209,13 @@ export async function buildTrackingDataset({
       color: sf.color,
       createdAt: sf.createdAt,
       orderIndex: sf.orderIndex,
+    })),
+    ingredients: ingredients.map((ing) => ({
+      id: ingredientKey(ing.id),
+      ingredientId: ing.id,
+      title: ing.title,
+      icon: ing.icon || '⭐',
+      createdAt: ing.createdAt,
     })),
     records,
   };
