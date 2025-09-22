@@ -14,12 +14,15 @@ import type { ChatMessage, ChatThread } from '@/types/chat';
 import { savePlanAction } from './actions';
 import { cn } from '@/lib/utils';
 import ColorPresetPicker from '@/components/color-preset-picker';
+import BlockPresetLibrary from '@/components/block-preset-library';
+import BlockPresetSaveDialog from '@/components/block-preset-save-dialog';
 import {
   addUserColorPreset,
   getUserColorPresets,
   DEFAULT_COLOR_PRESETS,
   type ColorPreset,
 } from '@/lib/color-presets';
+import type { BlockPreset } from '@/lib/block-presets';
 import type {
   HeadingReport,
   DailyReport,
@@ -307,6 +310,13 @@ export default function EditorClient({
     return {};
   });
   const [showPresetPicker, setShowPresetPicker] = useState(false);
+  const [showBlockPresetLibrary, setShowBlockPresetLibrary] = useState(false);
+  const libraryContainerRef = useRef<HTMLDivElement | null>(null);
+  const [presetMenuOpen, setPresetMenuOpen] = useState(false);
+  const presetMenuRef = useRef<HTMLDivElement | null>(null);
+  const [presetDialogBlockId, setPresetDialogBlockId] = useState<string | null>(
+    null,
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [metaPinned, setMetaPinned] = useState(false);
   const openMeta = useCallback((id: string) => {
@@ -328,6 +338,38 @@ export default function EditorClient({
   useEffect(() => {
     setSelectFlavor(false);
   }, [selectedId]);
+  useEffect(() => {
+    if (!showBlockPresetLibrary) return;
+    function handleClick(event: MouseEvent) {
+      if (!libraryContainerRef.current) return;
+      if (!libraryContainerRef.current.contains(event.target as Node)) {
+        setShowBlockPresetLibrary(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showBlockPresetLibrary]);
+  useEffect(() => {
+    if (!presetMenuOpen) return;
+    function handleClick(event: MouseEvent) {
+      if (!presetMenuRef.current) return;
+      if (!presetMenuRef.current.contains(event.target as Node)) {
+        setPresetMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [presetMenuOpen]);
+  useEffect(() => {
+    setPresetMenuOpen(false);
+  }, [selected?.id]);
+  useEffect(() => {
+    if (!editable) {
+      setShowBlockPresetLibrary(false);
+      setPresetMenuOpen(false);
+      setPresetDialogBlockId(null);
+    }
+  }, [editable]);
   const unreviewedIngredientIds = useMemo(() => {
     if (!selected) return [] as number[];
     const reviewed = reviews[selected.id]?.ingredients || {};
@@ -475,15 +517,30 @@ export default function EditorClient({
     const m = String(min % 60).padStart(2, '0');
     return `${h}:${m}`;
   }
-  function isoFromMinutes(min: number) {
-    const base = new Date(`${date}T00:00:00`);
-    return new Date(base.getTime() + min * 60000).toISOString();
-  }
+  const isoFromMinutes = useCallback(
+    (min: number) => {
+      const base = new Date(`${date}T00:00:00`);
+      return new Date(base.getTime() + min * 60000).toISOString();
+    },
+    [date],
+  );
 
   function minutesFromTime(t: string) {
     const [h, m] = t.split(':').map((v) => parseInt(v, 10));
     return (h || 0) * 60 + (m || 0);
   }
+
+  const presetDialogBlock = useMemo(
+    () => blocks.find((b) => b.id === presetDialogBlockId) ?? null,
+    [blocks, presetDialogBlockId],
+  );
+  const presetDialogDuration = useMemo(() => {
+    if (!presetDialogBlock) return 0;
+    return (
+      minutesFromIso(presetDialogBlock.end) -
+      minutesFromIso(presetDialogBlock.start)
+    );
+  }, [presetDialogBlock, minutesFromIso]);
 
   function buildPlanBlocksContext(list: PlanBlock[]) {
     return list
@@ -1014,6 +1071,91 @@ export default function EditorClient({
     });
   }
 
+  const handlePresetSelected = useCallback(
+    (preset: BlockPreset) => {
+      if (!editable || review) return;
+      const safeDuration = Math.max(
+        15,
+        Math.min(MAX_MINUTES, Math.round(preset.duration || 0)),
+      );
+      const sorted = [...blocks].sort(
+        (a, b) => minutesFromIso(a.start) - minutesFromIso(b.start),
+      );
+      const isFree = (start: number, end: number) =>
+        !sorted.some(
+          (b) =>
+            Math.max(start, minutesFromIso(b.start)) <
+            Math.min(end, minutesFromIso(b.end)),
+        );
+      const findSlot = (duration: number) => {
+        let cursor = startMinute;
+        while (cursor + duration <= endMinute) {
+          if (isFree(cursor, cursor + duration)) return cursor;
+          cursor += 15;
+        }
+        return null;
+      };
+      let candidate = findSlot(safeDuration);
+      if (candidate === null) {
+        const minStart = Math.max(0, Math.min(startMinute, MAX_MINUTES - safeDuration));
+        const maxStart = Math.max(
+          minStart,
+          Math.min(endMinute, MAX_MINUTES) - safeDuration,
+        );
+        if (maxStart <= minStart) {
+          candidate = minStart;
+        } else {
+          const steps = Math.floor((maxStart - minStart) / 15);
+          const randomStep = steps > 0 ? Math.floor(Math.random() * (steps + 1)) : 0;
+          candidate = minStart + randomStep * 15;
+        }
+      }
+      if (candidate === null) {
+        alert('No space available for this preset. Please adjust your timeline.');
+        return;
+      }
+      const start = Math.max(0, Math.min(candidate, MAX_MINUTES - safeDuration));
+      const end = Math.min(start + safeDuration, MAX_MINUTES);
+      const nowIso = new Date().toISOString();
+      const id = crypto.randomUUID();
+      const newBlock: PlanBlock = {
+        id,
+        planId: initialPlan?.id || '',
+        start: isoFromMinutes(start),
+        end: isoFromMinutes(end),
+        title: preset.title || preset.name,
+        description: preset.description,
+        color: preset.color || COLORS[0],
+        colorPreset: preset.colorPreset || '',
+        ingredientIds: [...(preset.ingredientIds ?? [])],
+        flavorIds: [...(preset.flavorIds ?? [])],
+        subflavorIds: [...(preset.subflavorIds ?? [])],
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      setBlocks((prev) => [...prev, newBlock]);
+      setShowBlockPresetLibrary(false);
+      openMeta(id);
+    },
+    [
+      editable,
+      review,
+      blocks,
+      minutesFromIso,
+      startMinute,
+      endMinute,
+      initialPlan?.id,
+      setBlocks,
+      setShowBlockPresetLibrary,
+      isoFromMinutes,
+      openMeta,
+    ],
+  );
+
+  const handlePresetSaved = useCallback((preset: BlockPreset) => {
+    alert(`Saved "${preset.name}" to your activity presets.`);
+  }, []);
+
   function addBlock() {
     if (!editable || review) return;
     const sorted = [...blocks].sort(
@@ -1465,23 +1607,54 @@ export default function EditorClient({
             ) : null}
             {!review &&
               (editable ? (
-                <button
-                  id={`p1an-add-top-${userId}`}
-                  onClick={() => addBlock()}
-                  disabled={!editable}
-                  className="rounded border px-2 py-1"
-                >
-                  + Add timeslot
-                </button>
+                <>
+                  <button
+                    id={`p1an-add-top-${userId}`}
+                    onClick={() => addBlock()}
+                    disabled={!editable}
+                    className="rounded border px-2 py-1"
+                  >
+                    + Add timeslot
+                  </button>
+                  <div ref={libraryContainerRef} className="relative">
+                    <button
+                      id={`p1an-add-preset-${userId}`}
+                      className="rounded border px-2 py-1"
+                      onClick={() => setShowBlockPresetLibrary((s) => !s)}
+                    >
+                      Add custom timeslot
+                    </button>
+                    {showBlockPresetLibrary && (
+                      <div className="absolute right-0 z-20 mt-2">
+                        <BlockPresetLibrary
+                          userId={currentUserId}
+                          editable={editable}
+                          onSelect={handlePresetSelected}
+                          onClose={() => setShowBlockPresetLibrary(false)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : (
-                <button
-                  id={`p1an-add-top-${userId}`}
-                  className="rounded border px-2 py-1"
-                  disabled
-                  title="Read-only in viewing mode"
-                >
-                  + Add timeslot
-                </button>
+                <>
+                  <button
+                    id={`p1an-add-top-${userId}`}
+                    className="rounded border px-2 py-1"
+                    disabled
+                    title="Read-only in viewing mode"
+                  >
+                    + Add timeslot
+                  </button>
+                  <button
+                    id={`p1an-add-preset-${userId}`}
+                    className="rounded border px-2 py-1"
+                    disabled
+                    title="Read-only in viewing mode"
+                  >
+                    Add custom timeslot
+                  </button>
+                </>
               ))}
             <button
               id={`p1an-range-btn-${userId}`}
@@ -1749,8 +1922,40 @@ export default function EditorClient({
           >
             {review ? (
               <>
-                <div className="mb-2 text-sm text-gray-500">
-                  {editable ? null : 'Read-only (viewing mode)'}
+                <div className="mb-2 flex items-start justify-between text-sm text-gray-500">
+                  <span>{editable ? '' : 'Read-only (viewing mode)'}</span>
+                  {editable && (
+                    <div ref={presetMenuRef} className="relative">
+                      <button
+                        id={`p1an-meta-menu-${selected.id}-${userId}`}
+                        aria-label="Activity options"
+                        className="rounded px-2 py-1 text-lg leading-none text-gray-600 hover:bg-gray-200"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setPresetMenuOpen((s) => !s);
+                        }}
+                      >
+                        ⋮
+                      </button>
+                      {presetMenuOpen && (
+                        <div className="absolute right-0 z-20 mt-1 w-48 rounded border bg-white py-1 text-sm shadow-lg">
+                          <button
+                            id={`p1an-meta-save-${selected.id}-${userId}`}
+                            className="flex w-full items-center px-3 py-2 text-left hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setPresetDialogBlockId(selected.id);
+                              setPresetMenuOpen(false);
+                            }}
+                          >
+                            Save activity block
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="mb-4">
                   <div
@@ -2883,6 +3088,15 @@ export default function EditorClient({
             )}
           </div>
         </div>
+      )}
+      {presetDialogBlock && editable && (
+        <BlockPresetSaveDialog
+          userId={currentUserId}
+          block={presetDialogBlock}
+          duration={presetDialogDuration}
+          onClose={() => setPresetDialogBlockId(null)}
+          onSaved={handlePresetSaved}
+        />
       )}
       {aiOpen && (
         <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/20 backdrop-blur-md">
