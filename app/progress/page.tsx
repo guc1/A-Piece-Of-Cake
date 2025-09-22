@@ -9,18 +9,24 @@ export function ProgressHome() {
   return (
     <main className="p-6">
       <BackButton href={hrefFor('/', ctx)} />
-      <div className="space-x-4">
+      <div className="mt-4 flex flex-wrap gap-3">
         <Link
           href={hrefFor('/progress/statistics', ctx)}
-          className="bg-orange-500 text-white px-4 py-2 rounded"
+          className="rounded bg-orange-500 px-4 py-2 font-semibold text-white shadow-sm shadow-orange-200 transition hover:bg-orange-600"
         >
           Statistics
         </Link>
         <Link
           href={hrefFor('/progress/overview', ctx)}
-          className="bg-orange-500 text-white px-4 py-2 rounded"
+          className="rounded bg-orange-500 px-4 py-2 font-semibold text-white shadow-sm shadow-orange-200 transition hover:bg-orange-600"
         >
           Overview
+        </Link>
+        <Link
+          href={hrefFor('/progress/tracking', ctx)}
+          className="rounded bg-orange-500 px-4 py-2 font-semibold text-white shadow-sm shadow-orange-200 transition hover:bg-orange-600"
+        >
+          Tracking
         </Link>
       </div>
     </main>
