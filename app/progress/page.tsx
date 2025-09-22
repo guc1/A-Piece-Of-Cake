@@ -22,6 +22,12 @@ export function ProgressHome() {
         >
           Overview
         </Link>
+        <Link
+          href={hrefFor('/progress/tracking', ctx)}
+          className="bg-orange-500 text-white px-4 py-2 rounded"
+        >
+          Tracking
+        </Link>
       </div>
     </main>
   );

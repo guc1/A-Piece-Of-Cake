@@ -1,12 +1,13 @@
 import { getUserByViewId, ensureUser } from '@/lib/users';
 import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
-import { listFlavors } from '@/lib/flavors-store';
 import { buildViewContext } from '@/lib/profile';
 import { ViewContextProvider } from '@/lib/view-context';
-import { FlavorsHome } from '@/app/(app)/flavors/page';
+import { TrackingHome } from '@/app/progress/tracking/page';
+import { cookies } from 'next/headers';
+import { getUserTimeZone } from '@/lib/clock';
 
-export default async function ViewFlavorsPage({
+export default async function ViewTrackingPage({
   params,
   searchParams,
 }: {
@@ -20,22 +21,19 @@ export default async function ViewFlavorsPage({
   const session = await auth();
   const viewer = session ? await ensureUser(session) : null;
   const viewerId = viewer ? viewer.id : null;
-  const flavors = await listFlavors(String(user.id), viewerId ?? null);
+  if (sp?.at) notFound();
+  const cookieStore = await cookies();
+  const tz = getUserTimeZone(user as any, { cookies: cookieStore });
   const ctx = buildViewContext({
     ownerId: user.id,
     viewerId: viewerId ?? null,
-    mode: sp?.at ? 'historical' : 'viewer',
+    mode: 'viewer',
     viewId: user.viewId,
-    snapshotDate: sp?.at,
   });
   return (
     <ViewContextProvider value={ctx}>
-      <section id={`v13w-flav-${user.id}`}>
-        <FlavorsHome
-          userId={String(user.id)}
-          selfId={viewerId ? String(viewerId) : undefined}
-          initialFlavors={flavors}
-        />
+      <section id={`v13w-progress-tracking-${user.id}`}>
+        <TrackingHome ownerId={user.id} viewerId={viewerId ?? null} tz={tz} />
       </section>
     </ViewContextProvider>
   );
