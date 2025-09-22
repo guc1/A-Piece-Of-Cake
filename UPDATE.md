@@ -304,3 +304,5 @@
 - 2025-10-30: Added activity block presets with category tagging, save-from-metadata controls, and a custom timeslot library picker in the planner toolbar.
 - 2025-10-30: Launched a progress tracking dashboard with streak visualizations, time-spent charts, flavor visibility controls, and daily progress snapshots for owner and viewer access.
 - 2025-10-30: Extended progress tracking with ingredient streak tables and a focused subflavor time diagram with dedicated view toggles.
+- 2025-10-30: Added manual streak override toggles with persistence and optional ingredient streak visibility control.
+- 2025-10-30: Added ingredient visibility filters to choose which streak rows appear in tracking tables.
