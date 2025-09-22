@@ -23,11 +23,11 @@ export default async function ViewAllSubflavorsPage({
   const session = await auth();
   const viewer = session ? await ensureUser(session) : null;
   const viewerId = viewer ? viewer.id : null;
-  const flavors = await listFlavors(String(user.id));
+  const flavors = await listFlavors(String(user.id), viewerId ?? null);
   const viewerFlavors = viewerId ? await listFlavors(String(viewerId)) : [];
   const groups: { flavor: Flavor; subflavors: Subflavor[] }[] = [];
   for (const f of flavors) {
-    const subs = await listSubflavors(String(user.id), f.id);
+    const subs = await listSubflavors(String(user.id), f.id, viewerId ?? null);
     groups.push({ flavor: f, subflavors: subs });
   }
   const ctx = buildViewContext({

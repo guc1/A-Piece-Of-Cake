@@ -67,6 +67,7 @@ async function canView(viewerId: number | null, ownerId: number, vis: Visibility
 export async function listSubflavors(
   userId: string,
   flavorId: string,
+  viewerId?: number | null,
 ): Promise<Subflavor[]> {
   const id = Number(userId);
   if (Number.isNaN(id)) return [];
@@ -74,14 +75,37 @@ export async function listSubflavors(
     .select()
     .from(subflavors)
     .where(and(eq(subflavors.userId, id), eq(subflavors.flavorId, flavorId)));
-  return sortSubflavors(rows.map(toSubflavor));
+  if (viewerId === undefined) {
+    return sortSubflavors(rows.map(toSubflavor));
+  }
+  const list: Subflavor[] = [];
+  for (const row of rows) {
+    const vis = (row.visibility as Visibility) ?? 'private';
+    if (await canView(viewerId, row.userId ?? 0, vis)) {
+      list.push(toSubflavor(row));
+    }
+  }
+  return sortSubflavors(list);
 }
 
-export async function listAllSubflavors(userId: string): Promise<Subflavor[]> {
+export async function listAllSubflavors(
+  userId: string,
+  viewerId?: number | null,
+): Promise<Subflavor[]> {
   const id = Number(userId);
   if (Number.isNaN(id)) return [];
   const rows = await db.select().from(subflavors).where(eq(subflavors.userId, id));
-  return sortSubflavors(rows.map(toSubflavor));
+  if (viewerId === undefined) {
+    return sortSubflavors(rows.map(toSubflavor));
+  }
+  const list: Subflavor[] = [];
+  for (const row of rows) {
+    const vis = (row.visibility as Visibility) ?? 'private';
+    if (await canView(viewerId, row.userId ?? 0, vis)) {
+      list.push(toSubflavor(row));
+    }
+  }
+  return sortSubflavors(list);
 }
 
 export async function getSubflavor(

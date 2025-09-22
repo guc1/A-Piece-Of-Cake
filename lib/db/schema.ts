@@ -296,6 +296,25 @@ export const profileSnapshots = pgTable(
   }),
 );
 
+export const progressSnapshots = pgTable(
+  'progress_snapshots',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    snapshotDate: date('snapshot_date').notNull(),
+    data: jsonb('data').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+  },
+  (table) => ({
+    uniqueUserDate: uniqueIndex('progress_snapshots_user_date_unique').on(
+      table.userId,
+      table.snapshotDate,
+    ),
+  }),
+);
+
 export const dailyReports = pgTable(
   'daily_reports',
   {
