@@ -17,6 +17,14 @@ export interface TrackingSubflavorSummary {
   orderIndex: number;
 }
 
+export interface TrackingIngredientSummary {
+  id: string;
+  ingredientId: number;
+  title: string;
+  icon: string;
+  createdAt: string;
+}
+
 export interface TrackingDailyRecord {
   date: string;
   totalMinutes: number;
@@ -26,6 +34,8 @@ export interface TrackingDailyRecord {
   plannedFlavors: string[];
   doneSubflavors: string[];
   plannedSubflavors: string[];
+  doneIngredients: string[];
+  plannedIngredients: string[];
 }
 
 export interface TrackingDataset {
@@ -35,5 +45,6 @@ export interface TrackingDataset {
   maxDays: number;
   flavors: TrackingFlavorSummary[];
   subflavors: TrackingSubflavorSummary[];
+  ingredients: TrackingIngredientSummary[];
   records: TrackingDailyRecord[];
 }

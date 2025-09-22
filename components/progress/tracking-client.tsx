@@ -171,7 +171,7 @@ function computeStatus(
   dataset: TrackingDataset,
   createdAt: string,
   id: string,
-  type: 'flavor' | 'subflavor',
+  type: 'flavor' | 'subflavor' | 'ingredient',
 ): DayState {
   const createdYmd = createdAt.slice(0, 10);
   if (record.date < createdYmd) return 'not-started';
@@ -186,6 +186,13 @@ function computeStatus(
   if (record.date === dataset.today && record.plannedSubflavors.includes(id)) {
     return 'planned';
   }
+  if (type === 'ingredient') {
+    if (record.doneIngredients.includes(id)) return 'done';
+    if (record.date === dataset.today && record.plannedIngredients.includes(id)) {
+      return 'planned';
+    }
+    return 'missed';
+  }
   return 'missed';
 }
 
@@ -194,7 +201,8 @@ function buildChartData(
   flavors: TrackingFlavorSummary[],
   subflavors: TrackingSubflavorSummary[],
   hidden: Set<string>,
-  showSubflavors: boolean,
+  mode: 'flavor' | 'subflavor',
+  focusFlavorId?: string | null,
 ) {
   const flavorTotals = new Map<string, number>();
   const subTotals = new Map<string, number>();
@@ -223,6 +231,7 @@ function buildChartData(
     .sort((a, b) => b.value - a.value);
   const subData: ChartDatum[] = subflavors
     .filter((sf) => !hidden.has(sf.id) && !hidden.has(sf.flavorId))
+    .filter((sf) => (mode === 'subflavor' && focusFlavorId ? sf.flavorId === focusFlavorId : true))
     .map((sf) => ({
       id: sf.id,
       label: sf.name,
@@ -233,7 +242,7 @@ function buildChartData(
     }))
     .filter((d) => d.value > 0)
     .sort((a, b) => b.value - a.value);
-  const working = showSubflavors ? subData : flavorData;
+  const working = mode === 'subflavor' ? subData : flavorData;
   const total = working.reduce((sum, item) => sum + item.value, 0);
   if (total > 0) {
     for (const item of working) {
@@ -271,7 +280,8 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
   const [timeRange, setTimeRange] = useState(() =>
     Math.min(7, dataset.records.length || 1),
   );
-  const [showSubDistribution, setShowSubDistribution] = useState(false);
+  const [chartMode, setChartMode] = useState<'flavor' | 'subflavor'>('flavor');
+  const [focusedFlavor, setFocusedFlavor] = useState<string | null>(null);
   const [activeSlice, setActiveSlice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -317,6 +327,24 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
     }));
   }, [dataset.flavors, dataset.subflavors]);
 
+  const visibleFlavors = useMemo(() => {
+    return dataset.flavors.filter((flavor) => !hidden.has(flavor.id));
+  }, [dataset.flavors, hidden]);
+
+  useEffect(() => {
+    if (visibleFlavors.length === 0) {
+      if (focusedFlavor !== null) setFocusedFlavor(null);
+      return;
+    }
+    const stillVisible = focusedFlavor
+      ? visibleFlavors.some((flavor) => flavor.id === focusedFlavor)
+      : false;
+    if (!focusedFlavor || !stillVisible) {
+      const next = visibleFlavors[0]?.id ?? null;
+      if (next !== focusedFlavor) setFocusedFlavor(next);
+    }
+  }, [visibleFlavors, focusedFlavor]);
+
   const visibleRowCount = useMemo(() => {
     let count = 0;
     for (const { flavor, subflavors } of flavorTree) {
@@ -334,15 +362,30 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
     return dataset.records.slice(-range);
   }, [dataset.records, timeRange]);
 
+  const effectiveFocusFlavor = useMemo(() => {
+    if (chartMode !== 'subflavor') return null;
+    if (!focusedFlavor) return null;
+    if (hidden.has(focusedFlavor)) return null;
+    return focusedFlavor;
+  }, [chartMode, focusedFlavor, hidden]);
+
   const chartData = useMemo(() => {
     return buildChartData(
       chartRecords,
       dataset.flavors,
       dataset.subflavors,
       hidden,
-      showSubDistribution,
+      chartMode,
+      effectiveFocusFlavor,
     );
-  }, [chartRecords, dataset.flavors, dataset.subflavors, hidden, showSubDistribution]);
+  }, [
+    chartRecords,
+    dataset.flavors,
+    dataset.subflavors,
+    hidden,
+    chartMode,
+    effectiveFocusFlavor,
+  ]);
 
   const availableRange = Math.max(dataset.records.length, 1);
   const rangeDays = chartRecords.length || timeRange;
@@ -354,8 +397,19 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
     if (activeSlice && lookup.has(activeSlice)) {
       return lookup.get(activeSlice)!;
     }
+    if (chartMode === 'flavor' && focusedFlavor && lookup.has(focusedFlavor)) {
+      return lookup.get(focusedFlavor)!;
+    }
     return chartData.data[0];
-  }, [chartData.data, activeSlice]);
+  }, [chartData.data, activeSlice, chartMode, focusedFlavor]);
+
+  const isSubflavorMode = chartMode === 'subflavor';
+
+  const focusFlavorName = useMemo(() => {
+    if (!effectiveFocusFlavor) return null;
+    const match = dataset.flavors.find((flavor) => flavor.id === effectiveFocusFlavor);
+    return match?.name ?? null;
+  }, [dataset.flavors, effectiveFocusFlavor]);
 
   const handleToggleFlavor = (id: string, parentId?: string) => {
     setHidden((prev) => {
@@ -381,6 +435,41 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
 
   const handleShowAll = () => {
     setHidden(new Set());
+  };
+
+  const handleShowFlavorMix = () => {
+    setChartMode('flavor');
+    if (focusedFlavor) {
+      setActiveSlice(focusedFlavor);
+    }
+  };
+
+  const handleSwitchToSubflavor = () => {
+    if (chartMode !== 'subflavor') {
+      let nextFocus: string | null = null;
+      if (activeSlice && dataset.flavors.some((flavor) => flavor.id === activeSlice)) {
+        nextFocus = activeSlice;
+      } else if (chartData.data.length > 0) {
+        const candidate = chartData.data[0];
+        if (dataset.flavors.some((flavor) => flavor.id === candidate.id)) {
+          nextFocus = candidate.id;
+        }
+      }
+      if (!nextFocus && visibleFlavors.length > 0) {
+        nextFocus = visibleFlavors[0].id;
+      }
+      if (nextFocus && nextFocus !== focusedFlavor) {
+        setFocusedFlavor(nextFocus);
+      }
+    }
+    setChartMode('subflavor');
+  };
+
+  const handleFocusFlavorChange = (value: string) => {
+    setFocusedFlavor(value ? value : null);
+    if (chartMode === 'flavor' && value) {
+      setActiveSlice(value);
+    }
   };
 
   return (
@@ -605,6 +694,71 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
               </tbody>
             </table>
           </div>
+          <div className="space-y-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Ingredient streaks</h3>
+              <span className="text-xs text-gray-500">
+                Ingredients don&apos;t add to time totals—just streak accountability.
+              </span>
+            </div>
+            <div className="overflow-x-auto rounded-3xl border border-orange-100 bg-white shadow-sm">
+              {dataset.ingredients.length === 0 ? (
+                <div className="px-6 py-8 text-center text-sm text-gray-500">
+                  Add ingredients to track how consistently you bring your habits into play.
+                </div>
+              ) : (
+                <table className="min-w-full border-separate border-spacing-y-2">
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-left text-sm font-semibold text-gray-600 backdrop-blur">
+                        Ingredient
+                      </th>
+                      {visibleRecords.map((record) => {
+                        const { day, weekday } = formatDay(record.date);
+                        return (
+                          <th
+                            key={`ingredient-head-${record.date}`}
+                            className="px-3 py-2 text-center text-xs font-medium uppercase tracking-wide text-gray-500"
+                          >
+                            <div>{weekday}</div>
+                            <div className="text-gray-700">{day}</div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dataset.ingredients.map((ingredient) => (
+                      <tr key={ingredient.id} className="align-middle">
+                        <td className="sticky left-0 z-10 bg-white/95 px-4 py-3 text-sm font-semibold text-gray-800 backdrop-blur">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-lg">
+                              {ingredient.icon}
+                            </span>
+                            <span>{ingredient.title}</span>
+                          </div>
+                        </td>
+                        {visibleRecords.map((record) => (
+                          <td key={`${ingredient.id}-${record.date}`} className="px-3 py-2 text-center">
+                            <StatusIndicator
+                              state={computeStatus(
+                                record,
+                                dataset,
+                                ingredient.createdAt,
+                                ingredient.id,
+                                'ingredient',
+                              )}
+                              label={`${ingredient.title} on ${record.date}`}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </section>
       ) : (
         <section className="space-y-6">
@@ -625,39 +779,83 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
                   ))}
                 {!timeRangeOptions.some((opt) => opt.value === dataset.records.length) &&
                   dataset.records.length > 0 && (
-                  <option value={dataset.records.length}>
-                    Entire history ({dataset.records.length} days)
-                  </option>
-                )}
+                    <option value={dataset.records.length}>
+                      Entire history ({dataset.records.length} days)
+                    </option>
+                  )}
               </select>
             </label>
-            <button
-              type="button"
-              onClick={() => setShowSubDistribution((prev) => !prev)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                showSubDistribution
-                  ? 'bg-orange-500 text-white shadow'
-                  : 'border border-orange-200 text-orange-600 hover:bg-orange-50'
-              }`}
-            >
-              {showSubDistribution ? 'Show main flavor mix' : 'See subflavor distribution'}
-            </button>
+            {isSubflavorMode && (
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <span className="font-medium">Focus flavor</span>
+                <select
+                  className="rounded-md border border-gray-200 px-3 py-1 text-sm"
+                  value={effectiveFocusFlavor ?? ''}
+                  onChange={(event) => handleFocusFlavorChange(event.target.value)}
+                  disabled={visibleFlavors.length === 0}
+                >
+                  {visibleFlavors.length === 0 ? (
+                    <option value="">No visible flavors</option>
+                  ) : (
+                    visibleFlavors.map((flavor) => (
+                      <option key={flavor.id} value={flavor.id}>
+                        {flavor.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </label>
+            )}
+            <div className="flex items-center gap-2 rounded-full bg-orange-50 p-1 text-sm font-medium text-orange-600">
+              <button
+                type="button"
+                onClick={handleShowFlavorMix}
+                className={`rounded-full px-4 py-2 transition ${
+                  chartMode === 'flavor'
+                    ? 'bg-white shadow-sm text-orange-600'
+                    : 'text-orange-500 hover:text-orange-600'
+                }`}
+              >
+                Main flavor mix
+              </button>
+              <button
+                type="button"
+                onClick={handleSwitchToSubflavor}
+                className={`rounded-full px-4 py-2 transition ${
+                  chartMode === 'subflavor'
+                    ? 'bg-white shadow-sm text-orange-600'
+                    : 'text-orange-500 hover:text-orange-600'
+                }`}
+              >
+                Subflavor diagram
+              </button>
+            </div>
           </div>
 
           <p className="text-sm text-gray-600">
             {chartData.data.length === 0
-              ? `No time logged in the last ${rangeDays} day${rangeDays === 1 ? '' : 's'} for this view yet.`
+              ? isSubflavorMode
+                ? effectiveFocusFlavor
+                  ? `No time logged in the last ${rangeDays} day${rangeDays === 1 ? '' : 's'} for subflavors tagged under ${focusFlavorName ?? 'this flavor'} yet.`
+                  : 'Choose a flavor above to inspect its subflavor mix.'
+                : `No time logged in the last ${rangeDays} day${rangeDays === 1 ? '' : 's'} for this view yet.`
               : `Logged ${totalHours} hrs in the last ${rangeDays} day${rangeDays === 1 ? '' : 's'}. ` +
-                (showSubDistribution
-                  ? `Detailed subflavor tags account for ${focusHours} hrs of that total.`
+                (isSubflavorMode
+                  ? focusFlavorName
+                    ? `${focusFlavorName} subflavors account for ${focusHours} hrs of that total.`
+                    : 'Select a flavor to see its subflavor distribution.'
                   : 'Every tracked flavor is represented below.')}
           </p>
 
           <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
             <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm">
               {chartData.data.length === 0 ? (
-                <div className="flex h-72 items-center justify-center text-sm text-gray-500">
-                  Tag your time blocks with flavors to see time distribution.
+                <div className="flex h-72 items-center justify-center px-4 text-center text-sm text-gray-500">
+                  {isSubflavorMode
+                    ? effectiveFocusFlavor
+                      ? 'No tracked time for these subflavors in this range yet.'
+                      : 'Select a flavor above to view its subflavor breakdown.'
+                    : 'Tag your time blocks with flavors to see time distribution.'}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
@@ -674,7 +872,17 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
                       onMouseLeave={() => setActiveSlice(null)}
                     >
                       {chartData.data.map((entry) => (
-                        <Cell key={entry.id} fill={entry.color || '#f97316'} />
+                        <Cell
+                          key={entry.id}
+                          fill={entry.color || '#f97316'}
+                          onClick={() => {
+                            setActiveSlice(entry.id);
+                            if (chartMode === 'flavor') {
+                              setFocusedFlavor(entry.id);
+                            }
+                          }}
+                          style={{ cursor: chartMode === 'flavor' ? 'pointer' : 'default' }}
+                        />
                       ))}
                     </Pie>
                     <RechartsTooltip content={<TrackingTooltip />} />
@@ -684,12 +892,18 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
             </div>
             <div className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm">
               <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                {showSubDistribution ? 'Subflavor insights' : 'Flavor insights'}
+                {isSubflavorMode
+                  ? `Subflavor insights${focusFlavorName ? ` – ${focusFlavorName}` : ''}`
+                  : 'Flavor insights'}
               </h3>
               <div className="space-y-3">
                 {chartData.data.length === 0 ? (
                   <p className="text-sm text-gray-500">
-                    Once you start logging activities, this panel will highlight where your time is going.
+                    {isSubflavorMode
+                      ? effectiveFocusFlavor
+                        ? 'Log activities with detailed subflavor tags to populate this insight.'
+                        : 'Select a flavor above to explore its subflavor mix.'
+                      : 'Once you start logging activities, this panel will highlight where your time is going.'}
                   </p>
                 ) : (
                   chartData.data.map((item) => {
@@ -700,6 +914,12 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
                         type="button"
                         onMouseEnter={() => setActiveSlice(item.id)}
                         onFocus={() => setActiveSlice(item.id)}
+                        onClick={() => {
+                          setActiveSlice(item.id);
+                          if (chartMode === 'flavor') {
+                            setFocusedFlavor(item.id);
+                          }
+                        }}
                         className={`w-full rounded-xl border px-4 py-3 text-left transition ${
                           isActive
                             ? 'border-orange-300 bg-orange-50 shadow-sm'
@@ -709,9 +929,9 @@ export default function TrackingClient({ dataset }: { dataset: TrackingDataset }
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-sm font-semibold text-gray-900">{item.label}</div>
-                            {showSubDistribution && item.helper && (
+                            {isSubflavorMode && item.helper && (
                               <div className="text-xs text-gray-500">
-                                Within {dataset.flavors.find((f) => f.id === item.helper)?.name}
+                                Within {focusFlavorName ?? dataset.flavors.find((f) => f.id === item.helper)?.name}
                               </div>
                             )}
                           </div>
