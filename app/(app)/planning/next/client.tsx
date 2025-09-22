@@ -20,6 +20,16 @@ import {
   DEFAULT_COLOR_PRESETS,
   type ColorPreset,
 } from '@/lib/color-presets';
+import {
+  addBlockPresetCategory,
+  addUserBlockPreset,
+  getUserBlockPresetCategories,
+  getUserBlockPresets,
+  type ActivityBlockPreset,
+  type BlockPresetCategory,
+  userBlockPresetCategoriesKey,
+  userBlockPresetsKey,
+} from '@/lib/block-presets';
 import type {
   HeadingReport,
   DailyReport,
@@ -307,8 +317,21 @@ export default function EditorClient({
     return {};
   });
   const [showPresetPicker, setShowPresetPicker] = useState(false);
+  const [blockPresets, setBlockPresets] = useState<ActivityBlockPreset[]>([]);
+  const [presetCategories, setPresetCategories] = useState<BlockPresetCategory[]>([]);
+  const [showPresetLibrary, setShowPresetLibrary] = useState(false);
+  const [activePresetCategory, setActivePresetCategory] = useState<
+    'all' | 'uncategorized' | string
+  >('all');
+  const [showBlockPresetMenu, setShowBlockPresetMenu] = useState(false);
+  const [showSavePresetDialog, setShowSavePresetDialog] = useState(false);
+  const [savePresetName, setSavePresetName] = useState('');
+  const [savePresetCategories, setSavePresetCategories] = useState<string[]>([]);
+  const [newPresetCategoryName, setNewPresetCategoryName] = useState('');
+  const [libraryCategoryName, setLibraryCategoryName] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [metaPinned, setMetaPinned] = useState(false);
+  const blockMenuRef = useRef<HTMLDivElement | null>(null);
   const openMeta = useCallback((id: string) => {
     setSelectedId(id);
     setMetaPinned(true);
@@ -327,6 +350,38 @@ export default function EditorClient({
   }, [selectedId]);
   useEffect(() => {
     setSelectFlavor(false);
+  }, [selectedId]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setBlockPresets(getUserBlockPresets(currentUserId));
+    setPresetCategories(getUserBlockPresetCategories(currentUserId));
+  }, [currentUserId]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    function handleStorage(e: StorageEvent) {
+      if (e.key === userBlockPresetsKey(currentUserId)) {
+        setBlockPresets(getUserBlockPresets(currentUserId));
+      } else if (e.key === userBlockPresetCategoriesKey(currentUserId)) {
+        setPresetCategories(getUserBlockPresetCategories(currentUserId));
+      }
+    }
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [currentUserId]);
+  useEffect(() => {
+    if (!showBlockPresetMenu) return;
+    function handleClick(e: MouseEvent) {
+      if (!blockMenuRef.current) return;
+      if (!blockMenuRef.current.contains(e.target as Node)) {
+        setShowBlockPresetMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showBlockPresetMenu]);
+  useEffect(() => {
+    setShowBlockPresetMenu(false);
+    setShowSavePresetDialog(false);
   }, [selectedId]);
   const unreviewedIngredientIds = useMemo(() => {
     if (!selected) return [] as number[];
@@ -350,6 +405,48 @@ export default function EditorClient({
     const reviewed = reviews['day']?.ingredients || {};
     return dailyIngredientIds.filter((iid) => !(iid in reviewed));
   }, [dailyIngredientIds, reviews]);
+  const categoryMap = useMemo(
+    () => new Map(presetCategories.map((c) => [c.id, c])),
+    [presetCategories],
+  );
+  const sortedCategories = useMemo(
+    () =>
+      [...presetCategories].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
+    [presetCategories],
+  );
+  const sortedBlockPresets = useMemo(
+    () =>
+      [...blockPresets].sort((a, b) => {
+        const aTime = Date.parse(a.updatedAt) || Date.parse(a.createdAt);
+        const bTime = Date.parse(b.updatedAt) || Date.parse(b.createdAt);
+        return bTime - aTime;
+      }),
+    [blockPresets],
+  );
+  const filteredBlockPresets = useMemo(() => {
+    if (activePresetCategory === 'all') return sortedBlockPresets;
+    if (activePresetCategory === 'uncategorized') {
+      return sortedBlockPresets.filter((p) => !(p.categoryIds?.length));
+    }
+    return sortedBlockPresets.filter((p) =>
+      (p.categoryIds ?? []).includes(activePresetCategory),
+    );
+  }, [sortedBlockPresets, activePresetCategory]);
+  const canUsePresetLibrary = editable && !review;
+  const canSaveBlockPreset = editable && !!selected;
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const openLibrary = showPresetLibrary && canUsePresetLibrary;
+    const openSave = showSavePresetDialog;
+    if (!openLibrary && !openSave) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showPresetLibrary, showSavePresetDialog, canUsePresetLibrary]);
   useEffect(() => {
     const handler = () => closeMeta();
     if (typeof window !== 'undefined') {
@@ -474,6 +571,16 @@ export default function EditorClient({
     const h = String(Math.floor(min / 60)).padStart(2, '0');
     const m = String(min % 60).padStart(2, '0');
     return `${h}:${m}`;
+  }
+  function formatDurationLabel(min: number) {
+    const safe = Math.max(0, Math.floor(min));
+    const hours = Math.floor(safe / 60);
+    const minutes = safe % 60;
+    const parts: string[] = [];
+    if (hours) parts.push(`${hours}h`);
+    if (minutes) parts.push(`${minutes}m`);
+    if (!parts.length) return '0m';
+    return parts.join(' ');
   }
   function isoFromMinutes(min: number) {
     const base = new Date(`${date}T00:00:00`);
@@ -1014,34 +1121,33 @@ export default function EditorClient({
     });
   }
 
+  const findExactSlot = useCallback(
+    (duration: number) => {
+      const sorted = [...blocks].sort(
+        (a, b) => minutesFromIso(a.start) - minutesFromIso(b.start),
+      );
+      const isFree = (s: number, e: number) =>
+        !sorted.some(
+          (b) =>
+            Math.max(s, minutesFromIso(b.start)) <
+            Math.min(e, minutesFromIso(b.end)),
+        );
+      for (let c = startMinute; c + duration <= endMinute; c += 15) {
+        if (isFree(c, c + duration)) return c;
+      }
+      return null;
+    },
+    [blocks, minutesFromIso, startMinute, endMinute],
+  );
+
   function addBlock() {
     if (!editable || review) return;
-    const sorted = [...blocks].sort(
-      (a, b) => minutesFromIso(a.start) - minutesFromIso(b.start),
-    );
-    function isFree(s: number, e: number) {
-      return !sorted.some(
-        (b) =>
-          Math.max(s, minutesFromIso(b.start)) <
-          Math.min(e, minutesFromIso(b.end)),
-      );
-    }
-
     let candidate: number | null = null;
     let duration = 60;
 
-    const findSlot = (dur: number) => {
-      let c = startMinute;
-      while (c + dur <= endMinute) {
-        if (isFree(c, c + dur)) return c;
-        c += 15;
-      }
-      return null;
-    };
-
-    candidate = findSlot(60);
+    candidate = findExactSlot(60);
     if (candidate === null) {
-      const small = findSlot(30);
+      const small = findExactSlot(30);
       if (small !== null) {
         duration = 30;
         candidate = small;
@@ -1063,8 +1169,7 @@ export default function EditorClient({
       return;
     }
 
-    // candidate is guaranteed to be set here
-    const start = candidate as number;
+    const start = candidate;
     const id = crypto.randomUUID();
     const newBlock: PlanBlock = {
       id,
@@ -1083,6 +1188,122 @@ export default function EditorClient({
     };
     setBlocks((b) => [...b, newBlock]);
     openMeta(id);
+  }
+
+  function ensurePresetCategory(name: string) {
+    const added = addBlockPresetCategory(currentUserId, name);
+    if (!added) return null;
+    setPresetCategories((prev) => {
+      if (prev.some((c) => c.id === added.id)) return prev;
+      return [...prev, added];
+    });
+    return added;
+  }
+
+  function handleSaveBlockPreset() {
+    if (!selected || !editable) return;
+    const name = savePresetName.trim();
+    if (!name) {
+      alert('Please enter a name for this preset.');
+      return;
+    }
+    const duration = Math.max(
+      15,
+      minutesFromIso(selected.end) - minutesFromIso(selected.start),
+    );
+    const uniqueCategories = Array.from(new Set(savePresetCategories));
+    const saved = addUserBlockPreset(currentUserId, {
+      title: name,
+      description: selected.description ?? '',
+      color: selected.color,
+      colorPreset: selected.colorPreset ?? '',
+      ingredientIds: selected.ingredientIds ?? [],
+      flavorIds: selected.flavorIds ?? [],
+      subflavorIds: selected.subflavorIds ?? [],
+      duration,
+      categoryIds: uniqueCategories,
+    });
+    setBlockPresets((prev) => {
+      const next = prev.filter((p) => p.id !== saved.id);
+      next.push(saved);
+      return next;
+    });
+    setShowSavePresetDialog(false);
+    setSavePresetCategories([]);
+    setNewPresetCategoryName('');
+    alert('Activity block saved to presets.');
+  }
+
+  function addBlockFromPreset(preset: ActivityBlockPreset) {
+    if (!editable || review) return;
+    const duration = Math.max(15, preset.duration || 60);
+    let candidate = findExactSlot(duration);
+    if (candidate === null) {
+      const maxStart = endMinute - duration;
+      if (maxStart <= startMinute) {
+        candidate = startMinute;
+      } else {
+        const steps = Math.floor((maxStart - startMinute) / 15);
+        candidate = startMinute + Math.floor(Math.random() * (steps + 1)) * 15;
+      }
+    }
+    if (candidate === null) {
+      alert('No space available for this preset. Adjust your timeline range.');
+      return;
+    }
+    const start = candidate;
+    const end = Math.min(start + duration, MAX_MINUTES);
+    const id = crypto.randomUUID();
+    const nowIso = new Date().toISOString();
+    const newBlock: PlanBlock = {
+      id,
+      planId: initialPlan?.id || '',
+      start: isoFromMinutes(start),
+      end: isoFromMinutes(end),
+      title: preset.title,
+      description: preset.description,
+      color: preset.color,
+      colorPreset: preset.colorPreset ?? '',
+      ingredientIds: [...(preset.ingredientIds ?? [])],
+      flavorIds: [...(preset.flavorIds ?? [])],
+      subflavorIds: [...(preset.subflavorIds ?? [])],
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    setBlocks((prev) => [...prev, newBlock]);
+    openMeta(id);
+    setShowPresetLibrary(false);
+  }
+
+  function openSaveBlockPresetDialog() {
+    if (!selected || !editable) return;
+    setSavePresetName(selected.title || 'Untitled activity');
+    setSavePresetCategories([]);
+    setNewPresetCategoryName('');
+    setShowSavePresetDialog(true);
+    setShowBlockPresetMenu(false);
+  }
+
+  function toggleSavePresetCategory(id: string) {
+    setSavePresetCategories((prev) =>
+      prev.includes(id) ? prev.filter((cid) => cid !== id) : [...prev, id],
+    );
+  }
+
+  function handleCreateDialogCategory() {
+    const added = ensurePresetCategory(newPresetCategoryName);
+    if (!added) return;
+    setSavePresetCategories((prev) =>
+      prev.includes(added.id) ? prev : [...prev, added.id],
+    );
+    setNewPresetCategoryName('');
+  }
+
+  function handleCreateLibraryCategory() {
+    const added = ensurePresetCategory(libraryCategoryName);
+    if (!added) return;
+    setLibraryCategoryName('');
+    setActivePresetCategory(added.id);
   }
 
   const lastSaved = useRef(
@@ -1483,6 +1704,29 @@ export default function EditorClient({
                   + Add timeslot
                 </button>
               ))}
+            {!review &&
+              (editable ? (
+                <button
+                  id={`p1an-add-custom-${userId}`}
+                  onClick={() => {
+                    setActivePresetCategory('all');
+                    setShowPresetLibrary(true);
+                  }}
+                  disabled={!canUsePresetLibrary}
+                  className="rounded border px-2 py-1"
+                >
+                  Add custom timeslot
+                </button>
+              ) : (
+                <button
+                  id={`p1an-add-custom-${userId}`}
+                  className="rounded border px-2 py-1"
+                  disabled
+                  title="Read-only in viewing mode"
+                >
+                  Add custom timeslot
+                </button>
+              ))}
             <button
               id={`p1an-range-btn-${userId}`}
               className="rounded border px-2 py-1"
@@ -1744,9 +1988,33 @@ export default function EditorClient({
         </div>
         {selected ? (
           <div
-            className="w-1/2 max-h-[90vh] overflow-y-auto border-l p-4"
+            className="relative w-1/2 max-h-[90vh] overflow-y-auto border-l p-4"
             id={`p1an-meta-${selected.id}-${userId}`}
           >
+            {editable && (
+              <div className="absolute right-4 top-4" ref={blockMenuRef}>
+                <button
+                  type="button"
+                  aria-label="Activity block actions"
+                  className="rounded px-2 py-1 text-xl leading-none hover:bg-gray-100"
+                  onClick={() => setShowBlockPresetMenu((s) => !s)}
+                >
+                  ⋮
+                </button>
+                {showBlockPresetMenu && (
+                  <div className="mt-1 w-48 rounded border bg-white text-sm shadow">
+                    <button
+                      type="button"
+                      className="flex w-full items-center px-3 py-2 text-left hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+                      onClick={openSaveBlockPresetDialog}
+                      disabled={!canSaveBlockPreset}
+                    >
+                      Save activity block
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             {review ? (
               <>
                 <div className="mb-2 text-sm text-gray-500">
@@ -2758,6 +3026,266 @@ export default function EditorClient({
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+      {showSavePresetDialog && selected && (
+        <div
+          className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSavePresetDialog(false);
+          }}
+        >
+          <div className="w-[90vw] max-w-md rounded bg-white p-4 text-sm shadow-lg">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-base font-semibold">Save activity block</h2>
+              <button
+                type="button"
+                aria-label="Close"
+                className="text-lg leading-none text-gray-500 hover:text-gray-800"
+                onClick={() => setShowSavePresetDialog(false)}
+              >
+                ×
+              </button>
+            </div>
+            <label className="block text-xs font-semibold uppercase text-gray-500">
+              Name
+            </label>
+            <input
+              className="mt-1 w-full rounded border px-3 py-2"
+              value={savePresetName}
+              onChange={(e) => setSavePresetName(e.target.value)}
+              maxLength={80}
+              placeholder="Morning focus sprint"
+            />
+            <div className="mt-4">
+              <div className="text-xs font-semibold uppercase text-gray-500">
+                Categories
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Select one or more categories to quickly find this block later.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {sortedCategories.length > 0 ? (
+                  sortedCategories.map((cat) => {
+                    const active = savePresetCategories.includes(cat.id);
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={cn(
+                          'rounded border px-3 py-1 text-xs transition',
+                          active
+                            ? 'border-orange-500 bg-orange-100 text-orange-700'
+                            : 'border-gray-200 text-gray-600 hover:bg-gray-100',
+                        )}
+                        onClick={() => toggleSavePresetCategory(cat.id)}
+                      >
+                        {cat.name}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <span className="text-xs text-gray-500">
+                    No categories yet — add one below.
+                  </span>
+                )}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  className="w-full rounded border px-3 py-2 text-xs"
+                  value={newPresetCategoryName}
+                  onChange={(e) => setNewPresetCategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateDialogCategory();
+                    }
+                  }}
+                  placeholder="Add category (e.g. Morning)"
+                  maxLength={40}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCreateDialogCategory}
+                  disabled={!newPresetCategoryName.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowSavePresetDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveBlockPreset}
+                disabled={!savePresetName.trim()}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPresetLibrary && canUsePresetLibrary && (
+        <div
+          className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowPresetLibrary(false);
+          }}
+        >
+          <div className="flex h-[90vh] w-[90vw] max-w-4xl flex-col overflow-hidden rounded bg-white p-4 text-sm shadow-lg">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Custom timeslots</h2>
+              <button
+                type="button"
+                aria-label="Close"
+                className="text-lg leading-none text-gray-500 hover:text-gray-800"
+                onClick={() => setShowPresetLibrary(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex flex-1 gap-4 overflow-hidden">
+              <div className="w-60 shrink-0 border-r pr-3">
+                <div className="text-xs font-semibold uppercase text-gray-500">
+                  Categories
+                </div>
+                <div className="mt-2 flex flex-col gap-1">
+                  <button
+                    type="button"
+                    className={cn(
+                      'w-full rounded px-2 py-1 text-left transition',
+                      activePresetCategory === 'all'
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'hover:bg-gray-100',
+                    )}
+                    onClick={() => setActivePresetCategory('all')}
+                  >
+                    All presets
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      'w-full rounded px-2 py-1 text-left transition',
+                      activePresetCategory === 'uncategorized'
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'hover:bg-gray-100',
+                    )}
+                    onClick={() => setActivePresetCategory('uncategorized')}
+                  >
+                    Uncategorized
+                  </button>
+                  {sortedCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className={cn(
+                        'w-full rounded px-2 py-1 text-left transition',
+                        activePresetCategory === cat.id
+                          ? 'bg-orange-100 text-orange-700'
+                          : 'hover:bg-gray-100',
+                      )}
+                      onClick={() => setActivePresetCategory(cat.id)}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <div className="text-xs font-semibold uppercase text-gray-500">
+                    Add category
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      className="w-full rounded border px-2 py-1 text-xs"
+                      value={libraryCategoryName}
+                      onChange={(e) => setLibraryCategoryName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateLibraryCategory();
+                        }
+                      }}
+                      placeholder="Evening"
+                      maxLength={40}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleCreateLibraryCategory}
+                      disabled={!libraryCategoryName.trim()}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {filteredBlockPresets.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {filteredBlockPresets.map((preset) => {
+                      const catLabels = (preset.categoryIds ?? []).map((cid) => ({
+                        id: cid,
+                        name: categoryMap.get(cid)?.name ?? 'Unknown',
+                      }));
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          className="flex flex-col rounded border px-3 py-3 text-left transition hover:border-orange-400 hover:shadow"
+                          onClick={() => addBlockFromPreset(preset)}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold">
+                              {preset.title || 'Untitled activity'}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {formatDurationLabel(preset.duration)}
+                            </span>
+                          </div>
+                          {preset.description ? (
+                            <p className="mt-1 text-xs text-gray-600">
+                              {preset.description}
+                            </p>
+                          ) : null}
+                          <div className="mt-2 flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-gray-500">
+                            {catLabels.length > 0 ? (
+                              catLabels.map((label) => (
+                                <span
+                                  key={`${preset.id}-cat-${label.id}`}
+                                  className="rounded bg-gray-100 px-2 py-0.5"
+                                >
+                                  {label.name}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="rounded bg-gray-100 px-2 py-0.5">
+                                Uncategorized
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-3 h-1 w-full rounded" style={{ background: preset.color }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                    No saved timeslots yet. Save one from a block to reuse it here.
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
