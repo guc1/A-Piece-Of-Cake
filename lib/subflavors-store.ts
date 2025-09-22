@@ -64,6 +64,14 @@ async function canView(viewerId: number | null, ownerId: number, vis: Visibility
   }
 }
 
+export async function canViewerSeeSubflavor(
+  viewerId: number | null,
+  ownerId: number,
+  vis: Visibility,
+) {
+  return canView(viewerId, ownerId, vis);
+}
+
 export async function listSubflavors(
   userId: string,
   flavorId: string,
@@ -82,6 +90,24 @@ export async function listAllSubflavors(userId: string): Promise<Subflavor[]> {
   if (Number.isNaN(id)) return [];
   const rows = await db.select().from(subflavors).where(eq(subflavors.userId, id));
   return sortSubflavors(rows.map(toSubflavor));
+}
+
+export async function listSubflavorsForViewer(
+  userId: string,
+  viewerId: number | null,
+): Promise<Subflavor[]> {
+  const id = Number(userId);
+  if (Number.isNaN(id)) return [];
+  const rows = await db.select().from(subflavors).where(eq(subflavors.userId, id));
+  const result: Subflavor[] = [];
+  for (const row of rows) {
+    const vis = (row.visibility as Visibility) ?? 'private';
+    const ownerId = row.userId ?? id;
+    if (await canView(viewerId, ownerId, vis)) {
+      result.push(toSubflavor(row));
+    }
+  }
+  return sortSubflavors(result);
 }
 
 export async function getSubflavor(

@@ -91,11 +91,37 @@ async function canView(
   }
 }
 
+export async function canViewerSeeFlavor(
+  viewerId: number | null,
+  ownerId: number,
+  vis: Visibility,
+) {
+  return canView(viewerId, ownerId, vis);
+}
+
 export async function listFlavors(userId: string): Promise<Flavor[]> {
   const id = Number(userId);
   if (Number.isNaN(id)) return [];
   const rows = await db.select().from(flavors).where(eq(flavors.userId, id));
   return sortFlavors(rows.map(toFlavor));
+}
+
+export async function listFlavorsForViewer(
+  userId: string,
+  viewerId: number | null,
+): Promise<Flavor[]> {
+  const id = Number(userId);
+  if (Number.isNaN(id)) return [];
+  const rows = await db.select().from(flavors).where(eq(flavors.userId, id));
+  const result: Flavor[] = [];
+  for (const row of rows) {
+    const vis = (row.visibility as Visibility) ?? 'public';
+    const ownerId = row.userId ?? id;
+    if (await canView(viewerId, ownerId, vis)) {
+      result.push(toFlavor(row));
+    }
+  }
+  return sortFlavors(result);
 }
 
 export async function getFlavor(

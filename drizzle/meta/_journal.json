@@ -226,5 +226,12 @@
       "tag": "0034_add_coach_tone_custom",
       "breakpoints": true
     }
+    ,{
+      "idx": 32,
+      "version": "7",
+      "when": 1756284819565,
+      "tag": "0035_create_progress_snapshots",
+      "breakpoints": true
+    }
   ]
 }

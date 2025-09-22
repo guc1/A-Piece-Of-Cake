@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { ensureUser } from '@/lib/users';
 import { buildViewContext } from '@/lib/profile';
 import { ensureDailyProfileSnapshot } from '@/lib/profile-snapshots';
+import { ensureDailyProgressSnapshot } from '@/lib/progress-tracking-store';
 import { getUserTimeZone } from '@/lib/clock';
 import { cookies } from 'next/headers';
 import { ViewContextProvider } from '@/lib/view-context';
@@ -21,6 +22,7 @@ export default async function ProgressLayout({
   const cookieStore = await cookies();
   const tz = getUserTimeZone(me as any, { cookies: cookieStore });
   await ensureDailyProfileSnapshot(me.id, tz);
+  await ensureDailyProgressSnapshot(me.id, tz);
   const ctx = buildViewContext({
     ownerId: me.id,
     viewerId: me.id,
