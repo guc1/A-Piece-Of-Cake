@@ -11,7 +11,7 @@ import type { Ingredient } from '@/types/ingredient';
 import type { Flavor } from '@/types/flavor';
 import type { Subflavor } from '@/types/subflavor';
 import type { ChatMessage, ChatThread } from '@/types/chat';
-import { savePlanAction } from './actions';
+import { savePlanAction, loadPlanFromDateAction } from './actions';
 import { cn } from '@/lib/utils';
 import ColorPresetPicker from '@/components/color-preset-picker';
 import {
@@ -38,6 +38,7 @@ import type {
 } from '@/types/report';
 import type { Todo } from '@/types/todo';
 import { getCoachTone, getCoachTonePrompt } from '@/lib/ai/coach-tone';
+import LoadPlanningModal from './load-planning-modal';
 
 const COLORS = [
   '#F87171',
@@ -65,6 +66,60 @@ const MAX_MINUTES = 24 * 60; // minutes in a day
 const DEFAULT_START = 5 * 60; // 05:00
 const DEFAULT_END = 22 * 60; // 22:00
 const Z_BASE = 10000;
+
+type LoadPlanSnapshot = {
+  date: string;
+  plan: Plan;
+  previewPlan: Plan | null;
+  fromSnapshot: boolean;
+  snapshotCapturedAt: string | null;
+};
+
+function normalizePlan(plan: Plan): Plan {
+  return {
+    ...plan,
+    blocks: (plan.blocks ?? []).map((b) => ({
+      ...b,
+      ingredientIds: b.ingredientIds ?? [],
+      flavorIds: b.flavorIds ?? [],
+      subflavorIds: b.subflavorIds ?? [],
+      colorPreset: b.colorPreset ?? '',
+    })),
+    dailyAim: plan.dailyAim ?? '',
+    dailyIngredientIds: plan.dailyIngredientIds ?? [],
+    colorPresets: plan.colorPresets ?? [],
+    planningChat: plan.planningChat ?? { chatId: '', messages: [] },
+    liveChat: plan.liveChat ?? { chatId: '', messages: [] },
+  };
+}
+
+function normalizePlanOrNull(plan: Plan | null): Plan | null {
+  if (!plan) return null;
+  return normalizePlan(plan);
+}
+
+function rebasePlanToDate(plan: Plan, sourceDate: string, targetDate: string): Plan {
+  if (sourceDate === targetDate) {
+    return plan;
+  }
+
+  const sourceMidnight = new Date(`${sourceDate}T00:00:00`);
+  const targetMidnight = new Date(`${targetDate}T00:00:00`);
+  const shiftTime = (iso: string) => {
+    const offset = new Date(iso).getTime() - sourceMidnight.getTime();
+    return new Date(targetMidnight.getTime() + offset).toISOString();
+  };
+
+  return {
+    ...plan,
+    date: targetDate,
+    blocks: plan.blocks.map((block) => ({
+      ...block,
+      start: shiftTime(block.start),
+      end: shiftTime(block.end),
+    })),
+  };
+}
 
 function getTextColor(hex: string) {
   if (!hex.startsWith('#') || (hex.length !== 7 && hex.length !== 4)) {
@@ -95,6 +150,7 @@ interface Props {
   live?: boolean;
   review?: boolean;
   initialShowDailyAim?: boolean;
+  snapshotDates?: string[];
   reportContext?: {
     heading: HeadingReport | null;
     daily: Pick<DailyReport, 'date' | 'bad' | 'observations'>[];
@@ -122,6 +178,7 @@ export default function EditorClient({
   live = false,
   review = false,
   initialShowDailyAim = false,
+  snapshotDates: initialSnapshotDates = [],
   reportContext,
 }: Props) {
   const {
@@ -149,14 +206,26 @@ export default function EditorClient({
     if (editable && typeof window !== 'undefined') {
       try {
         const raw = window.localStorage.getItem(storageKey);
-        if (raw)
-          return (JSON.parse(raw) as PlanBlock[]).map((b) => ({
-            ...b,
-            ingredientIds: b.ingredientIds ?? [],
-            flavorIds: b.flavorIds ?? [],
-            subflavorIds: b.subflavorIds ?? [],
-            colorPreset: b.colorPreset ?? '',
-          }));
+        if (raw) {
+          const parsed = JSON.parse(raw) as
+            | PlanBlock[]
+            | {
+                blocks?: PlanBlock[];
+              };
+          const stored = Array.isArray(parsed)
+            ? parsed
+            : Array.isArray(parsed?.blocks)
+              ? parsed.blocks
+              : null;
+          if (stored)
+            return stored.map((b) => ({
+              ...b,
+              ingredientIds: b.ingredientIds ?? [],
+              flavorIds: b.flavorIds ?? [],
+              subflavorIds: b.subflavorIds ?? [],
+              colorPreset: b.colorPreset ?? '',
+            }));
+        }
       } catch {
         // ignore malformed data
       }
@@ -215,6 +284,39 @@ export default function EditorClient({
       day: 'numeric',
     },
   );
+  const ingredientMap = useMemo(() => {
+    const map = new Map<number, Ingredient>();
+    for (const ing of initialIngredients) {
+      map.set(ing.id, ing);
+    }
+    return map;
+  }, [initialIngredients]);
+  const flavorMap = useMemo(() => {
+    const map = new Map<string, Flavor>();
+    for (const fl of initialFlavors) {
+      map.set(fl.id, fl);
+    }
+    return map;
+  }, [initialFlavors]);
+  const subflavorMap = useMemo(() => {
+    const map = new Map<string, Subflavor>();
+    for (const sf of initialSubflavors) {
+      map.set(sf.id, sf);
+    }
+    return map;
+  }, [initialSubflavors]);
+  const [loadModalOpen, setLoadModalOpen] = useState(false);
+  const [loadModalStep, setLoadModalStep] = useState<'calendar' | 'preview'>(
+    'calendar',
+  );
+  const [loadSelectedDate, setLoadSelectedDate] = useState<string | null>(null);
+  const [loadBusyAction, setLoadBusyAction] = useState<
+    'preview' | 'select' | 'add' | null
+  >(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadResult, setLoadResult] = useState<LoadPlanSnapshot | null>(null);
+  const [loadBanner, setLoadBanner] = useState<string | null>(null);
+  const loadBannerTimer = useRef<number | null>(null);
   useEffect(() => {
     if (!initialShowDailyAim) return;
     setShowDailyAim(true);
@@ -233,6 +335,23 @@ export default function EditorClient({
       // ignore
     }
   }, [initialShowDailyAim, storageKey]);
+
+  useEffect(() => {
+    if (!loadModalOpen || typeof document === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [loadModalOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (loadBannerTimer.current != null) {
+        clearTimeout(loadBannerTimer.current);
+      }
+    };
+  }, []);
 
   const [aiOpen, setAiOpen] = useState(false);
   const welcome: ChatMessage = {
@@ -460,6 +579,194 @@ export default function EditorClient({
       }
     };
   }, [closeMeta]);
+
+  const formatDateLabel = useCallback(
+    (ymd: string) =>
+      new Date(`${ymd}T00:00:00`).toLocaleDateString('en-US', {
+        timeZone: tz,
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+    [tz],
+  );
+
+  const showLoadBanner = useCallback(
+    (message: string) => {
+      setLoadBanner(message);
+      if (loadBannerTimer.current != null) {
+        clearTimeout(loadBannerTimer.current);
+      }
+      if (typeof window !== 'undefined') {
+        loadBannerTimer.current = window.setTimeout(() => {
+          setLoadBanner(null);
+        }, 4000);
+      }
+    },
+    [],
+  );
+
+  const handleOpenLoadModal = useCallback(() => {
+    const fallback =
+      initialSnapshotDates.find((d) => d < date) ??
+      initialSnapshotDates.find((d) => d !== date) ??
+      initialSnapshotDates[0] ??
+      null;
+    setLoadSelectedDate(fallback);
+    setLoadError(null);
+    setLoadModalStep('calendar');
+    setLoadResult(null);
+    setLoadBusyAction(null);
+    setLoadModalOpen(true);
+  }, [initialSnapshotDates, date]);
+
+  const handleCloseLoadModal = useCallback(() => {
+    setLoadModalOpen(false);
+    setLoadModalStep('calendar');
+    setLoadSelectedDate(null);
+    setLoadBusyAction(null);
+    setLoadError(null);
+    setLoadResult(null);
+  }, []);
+
+  const handlePreviewDate = useCallback(async (targetDate: string) => {
+    if (!targetDate) return;
+    setLoadBusyAction('preview');
+    setLoadError(null);
+    try {
+      const payload = await loadPlanFromDateAction(targetDate);
+      const snapshot: LoadPlanSnapshot = {
+        date: targetDate,
+        plan: normalizePlan(payload.plan),
+        previewPlan: normalizePlanOrNull(payload.previewPlan),
+        fromSnapshot: payload.fromSnapshot,
+        snapshotCapturedAt: payload.snapshotCapturedAt,
+      };
+      setLoadResult(snapshot);
+      setLoadModalStep('preview');
+    } catch (err) {
+      console.error(err);
+      setLoadError('We couldn’t open that planning day. Try another date.');
+    } finally {
+      setLoadBusyAction(null);
+    }
+  }, []);
+
+  const handlePreviewBack = useCallback(() => {
+    setLoadModalStep('calendar');
+    setLoadBusyAction(null);
+    setLoadError(null);
+  }, []);
+
+  const applyPlanFrom = useCallback(
+    (planToApply: Plan, sourceDate: string, meta: {
+      fromSnapshot: boolean;
+      snapshotCapturedAt: string | null;
+    }) => {
+      if (!editable) return;
+      const normalized = normalizePlan(planToApply);
+      const rebased = rebasePlanToDate(normalized, sourceDate, date);
+      setBlocks(rebased.blocks);
+      setDailyAim(rebased.dailyAim);
+      setDailyIngredientIds(rebased.dailyIngredientIds);
+      closeMeta();
+      setShowPresetLibrary(false);
+      setShowBlockPresetMenu(false);
+      setShowPresetPicker(false);
+      setShowSavePresetDialog(false);
+      setSelectIngredient(false);
+      setSelectFlavor(false);
+      setSelectDailyIngredient(false);
+      setLoadModalOpen(false);
+      setLoadModalStep('calendar');
+      setLoadSelectedDate(null);
+      setLoadResult(null);
+      setLoadError(null);
+      const parts = [`Loaded planning from ${formatDateLabel(sourceDate)}`];
+      if (meta.fromSnapshot) {
+        if (meta.snapshotCapturedAt) {
+          const captured = new Date(meta.snapshotCapturedAt).toLocaleString(
+            'en-US',
+            {
+              timeZone: tz,
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+            },
+          );
+          parts.push(`(snapshot captured ${captured})`);
+        } else {
+          parts.push('(snapshot)');
+        }
+      }
+      showLoadBanner(parts.join(' '));
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(
+            storageKey,
+            JSON.stringify({
+              blocks: rebased.blocks,
+              dailyAim: rebased.dailyAim,
+              dailyIngredientIds: rebased.dailyIngredientIds,
+            }),
+          );
+        } catch {
+          // ignore local storage errors
+        }
+      }
+    },
+    [
+      editable,
+      closeMeta,
+      formatDateLabel,
+      showLoadBanner,
+      tz,
+      storageKey,
+      date,
+    ],
+  );
+
+  const copyPlanFromDate = useCallback(
+    async (targetDate: string, reason: 'select' | 'add') => {
+      if (!editable || !targetDate) return;
+      setLoadBusyAction(reason);
+      setLoadError(null);
+      try {
+        let snapshot =
+          loadResult && loadResult.date === targetDate ? loadResult : null;
+        if (!snapshot) {
+          const payload = await loadPlanFromDateAction(targetDate);
+          snapshot = {
+            date: targetDate,
+            plan: normalizePlan(payload.plan),
+            previewPlan: normalizePlanOrNull(payload.previewPlan),
+            fromSnapshot: payload.fromSnapshot,
+            snapshotCapturedAt: payload.snapshotCapturedAt,
+          };
+        }
+        applyPlanFrom(snapshot.plan, targetDate, {
+          fromSnapshot: snapshot.fromSnapshot,
+          snapshotCapturedAt: snapshot.snapshotCapturedAt,
+        });
+      } catch (err) {
+        console.error(err);
+        setLoadError('We couldn’t load that planning day. Try another date.');
+      } finally {
+        setLoadBusyAction(null);
+      }
+    },
+    [editable, loadResult, applyPlanFrom],
+  );
+
+  const activeLoadResult = useMemo(
+    () =>
+      loadResult && loadSelectedDate && loadResult.date === loadSelectedDate
+        ? loadResult
+        : null,
+    [loadResult, loadSelectedDate],
+  );
   const draggingRef = useRef(false);
   const [startMinute, setStartMinute] = useState(DEFAULT_START);
   const [endMinute, setEndMinute] = useState(DEFAULT_END);
@@ -1931,6 +2238,11 @@ export default function EditorClient({
                 )}
               </div>
             ) : null}
+            {loadBanner ? (
+              <div className="w-full rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-700 shadow-sm">
+                {loadBanner}
+              </div>
+            ) : null}
             {!review &&
               (editable ? (
                 <button
@@ -2006,6 +2318,16 @@ export default function EditorClient({
             >
               {live ? 'Live AI' : 'AI planning'}
             </button>
+            {!live && !review && editable && !snapshotDate && (
+              <Button
+                id={`p1an-load-plan-${userId}`}
+                variant="outline"
+                className="border-2 border-orange-400 bg-orange-50 px-3 py-2 text-orange-600 shadow-sm hover:bg-orange-100"
+                onClick={handleOpenLoadModal}
+              >
+                Load planning
+              </Button>
+            )}
             <Button
               id={`p1an-daily-aim-${userId}`}
               variant="outline"
@@ -3659,6 +3981,38 @@ export default function EditorClient({
           </div>
         </div>
       )}
+      <LoadPlanningModal
+        open={loadModalOpen}
+        onClose={handleCloseLoadModal}
+        step={loadModalStep}
+        selectedDate={loadSelectedDate}
+        onDateChange={(next) => {
+          setLoadSelectedDate(next);
+          setLoadError(null);
+        }}
+        onPreview={handlePreviewDate}
+        onSelect={(next) => copyPlanFromDate(next, 'select')}
+        onAddNow={(next) => copyPlanFromDate(next, 'add')}
+        onBack={handlePreviewBack}
+        loadingAction={loadBusyAction}
+        error={loadError}
+        snapshotDates={initialSnapshotDates}
+        previewPlan={activeLoadResult?.previewPlan ?? null}
+        previewMeta={
+          activeLoadResult
+            ? {
+                fromSnapshot: activeLoadResult.fromSnapshot,
+                snapshotCapturedAt: activeLoadResult.snapshotCapturedAt,
+              }
+            : null
+        }
+        tz={tz}
+        ingredientMap={ingredientMap}
+        flavorMap={flavorMap}
+        subflavorMap={subflavorMap}
+        currentPlanDate={date}
+        planningDateLabel={planningDateText}
+      />
       {aiOpen && (
         <div className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/20 backdrop-blur-md">
           <div className="flex w-[90%] max-w-2xl max-h-[90vh] flex-col rounded bg-white p-6 shadow-lg">
