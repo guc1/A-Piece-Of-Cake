@@ -588,8 +588,15 @@ export default function EditorClient({
   }
 
   function minutesFromTime(t: string) {
-    const [h, m] = t.split(':').map((v) => parseInt(v, 10));
-    return (h || 0) * 60 + (m || 0);
+    const match = t.match(/^(\d{1,2})(?::(\d{2}))$/);
+    if (!match) return Number.NaN;
+    const hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return Number.NaN;
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return Number.NaN;
+    }
+    return hours * 60 + minutes;
   }
 
   function buildPlanBlocksContext(list: PlanBlock[]) {
@@ -830,22 +837,245 @@ export default function EditorClient({
     end: string;
   };
 
-  function parseActivities(str: string): ActivitySuggestion[] | null {
-    try {
-      const obj = JSON.parse(str);
-      return Array.isArray(obj) ? obj : [obj];
-    } catch {
-      try {
-        const m = str.match(/```json\s*([\s\S]*?)\s*```/i);
-        if (m) {
-          const obj = JSON.parse(m[1]);
-          return Array.isArray(obj) ? obj : [obj];
+  type ActivitySuggestionResult = {
+    activities: ActivitySuggestion[];
+    invalidCount: number;
+  };
+
+  function extractJsonSegments(str: string) {
+    const segments: string[] = [];
+    let startIndex = -1;
+    const stack: string[] = [];
+    let inString = false;
+    let escape = false;
+
+    for (let i = 0; i < str.length; i += 1) {
+      const ch = str[i];
+
+      if (inString) {
+        if (escape) {
+          escape = false;
+          continue;
         }
+        if (ch === '\\') {
+          escape = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (ch === '{' || ch === '[') {
+        if (stack.length === 0) {
+          startIndex = i;
+        }
+        stack.push(ch);
+      } else if (ch === '}' || ch === ']') {
+        const expected = ch === '}' ? '{' : '[';
+        if (stack.length === 0 || stack[stack.length - 1] !== expected) {
+          stack.length = 0;
+          startIndex = -1;
+          continue;
+        }
+        stack.pop();
+        if (stack.length === 0 && startIndex >= 0) {
+          segments.push(str.slice(startIndex, i + 1));
+          startIndex = -1;
+        }
+      }
+    }
+
+    return segments;
+  }
+
+  function normalizeTime(value: unknown): string | null {
+    if (!value && value !== 0) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const ampmMatch = raw.match(
+      /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i,
+    );
+    if (ampmMatch) {
+      let hours = parseInt(ampmMatch[1], 10);
+      const minutes = parseInt(ampmMatch[2] ?? '0', 10);
+      const suffix = ampmMatch[3].toLowerCase();
+      if (hours === 12) {
+        hours = suffix === 'am' ? 0 : 12;
+      } else if (suffix === 'pm') {
+        hours += 12;
+      }
+      if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    const hmMatch = raw.match(/^(\d{1,2})(?::(\d{2}))$/);
+    if (hmMatch) {
+      const hours = parseInt(hmMatch[1], 10);
+      const minutes = parseInt(hmMatch[2], 10);
+      if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    const hourOnlyMatch = raw.match(/^(\d{1,2})h(?:ours?)?$/i);
+    if (hourOnlyMatch) {
+      const hours = parseInt(hourOnlyMatch[1], 10);
+      if (Number.isNaN(hours) || hours < 0 || hours > 23) return null;
+      return `${String(hours).padStart(2, '0')}:00`;
+    }
+
+    const compactMatch = raw.match(/^(\d{1,2})(\d{2})$/);
+    if (compactMatch) {
+      const hours = parseInt(compactMatch[1], 10);
+      const minutes = parseInt(compactMatch[2], 10);
+      if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    return null;
+  }
+
+  function parseDurationMinutes(value: unknown): number | null {
+    if (!value && value !== 0) return null;
+    const raw = String(value).trim().toLowerCase();
+    if (!raw) return null;
+
+    const hourMatch = raw.match(/(\d+(?:\.\d+)?)\s*h/);
+    const minuteMatch = raw.match(/(\d+(?:\.\d+)?)\s*m/);
+
+    let total = 0;
+    if (hourMatch) {
+      total += parseFloat(hourMatch[1]) * 60;
+    }
+    if (minuteMatch) {
+      total += parseFloat(minuteMatch[1]);
+    }
+
+    if (!hourMatch && !minuteMatch) {
+      const numeric = parseFloat(raw);
+      if (!Number.isNaN(numeric)) {
+        if (raw.includes('hour')) {
+          total += numeric * 60;
+        } else {
+          total += numeric;
+        }
+      }
+    }
+
+    if (!Number.isFinite(total) || total <= 0) return null;
+    return Math.round(total);
+  }
+
+  function sanitizeActivitySuggestion(raw: any): ActivitySuggestion | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const normalized: Record<string, any> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      normalized[key.toLowerCase()] = value;
+    }
+
+    const activity =
+      raw.Activity ??
+      normalized.activity ??
+      normalized.title ??
+      normalized.name;
+    const description =
+      raw.Description ??
+      normalized.description ??
+      normalized.details ??
+      '';
+    let start =
+      normalizeTime(raw.start) ??
+      normalizeTime(normalized.start) ??
+      normalizeTime(normalized.begin) ??
+      normalizeTime(normalized.starttime);
+    let end =
+      normalizeTime(raw.end) ??
+      normalizeTime(normalized.end) ??
+      normalizeTime(normalized.finish) ??
+      normalizeTime(normalized.endtime);
+
+    if (!start) return null;
+
+    if (!end) {
+      const duration =
+        parseDurationMinutes(normalized.duration) ??
+        parseDurationMinutes(normalized.length);
+      if (duration) {
+        const [h, m] = start.split(':').map((v) => parseInt(v, 10));
+        const minutes = h * 60 + m + duration;
+        if (minutes < 0 || minutes >= 24 * 60) return null;
+        const endHours = Math.floor(minutes / 60);
+        const endMinutes = minutes % 60;
+        end = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+      }
+    }
+
+    if (!activity || !start || !end) return null;
+
+    const startMin = minutesFromTime(start);
+    const endMin = minutesFromTime(end);
+    if (Number.isNaN(startMin) || Number.isNaN(endMin) || endMin <= startMin) {
+      return null;
+    }
+
+    return {
+      Activity: String(activity).trim(),
+      Description: String(description ?? '').trim(),
+      start,
+      end,
+    };
+  }
+
+  function toActivitySuggestions(value: any): ActivitySuggestionResult | null {
+    const list = Array.isArray(value) ? value : [value];
+    const activities: ActivitySuggestion[] = [];
+    let invalidCount = 0;
+
+    for (const entry of list) {
+      const sanitized = sanitizeActivitySuggestion(entry);
+      if (sanitized) activities.push(sanitized);
+      else invalidCount += 1;
+    }
+
+    if (!activities.length) return invalidCount ? { activities, invalidCount } : null;
+    return { activities, invalidCount };
+  }
+
+  function parseActivities(str: string): ActivitySuggestionResult | null {
+    const tryParse = (value: string) => {
+      try {
+        const parsed = JSON.parse(value);
+        return toActivitySuggestions(parsed);
       } catch {
         return null;
       }
-      return null;
+    };
+
+    const direct = tryParse(str);
+    if (direct) return direct;
+
+    const blockMatch = str.match(/```json\s*([\s\S]*?)\s*```/i);
+    if (blockMatch) {
+      const parsed = tryParse(blockMatch[1]);
+      if (parsed) return parsed;
     }
+
+    for (const segment of extractJsonSegments(str)) {
+      const parsed = tryParse(segment);
+      if (parsed) return parsed;
+    }
+
+    return null;
   }
 
   type ColorAssignment = {
@@ -881,7 +1111,7 @@ export default function EditorClient({
     setChatMessages([welcome]);
   }
 
-  const PLANNING_SYSTEM_PROMPT = `You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. You are helping the user plan the day for ${planningDateText}. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life, last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. Based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity. If the user asks you to plan activities without clarifying which ones, create a planning that takes both what you know about the user's progress and his to-dos, aiming for an ideal schedule that fits the user's needs. Always listen to the feedback of the user, and try to make as good as possible planning for him or her. Regarding to-dos, always advise planning each task before its deadline. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity than respond ONLY with a JSON object containing the fields: Activity (which is the title of the activity), Description (which is a detailed description of the activity) start (starting time of activity), end (end time of activity) for each activity the user wanted to have implemented.`;
+  const PLANNING_SYSTEM_PROMPT = `You are a helpful assistant planning agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake. You are helping the user plan the day for ${planningDateText}. Your goal is to advise the user based on the context of his current daily activities, his goals in life, where he is heading towards in life, last 7 day rapport, last 2 week rapport, and last 2 months rapport of his performance. Based on all that context you are going to recommend an activity to the user. The input message the user sended is always the most important: so if the user wants to plan a specific activity you will help him find the best time in the planning and help him with descriptions. If the user asks to plan your day for him, you are going to advise more than 1 activity. If the user asks you to plan activities without clarifying which ones, create a planning that takes both what you know about the user's progress and his to-dos, aiming for an ideal schedule that fits the user's needs. Always listen to the feedback of the user, and try to make as good as possible planning for him or her. Regarding to-dos, always advise planning each task before its deadline. In the first message always propose the activities you recommend to the user. So always base your answer on the context and the user request. Also match your ambitions in the planning of the users ambitions and capabilities. Always end the first message with : Do you want me to plan an activity or more for you? . when the user wants you to plan an activity then respond ONLY with a JSON array (and nothing else) where each item contains the fields: Activity (title of the activity), Description (detailed description of the activity), start (start time in 24-hour HH:MM format), and end (end time in 24-hour HH:MM format) for each activity the user wanted to have implemented. Never include commentary outside of the JSON when returning those activities.`;
   const LIVE_SYSTEM_PROMPT =
     'You are a helpful live assistant agent in the Cake framework, a life-planning platform where users build a cake which represent their ethos statement using flavours which are built with ingredients—Flavours are kind of the goals/vectorial placement people have in different domains in life, these flavours combined (and of course their execution) leads to a cake, ingredients are kind of the habits the user has created to help him create the flavours successful. Your context as an agent: the person is currently working on his planning on the day, and when he chats with you Your goal is to provide help with whatever the user needs help with. probably it is going to be with finding motivation , or questions on if he or she should build the day up differently from now, or just general tips. Your context will exist out of his goal in life, where he is currently heading towards according to the rapport , the current activities he is doing. the other activities on the day. the daily aim. and all the ingredients and flavours the user has on his account. You are going to make him motivated, with reminding him about the goal etc. talk him out of negative thoughts, and help him make the best out of the day. Give him a sense of purpose, recognition of his work, and belief. Yet stay honest. Really motivates him or her to perform outstandingly. the tone and honesty the user wants: ${toneDescription} ';
   const SYSTEM_PROMPT = live ? LIVE_SYSTEM_PROMPT : PLANNING_SYSTEM_PROMPT;
@@ -928,7 +1158,7 @@ export default function EditorClient({
           ]);
         } else {
           const parsed = parseActivities(data.response as string);
-          if (parsed && parsed.length) {
+          if (parsed && parsed.activities.length) {
             const presets = [
               ...DEFAULT_COLOR_PRESETS,
               ...getUserColorPresets(userId),
@@ -940,7 +1170,7 @@ export default function EditorClient({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  activities: parsed,
+                  activities: parsed.activities,
                   presets: presets.map((p) => ({ id: p.id, name: p.name })),
                 }),
               });
@@ -950,10 +1180,13 @@ export default function EditorClient({
               assignments = null;
             }
 
-            const titles = parsed.map((p) => p.Activity).join(', ');
-            const ok = confirm(`Should I add these activities (${titles})?`);
+            const titles = parsed.activities.map((p) => p.Activity).join(', ');
+            const confirmMessage = parsed.invalidCount
+              ? `Should I add these ${parsed.activities.length} activities (${titles})? ${parsed.invalidCount} suggestion(s) were skipped because they were incomplete.`
+              : `Should I add these activities (${titles})?`;
+            const ok = confirm(confirmMessage);
             if (ok) {
-              const newBlocks = parsed.map((p) => {
+              const newBlocks = parsed.activities.map((p) => {
                 const start = minutesFromTime(p.start);
                 const end = minutesFromTime(p.end);
                 const presetId = assignments?.find(
@@ -986,7 +1219,11 @@ export default function EditorClient({
                 ...newMessages,
                 {
                   role: 'assistant',
-                  content: `Added activities: ${titles}.`,
+                  content:
+                    `Added activities: ${titles}.` +
+                    (parsed.invalidCount
+                      ? ` Skipped ${parsed.invalidCount} suggestion(s) that were missing valid times.`
+                      : ''),
                   createdAt: new Date().toISOString(),
                 },
               ]);
@@ -1000,6 +1237,16 @@ export default function EditorClient({
                 },
               ]);
             }
+          } else if (parsed && parsed.invalidCount) {
+            setChatMessages([
+              ...newMessages,
+              {
+                role: 'assistant',
+                content:
+                  'I could not add a plan because the suggested activities were missing valid times. Please try again with clear start and end times (HH:MM).',
+                createdAt: new Date().toISOString(),
+              },
+            ]);
           } else {
             setChatMessages([
               ...newMessages,
