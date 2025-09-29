@@ -3,7 +3,7 @@ import { ensureUser } from '@/lib/users';
 import { notFound, redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { resolvePlanDate, toYMD } from '@/lib/plan-date';
-import { getOrCreatePlan } from '@/lib/plans-store';
+import { getOrCreatePlan, listPlanDates } from '@/lib/plans-store';
 import TimeOverrideBadge from '@/components/time-override-badge';
 import EditorClient from './client';
 import { listIngredients } from '@/lib/ingredients-store';
@@ -48,6 +48,7 @@ export default async function PlanningNextPage({
     weeklyReports,
     monthlyReports,
     todos,
+    planDates,
   ] = await Promise.all([
     getOrCreatePlan(me.id, dateStr),
     listIngredients(String(me.id), me.id),
@@ -58,6 +59,7 @@ export default async function PlanningNextPage({
     listWeeklyReports(me.id),
     listMonthlyReports(me.id),
     listTodos(String(me.id), me.id),
+    listPlanDates(me.id),
   ]);
   const reportContext = {
     heading,
@@ -94,6 +96,7 @@ export default async function PlanningNextPage({
         flavors={flavors}
         subflavors={subflavors}
         todos={todos}
+        planDates={planDates}
         reportContext={reportContext}
         initialShowDailyAim={showDailyAim}
       />
