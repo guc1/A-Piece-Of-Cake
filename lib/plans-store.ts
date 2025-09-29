@@ -55,6 +55,19 @@ async function fetchPlan(userId: number, date: string): Promise<Plan | null> {
   };
 }
 
+export async function listPlanDates(
+  userId: number,
+  limit = 120,
+): Promise<string[]> {
+  const rows = await db
+    .select({ date: plans.date })
+    .from(plans)
+    .where(eq(plans.userId, userId))
+    .orderBy(desc(plans.date))
+    .limit(limit);
+  return rows.map((row) => row.date.toISOString().slice(0, 10));
+}
+
 export async function getOrCreatePlan(
   userId: number,
   date: string,

@@ -308,3 +308,4 @@
 - 2025-10-30: Added ingredient visibility filters to choose which streak rows appear in tracking tables.
 - 2025-10-30: Rendered custom flavor and ingredient icons as images in progress streak filters and tables.
 - 2025-10-30: Hardened AI planning suggestions by enforcing JSON-only responses, normalizing activity times, and giving users feedback when incomplete suggestions are skipped.
+- 2025-10-30: Added a calendar-driven load planning modal with previews so next-day schedules can copy past plans in a single click.

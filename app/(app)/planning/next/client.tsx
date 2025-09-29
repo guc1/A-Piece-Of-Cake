@@ -52,6 +52,8 @@ const COLORS = [
   '#94A3B8',
 ];
 
+const WEEK_DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
 function iconSrc(ic: string) {
   if (ic.startsWith('data:')) return ic;
   if (/^[A-Za-z0-9+/=]+$/.test(ic)) return `data:image/png;base64,${ic}`;
@@ -107,6 +109,7 @@ interface Props {
       'startDate' | 'endDate' | 'bad' | 'observations'
     >[];
   };
+  planDates: string[];
 }
 
 export default function EditorClient({
@@ -123,6 +126,7 @@ export default function EditorClient({
   review = false,
   initialShowDailyAim = false,
   reportContext,
+  planDates,
 }: Props) {
   const {
     editable,
@@ -329,6 +333,20 @@ export default function EditorClient({
   const [savePresetCategories, setSavePresetCategories] = useState<string[]>([]);
   const [newPresetCategoryName, setNewPresetCategoryName] = useState('');
   const [libraryCategoryName, setLibraryCategoryName] = useState('');
+  const [showLoadPlanning, setShowLoadPlanning] = useState(false);
+  const [loadSelectedDate, setLoadSelectedDate] = useState<string | null>(null);
+  const [loadMonth, setLoadMonth] = useState(() => new Date(`${date}T00:00:00`));
+  const [loadStep, setLoadStep] = useState<'calendar' | 'preview'>('calendar');
+  const [loadPreviewPlan, setLoadPreviewPlan] = useState<Plan | null>(null);
+  const [loadPreviewDate, setLoadPreviewDate] = useState<string | null>(null);
+  const [loadPreviewLoading, setLoadPreviewLoading] = useState(false);
+  const [loadFetching, setLoadFetching] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadApplying, setLoadApplying] = useState(false);
+  const [loadSuccessMessage, setLoadSuccessMessage] = useState<string | null>(null);
+  const planCacheRef = useRef(new Map<string, Plan>());
+  const previewRequestRef = useRef(0);
+  const availablePlanDates = useMemo(() => new Set(planDates), [planDates]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [metaPinned, setMetaPinned] = useState(false);
   const blockMenuRef = useRef<HTMLDivElement | null>(null);
@@ -351,6 +369,11 @@ export default function EditorClient({
   useEffect(() => {
     setSelectFlavor(false);
   }, [selectedId]);
+  useEffect(() => {
+    if (!loadSuccessMessage) return;
+    const timer = setTimeout(() => setLoadSuccessMessage(null), 5000);
+    return () => clearTimeout(timer);
+  }, [loadSuccessMessage]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setBlockPresets(getUserBlockPresets(currentUserId));
@@ -416,6 +439,35 @@ export default function EditorClient({
       ),
     [presetCategories],
   );
+  const loadMonthLabel = useMemo(
+    () =>
+      loadMonth.toLocaleDateString(undefined, {
+        month: 'long',
+        year: 'numeric',
+      }),
+    [loadMonth],
+  );
+  const loadCalendarDays = useMemo(() => {
+    const monthStart = new Date(
+      loadMonth.getFullYear(),
+      loadMonth.getMonth(),
+      1,
+    );
+    const monthEnd = new Date(
+      loadMonth.getFullYear(),
+      loadMonth.getMonth() + 1,
+      0,
+    );
+    const gridStart = new Date(monthStart);
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+    const gridEnd = new Date(monthEnd);
+    gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+    const days: Date[] = [];
+    for (let cur = new Date(gridStart); cur <= gridEnd; cur.setDate(cur.getDate() + 1)) {
+      days.push(new Date(cur));
+    }
+    return days;
+  }, [loadMonth]);
   const sortedBlockPresets = useMemo(
     () =>
       [...blockPresets].sort((a, b) => {
@@ -1553,6 +1605,177 @@ export default function EditorClient({
     setActivePresetCategory(added.id);
   }
 
+  function formatLoadDateLabel(value: string) {
+    try {
+      const ref = new Date(`${value}T00:00:00`);
+      return ref.toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return value;
+    }
+  }
+
+  function normalizePlanSnapshot(plan: Plan): Plan {
+    return {
+      ...plan,
+      blocks: (plan.blocks ?? []).map((b) => ({
+        ...b,
+        ingredientIds: b.ingredientIds ?? [],
+        flavorIds: b.flavorIds ?? [],
+        subflavorIds: b.subflavorIds ?? [],
+        colorPreset: b.colorPreset ?? '',
+      })),
+      dailyAim: plan.dailyAim ?? '',
+      dailyIngredientIds: plan.dailyIngredientIds ?? [],
+      colorPresets: plan.colorPresets ?? [],
+      planningChat: plan.planningChat ?? { chatId: '', messages: [] },
+      liveChat: plan.liveChat ?? { chatId: '', messages: [] },
+    };
+  }
+
+  async function fetchPlanSnapshot(dateStr: string): Promise<Plan> {
+    const cached = planCacheRef.current.get(dateStr);
+    if (cached) return cached;
+    const response = await fetch(`/api/planning/load?date=${dateStr}`, {
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to load plan');
+    }
+    const raw = (await response.json()) as Plan;
+    const normalized = normalizePlanSnapshot(raw);
+    planCacheRef.current.set(dateStr, normalized);
+    return normalized;
+  }
+
+  function openLoadPlanningModal() {
+    if (!editable || review || snapshotDate) return;
+    const baseDate = loadSelectedDate ?? planDates[0] ?? date;
+    setLoadMonth(new Date(`${baseDate}T00:00:00`));
+    setLoadStep('calendar');
+    setLoadPreviewPlan(null);
+    setLoadPreviewDate(null);
+    setLoadPreviewLoading(false);
+    setLoadSelectedDate(null);
+    setLoadError(null);
+    setLoadFetching(false);
+    setShowLoadPlanning(true);
+  }
+
+  function closeLoadPlanningModal() {
+    setShowLoadPlanning(false);
+    setLoadStep('calendar');
+    setLoadPreviewPlan(null);
+    setLoadPreviewDate(null);
+    setLoadSelectedDate(null);
+    setLoadError(null);
+    setLoadPreviewLoading(false);
+    setLoadFetching(false);
+  }
+
+  function previewMinutes(dateStr: string, iso: string) {
+    const base = new Date(`${dateStr}T00:00:00`);
+    const diff = Math.round((new Date(iso).getTime() - base.getTime()) / 60000);
+    return Math.max(0, Math.min(diff, MAX_MINUTES));
+  }
+
+  function formatPreviewRange(block: PlanBlock, dateStr: string) {
+    const start = previewMinutes(dateStr, block.start);
+    const end = previewMinutes(dateStr, block.end);
+    const sh = String(Math.floor(start / 60)).padStart(2, '0');
+    const sm = String(start % 60).padStart(2, '0');
+    const eh = String(Math.floor(end / 60)).padStart(2, '0');
+    const em = String(end % 60).padStart(2, '0');
+    return `${sh}:${sm} – ${eh}:${em}`;
+  }
+
+  async function handlePreviewPlan(dateStr: string) {
+    setLoadSelectedDate(dateStr);
+    setLoadError(null);
+    setLoadStep('preview');
+    setLoadPreviewLoading(true);
+    setLoadPreviewDate(dateStr);
+    const requestId = ++previewRequestRef.current;
+    try {
+      const planSnapshot = await fetchPlanSnapshot(dateStr);
+      if (previewRequestRef.current !== requestId) return;
+      setLoadPreviewPlan(planSnapshot);
+    } catch {
+      if (previewRequestRef.current !== requestId) return;
+      setLoadPreviewPlan(null);
+      setLoadError('Unable to preview that day right now. Please try again.');
+    } finally {
+      if (previewRequestRef.current === requestId) {
+        setLoadPreviewLoading(false);
+      }
+    }
+  }
+
+  async function handleSelectPlan(dateStr: string) {
+    if (loadApplying) return;
+    setLoadSelectedDate(dateStr);
+    setLoadError(null);
+    setLoadFetching(true);
+    try {
+      const planSnapshot = await fetchPlanSnapshot(dateStr);
+      applyLoadedPlan(planSnapshot, dateStr);
+    } catch {
+      setLoadError('Unable to load that plan. Please try again.');
+    } finally {
+      setLoadFetching(false);
+    }
+  }
+
+  function applyLoadedPlan(planSnapshot: Plan, sourceDate: string) {
+    if (loadApplying) return;
+    setLoadApplying(true);
+    try {
+      const normalized = normalizePlanSnapshot(planSnapshot);
+      const payload = {
+        blocks: normalized.blocks,
+        dailyAim: normalized.dailyAim ?? '',
+        dailyIngredientIds: normalized.dailyIngredientIds ?? [],
+      };
+      lastSaved.current = '__load-pending__';
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      setBlocks(normalized.blocks);
+      setDailyAim(payload.dailyAim);
+      setDailyIngredientIds(payload.dailyIngredientIds);
+      closeMeta();
+      setShowDailyAim(false);
+      if (editable && typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify(payload));
+        } catch {
+          // ignore storage failures
+        }
+      }
+      setShowLoadPlanning(false);
+      setLoadStep('calendar');
+      setLoadPreviewPlan(null);
+      setLoadPreviewDate(null);
+      setLoadSelectedDate(null);
+      setLoadError(null);
+      const label = formatLoadDateLabel(sourceDate);
+      setLoadSuccessMessage(`Loaded plan from ${label}.`);
+    } finally {
+      setLoadApplying(false);
+    }
+  }
+
+  function handleApplyPreview() {
+    if (!loadPreviewPlan || !loadPreviewDate) return;
+    setLoadError(null);
+    applyLoadedPlan(loadPreviewPlan, loadPreviewDate);
+  }
+
   const lastSaved = useRef(
     JSON.stringify({ blocks, dailyAim, dailyIngredientIds }),
   );
@@ -1999,6 +2222,15 @@ export default function EditorClient({
                 Load later
               </button>
             )}
+            {!review && !live && editable && !snapshotDate && (
+              <button
+                id={`p1an-load-copy-${userId}`}
+                className="rounded border border-orange-300 bg-orange-50 px-3 py-1 font-medium text-orange-600 hover:bg-orange-100"
+                onClick={openLoadPlanningModal}
+              >
+                Load planning
+              </button>
+            )}
             <button
               id={`p1an-${live ? 'live-ai' : 'ai'}-${userId}`}
               className="rounded bg-orange-500 px-3 py-1 text-white"
@@ -2032,12 +2264,17 @@ export default function EditorClient({
               </button>
             )}
             <PlanningDateNav date={date} today={today} />
+            {loadSuccessMessage && (
+              <div className="w-full rounded border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-600">
+                {loadSuccessMessage}
+              </div>
+            )}
           </div>
-          {showCustom && (
-            <div
-              className="sticky top-[48px] z-10 flex items-center gap-2 bg-gray-50 p-2 text-xs"
-              onClick={(e) => e.stopPropagation()}
-            >
+      {showCustom && (
+        <div
+          className="sticky top-[48px] z-10 flex items-center gap-2 bg-gray-50 p-2 text-xs"
+          onClick={(e) => e.stopPropagation()}
+        >
               <span>Start:</span>
               <input
                 type="time"
@@ -3272,6 +3509,347 @@ export default function EditorClient({
                   </Button>
                 </div>
               </>
+            )}
+          </div>
+        </div>
+      )}
+      {showLoadPlanning && (
+        <div
+          className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeLoadPlanningModal();
+          }}
+        >
+          <div className="flex h-[90vh] w-[95vw] max-w-5xl flex-col overflow-hidden rounded-lg bg-white p-4 text-sm shadow-xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Load planning</h2>
+                <p className="text-xs text-gray-500">
+                  Borrow a past plan to jump-start tomorrow&apos;s schedule.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close"
+                className="rounded bg-gray-100 px-2 py-1 text-lg leading-none text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+                onClick={closeLoadPlanningModal}
+              >
+                ×
+              </button>
+            </div>
+            {loadStep === 'calendar' ? (
+              <div className="grid flex-1 gap-6 overflow-y-auto md:grid-cols-[1.4fr,1fr]">
+                <div>
+                  <div className="mb-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      aria-label="Previous month"
+                      className="rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
+                      onClick={() =>
+                        setLoadMonth(
+                          new Date(
+                            loadMonth.getFullYear(),
+                            loadMonth.getMonth() - 1,
+                            1,
+                          ),
+                        )
+                      }
+                    >
+                      ❮
+                    </button>
+                    <div className="text-base font-semibold text-gray-800">
+                      {loadMonthLabel}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Next month"
+                      className="rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
+                      onClick={() =>
+                        setLoadMonth(
+                          new Date(
+                            loadMonth.getFullYear(),
+                            loadMonth.getMonth() + 1,
+                            1,
+                          ),
+                        )
+                      }
+                    >
+                      ❯
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    {WEEK_DAYS.map((day) => (
+                      <span key={day}>{day}</span>
+                    ))}
+                  </div>
+                  <div className="mt-1 grid grid-cols-7 gap-1">
+                    {loadCalendarDays.map((d) => {
+                      const iso = d.toISOString().slice(0, 10);
+                      const isCurrentMonth =
+                        d.getMonth() === loadMonth.getMonth();
+                      const hasPlan = availablePlanDates.has(iso);
+                      const isSelected = loadSelectedDate === iso;
+                      const isToday = iso === today;
+                      return (
+                        <button
+                          key={iso}
+                          type="button"
+                          disabled={!hasPlan}
+                          onClick={() => {
+                            setLoadSelectedDate(iso);
+                            setLoadError(null);
+                          }}
+                          className={cn(
+                            'flex h-10 items-center justify-center rounded-md border text-sm transition',
+                            hasPlan
+                              ? 'border-orange-200 bg-white text-gray-900 hover:bg-orange-50'
+                              : 'border-transparent bg-gray-100 text-gray-400',
+                            !isCurrentMonth && 'opacity-60',
+                            isToday && !isSelected && 'border-orange-400',
+                            isSelected &&
+                              'border-orange-500 bg-orange-500 text-white hover:bg-orange-500',
+                            hasPlan ? 'cursor-pointer' : 'cursor-not-allowed',
+                          )}
+                        >
+                          {d.getDate()}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {planDates.length === 0 && (
+                    <p className="mt-6 rounded border border-dashed border-gray-300 p-4 text-center text-xs text-gray-500">
+                      No saved plans yet. Create a plan to unlock quick loading.
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-4">
+                  <div className="rounded border border-orange-200 bg-orange-50 px-4 py-3 text-orange-700">
+                    <p className="text-sm font-semibold">Choose a day</p>
+                    <p className="mt-1 text-xs">
+                      Orange dates hold finished plans. Preview them or copy instantly into
+                      tomorrow.
+                    </p>
+                  </div>
+                  {loadSelectedDate ? (
+                    <div className="rounded border border-gray-200 px-4 py-3">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {formatLoadDateLabel(loadSelectedDate)}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Preview to double-check the schedule or select to copy it right away.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handlePreviewPlan(loadSelectedDate)}
+                          disabled={loadFetching || loadApplying}
+                        >
+                          Preview
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleSelectPlan(loadSelectedDate)}
+                          disabled={loadFetching || loadApplying}
+                        >
+                          {loadFetching ? 'Selecting…' : 'Select'}
+                        </Button>
+                      </div>
+                      {loadError && (
+                        <p className="mt-2 text-xs text-red-500">{loadError}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded border border-dashed border-gray-300 px-4 py-6 text-center text-xs text-gray-500">
+                      Pick a highlighted day to unlock preview and select actions.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {loadPreviewDate ? formatLoadDateLabel(loadPreviewDate) : 'Preview'}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      This is how your plan looked on that day.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setLoadStep('calendar');
+                      setLoadError(null);
+                      setLoadPreviewPlan(null);
+                      setLoadPreviewDate(null);
+                    }}
+                  >
+                    Back to calendar
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto rounded border border-gray-100 bg-gray-50 p-4">
+                  {loadPreviewLoading ? (
+                    <div className="flex h-full items-center justify-center text-xs text-gray-500">
+                      Loading preview…
+                    </div>
+                  ) : loadError ? (
+                    <div className="rounded border border-red-200 bg-red-50 p-4 text-xs text-red-600">
+                      {loadError}
+                    </div>
+                  ) : loadPreviewPlan ? (
+                    <div className="space-y-4">
+                      {(loadPreviewPlan.dailyAim ||
+                        (loadPreviewPlan.dailyIngredientIds ?? []).length > 0) && (
+                        <div className="rounded border border-orange-200 bg-white p-4 shadow-sm">
+                          {loadPreviewPlan.dailyAim && (
+                            <div>
+                              <div className="text-xs font-semibold uppercase text-orange-500">
+                                Daily aim
+                              </div>
+                              <p className="mt-1 text-sm text-gray-700">
+                                {loadPreviewPlan.dailyAim}
+                              </p>
+                            </div>
+                          )}
+                          {(loadPreviewPlan.dailyIngredientIds ?? []).length > 0 && (
+                            <div className="mt-3">
+                              <div className="text-xs font-semibold uppercase text-orange-500">
+                                Daily ingredients
+                              </div>
+                              <div className="mt-1 flex flex-wrap gap-1 text-[11px] text-green-700">
+                                {loadPreviewPlan.dailyIngredientIds.map((iid) => {
+                                  const ing = initialIngredients.find((i) => i.id === iid);
+                                  return (
+                                    <span
+                                      key={iid}
+                                      className="rounded bg-green-100 px-2 py-0.5"
+                                    >
+                                      {ing?.title ?? 'Secret 🔒'}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        {loadPreviewPlan.blocks.length ? (
+                          [...loadPreviewPlan.blocks]
+                            .sort(
+                              (a, b) =>
+                                new Date(a.start).getTime() - new Date(b.start).getTime(),
+                            )
+                            .map((b) => {
+                              const ingredientNames = (b.ingredientIds ?? [])
+                                .map((iid) => initialIngredients.find((i) => i.id === iid)?.title)
+                                .filter(Boolean);
+                              const flavorNames = (b.flavorIds ?? [])
+                                .map((fid) => flavors.find((f) => f.id === fid)?.name)
+                                .filter(Boolean);
+                              const subNames = (b.subflavorIds ?? [])
+                                .map((sid) => subflavors.find((s) => s.id === sid)?.name)
+                                .filter(Boolean);
+                              return (
+                                <div
+                                  key={`${b.id}-${b.start}`}
+                                  className="rounded border border-gray-200 bg-white p-4 shadow-sm"
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-gray-900">
+                                    <span>{b.title || 'Untitled activity'}</span>
+                                    {loadPreviewDate && (
+                                      <span className="text-xs font-medium text-gray-500">
+                                        {formatPreviewRange(b, loadPreviewDate)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {b.description && (
+                                    <p className="mt-1 text-xs text-gray-600">
+                                      {b.description}
+                                    </p>
+                                  )}
+                                  {flavorNames.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-orange-600">
+                                      {flavorNames.map((name, idx) => (
+                                        <span
+                                          key={`${b.id}-flavor-${idx}`}
+                                          className="rounded bg-orange-100 px-2 py-0.5"
+                                        >
+                                          {name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {subNames.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-purple-600">
+                                      {subNames.map((name, idx) => (
+                                        <span
+                                          key={`${b.id}-sub-${idx}`}
+                                          className="rounded bg-purple-100 px-2 py-0.5"
+                                        >
+                                          {name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {ingredientNames.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1 text-[11px] text-green-700">
+                                      {ingredientNames.map((name, idx) => (
+                                        <span
+                                          key={`${b.id}-ing-${idx}`}
+                                          className="rounded bg-green-100 px-2 py-0.5"
+                                        >
+                                          {name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                        ) : (
+                          <div className="rounded border border-dashed border-gray-300 p-4 text-center text-xs text-gray-500">
+                            No activities were saved for this day.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-gray-500">
+                      No data available for this day.
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setLoadStep('calendar');
+                      setLoadError(null);
+                      setLoadPreviewPlan(null);
+                      setLoadPreviewDate(null);
+                    }}
+                  >
+                    Select another date
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleApplyPreview}
+                    disabled={!loadPreviewPlan || loadApplying}
+                  >
+                    {loadApplying ? 'Adding…' : 'Add now'}
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>
