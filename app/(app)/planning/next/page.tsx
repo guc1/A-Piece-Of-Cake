@@ -14,6 +14,7 @@ import { listDailyReports } from '@/lib/daily-report-store';
 import { listWeeklyReports } from '@/lib/weekly-report-store';
 import { listMonthlyReports } from '@/lib/monthly-report-store';
 import { listTodos } from '@/lib/todos-store';
+import { listProfileSnapshotDates } from '@/lib/profile-snapshots';
 
 export const revalidate = 0;
 
@@ -48,6 +49,7 @@ export default async function PlanningNextPage({
     weeklyReports,
     monthlyReports,
     todos,
+    snapshotDates,
   ] = await Promise.all([
     getOrCreatePlan(me.id, dateStr),
     listIngredients(String(me.id), me.id),
@@ -58,6 +60,7 @@ export default async function PlanningNextPage({
     listWeeklyReports(me.id),
     listMonthlyReports(me.id),
     listTodos(String(me.id), me.id),
+    listProfileSnapshotDates(me.id),
   ]);
   const reportContext = {
     heading,
@@ -94,6 +97,7 @@ export default async function PlanningNextPage({
         flavors={flavors}
         subflavors={subflavors}
         todos={todos}
+        snapshotDates={snapshotDates}
         reportContext={reportContext}
         initialShowDailyAim={showDailyAim}
       />
